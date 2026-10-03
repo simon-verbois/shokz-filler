@@ -1,0 +1,9 @@
+# Requested autonomous mode for this trusted project. Managed host policy may still override it.
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+
+# Current library documentation lookup; anonymous access is rate-limited.
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+startup_timeout_sec = 20
+tool_timeout_sec = 60
