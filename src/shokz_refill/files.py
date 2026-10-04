@@ -10,6 +10,21 @@ from .naming import collision_path, sanitize_component
 _HIDDEN_DEVICE_NAMES = {"system volume information"}
 
 
+def _flush_directory(path: Path) -> None:
+    """Best-effort metadata flush after a rename on removable storage."""
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    descriptor: int | None = None
+    try:
+        descriptor = os.open(path, flags)
+        os.fsync(descriptor)
+    except OSError:
+        # Directory fsync is unsupported by some Windows/removable filesystems.
+        pass
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
 class DeviceFileService:
     def __init__(self, root: Path) -> None:
         self.root = root.resolve(strict=True)
@@ -107,7 +122,11 @@ class DeviceFileService:
                 moved.append(source)
                 continue
             target = collision_path(target)
+            previous_parent = source.parent
             source.rename(target)
+            _flush_directory(previous_parent)
+            if target.parent != previous_parent:
+                _flush_directory(target.parent)
             moved.append(target)
         return moved
 

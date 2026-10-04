@@ -562,10 +562,25 @@ class MainWindow(QMainWindow):
             actions.addWidget(button)
         actions.addStretch()
         layout.addLayout(actions)
+        device_activity = QHBoxLayout()
+        self.device_operation_label = QLabel("Device operation: idle")
+        self.device_operation_progress = QProgressBar()
+        self.device_operation_progress.setMaximumWidth(220)
+        self.device_operation_progress.setRange(0, 100)
+        self.device_operation_progress.setValue(0)
+        self.device_operation_progress.setVisible(False)
+        device_activity.addWidget(self.device_operation_label)
+        device_activity.addWidget(self.device_operation_progress)
+        device_activity.addStretch()
+        layout.addLayout(device_activity)
         return widget
 
     def _run(
-        self, function: Callable[[], Any], success: Callable[[Any], None], message: str = "Working…"
+        self,
+        function: Callable[[], Any],
+        success: Callable[[Any], None],
+        message: str = "Working…",
+        failure: Callable[[str], None] | None = None,
     ) -> None:
         self.statusBar().showMessage(message)
         worker = Worker(function)
@@ -578,7 +593,10 @@ class MainWindow(QMainWindow):
 
         def failed(message: str) -> None:
             self._workers.discard(worker)
-            self._show_error(message)
+            if failure is None:
+                self._show_error(message)
+            else:
+                failure(message)
 
         worker.signals.result.connect(completed)
         worker.signals.error.connect(failed)
@@ -1194,16 +1212,24 @@ class MainWindow(QMainWindow):
         if not self.device or not selected:
             return
         root = self.device.root
+        count = len(selected)
+        self._set_device_operation(f"Moving {count} item(s) — keep the Shokz connected", busy=True)
 
         def completed(value: object) -> None:
-            count = len(value) if isinstance(value, list) else 0
-            self.statusBar().showMessage(f"Moved {count} item(s)")
+            moved_count = len(value) if isinstance(value, list) else 0
+            self._set_device_operation(f"Move complete: {moved_count} item(s)", complete=True)
+            self.statusBar().showMessage(f"Moved {moved_count} item(s)")
             self._refresh_files()
+
+        def failed(message: str) -> None:
+            self._set_device_operation(f"Move failed: {message}")
+            self._show_error(message)
 
         self._run(
             lambda: DeviceFileService(root).move(selected, destination),
             completed,
             "Moving selected items…",
+            failed,
         )
 
     def _add_local(self) -> None:
@@ -1215,6 +1241,9 @@ class MainWindow(QMainWindow):
             return
         sources = [Path(name) for name in names]
         root, folder = self.device.root, self.current_folder
+        self._set_device_operation(
+            f"Copying {len(sources)} MP3 file(s) — keep the Shokz connected", busy=True
+        )
 
         def copy_files() -> int:
             copied = 0
@@ -1225,12 +1254,33 @@ class MainWindow(QMainWindow):
                 copied += 1
             return copied
 
-        self._run(copy_files, self._local_added, "Copying MP3 files…")
+        self._run(
+            copy_files,
+            self._local_added,
+            "Copying MP3 files…",
+            self._device_operation_failed,
+        )
 
     def _local_added(self, result: object) -> None:
         copied = result if isinstance(result, int) else 0
+        self._set_device_operation(f"Copy complete: {copied} MP3 file(s)", complete=True)
         self.statusBar().showMessage(f"Copied {copied} MP3 file(s)")
         self._refresh_files()
+
+    def _device_operation_failed(self, message: str) -> None:
+        self._set_device_operation(f"Device operation failed: {message}")
+        self._show_error(message)
+
+    def _set_device_operation(
+        self, message: str, *, busy: bool = False, complete: bool = False
+    ) -> None:
+        self.device_operation_label.setText(f"Device operation: {message}")
+        self.device_operation_progress.setVisible(busy or complete)
+        if busy:
+            self.device_operation_progress.setRange(0, 0)
+        else:
+            self.device_operation_progress.setRange(0, 100)
+            self.device_operation_progress.setValue(100 if complete else 0)
 
     def _select_destination(self) -> None:
         if self.device and self.current_folder:

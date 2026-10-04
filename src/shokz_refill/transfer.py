@@ -17,6 +17,20 @@ Progress = Callable[[int], None]
 Cancelled = Callable[[], bool]
 
 
+def _flush_directory(path: Path) -> None:
+    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+    descriptor: int | None = None
+    try:
+        descriptor = os.open(path, flags)
+        os.fsync(descriptor)
+    except OSError:
+        # Some Windows and removable filesystems do not support directory fsync.
+        pass
+    finally:
+        if descriptor is not None:
+            os.close(descriptor)
+
+
 def _fingerprint(path: Path) -> dict[str, object]:
     digest = hashlib.sha256()
     with path.open("rb") as handle:
@@ -149,6 +163,7 @@ class TransferManager:
             if partial.stat().st_size != needed:
                 raise OSError("Transfer verification failed: sizes do not match")
             partial.replace(destination)
+            _flush_directory(destination.parent)
             del states[matching_key]
             self._save(states)
             return destination

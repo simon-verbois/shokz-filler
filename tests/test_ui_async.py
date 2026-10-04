@@ -302,3 +302,37 @@ def test_drag_drop_rows_move_to_visible_folder(
     window.pool.waitForDone(3_000)
     window.close()
     app.processEvents()
+
+
+def test_move_operation_stays_visible_until_completion(tmp_path: Path) -> None:
+    app = QApplication.instance() or QApplication([])
+    root = tmp_path / "device"
+    destination = root / "Music"
+    destination.mkdir(parents=True)
+    song = root / "song.mp3"
+    song.write_bytes(b"song")
+    window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
+    window.device = manual_device(root)
+    window.current_folder = root
+
+    window._move_paths([song], destination)
+    assert "keep the Shokz connected" in window.device_operation_label.text()
+    assert window.device_operation_progress.maximum() == 0
+
+    deadline = time.monotonic() + 3
+    while song.exists() and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.01)
+    while (
+        "complete" not in window.device_operation_label.text().casefold()
+        and time.monotonic() < deadline
+    ):
+        app.processEvents()
+        time.sleep(0.01)
+
+    assert (destination / "song.mp3").is_file()
+    assert "Move complete" in window.device_operation_label.text()
+    assert window.device_operation_progress.value() == 100
+    window.pool.waitForDone(3_000)
+    window.close()
+    app.processEvents()

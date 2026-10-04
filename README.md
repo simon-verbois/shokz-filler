@@ -23,6 +23,10 @@ always broadly compatible MP3: **CBR 192 kbps, 44.1 kHz, stereo, ID3v2.3**.
 5. Watch download, conversion, and transfer progress in the queue. Failed items can be retried and
    active or queued items can be cancelled.
 
+Downloads, conversions, and device transfers use independent bounded worker pools. A conversion
+therefore does not prevent the next track from downloading, while writes to removable storage stay
+strictly sequential.
+
 For songs selected outside a playlist, Shokz Refill always asks for a destination using its in-app
 folder tree. The device root is hidden: choose an existing folder or create a new top-level folder
 in the dialog. Downloading directly to the device root is intentionally disabled.
@@ -39,6 +43,9 @@ confirmation and do not follow symbolic links outside the device. Name
 collisions get a deterministic numbered name and never overwrite an existing file. Interrupted
 transfers remain visibly marked as `.part` and resume only when the cached source fingerprint still
 matches.
+
+The device tab keeps the current or last file operation visible. During a move or local MP3 copy it
+explicitly warns not to disconnect the Shokz, then reports completion or failure.
 
 Names created by Shokz Refill keep readable Unicode letters, numbers, spaces, hyphens and
 underscores. Other punctuation, emoji, control characters and filesystem-reserved characters are
