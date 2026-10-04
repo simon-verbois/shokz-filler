@@ -78,7 +78,9 @@ def test_whole_playlist_creates_automatic_folder(
     root.mkdir()
     window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
     window.device = manual_device(root)
-    window.destination = root
+    search_destination = root / "Search results"
+    search_destination.mkdir()
+    window.destination = search_destination
     queued: list[Path] = []
 
     def enqueue(_tracks: object, destination: Path, _root: Path) -> list[object]:
@@ -215,9 +217,26 @@ def test_download_folder_dialog_blocks_root_and_creates_folder(
 ) -> None:
     app = QApplication.instance() or QApplication([])
     root = tmp_path / "device"
-    root.mkdir()
+    (root / "Existing").mkdir(parents=True)
     dialog = DeviceFolderDialog(manual_device(root), [], allow_root=False, allow_create=True)
+    deadline = time.monotonic() + 3
+    while (
+        dialog.tree.topLevelItemCount() == 0 or dialog.tree.topLevelItem(0).text(0) == "Loading…"
+    ) and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.01)
+
+    assert [
+        dialog.tree.topLevelItem(index).text(0) for index in range(dialog.tree.topLevelItemCount())
+    ] == ["Existing"]
+    assert all(
+        dialog.tree.topLevelItem(index).text(0) != dialog.device.name
+        for index in range(dialog.tree.topLevelItemCount())
+    )
     assert not dialog.ok_button.isEnabled()
+    dialog.tree.setCurrentItem(dialog.tree.topLevelItem(0))
+    assert dialog.ok_button.isEnabled()
+    dialog.tree.setCurrentItem(None)
     monkeypatch.setattr(
         QInputDialog,
         "getText",
@@ -233,6 +252,29 @@ def test_download_folder_dialog_blocks_root_and_creates_folder(
     assert dialog.destination == root / "My New Folder"
     assert dialog.destination.is_dir()
     dialog.close()
+
+
+def test_result_headers_sort_and_keep_track_mapping(tmp_path: Path) -> None:
+    app = QApplication.instance() or QApplication([])
+    window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
+    slow = Track("slow-id", "Zulu", ("Beta",), duration_seconds=600)
+    fast = Track("fast-id", "Alpha", ("Gamma",), duration_seconds=90)
+    window._show_results([slow, fast])
+
+    assert window.results.item(0, 0).text() == "Zulu"
+    window._sort_results(0)
+    assert window.results.item(0, 0).text() == "Alpha"
+    window.results.selectRow(0)
+    assert window._selected_result_objects() == [fast]
+
+    window._sort_results(2)
+    assert window.results.item(0, 0).text() == "Alpha"
+    window._sort_results(2)
+    assert window.results.item(0, 0).text() == "Zulu"
+
+    window.pool.waitForDone(3_000)
+    window.close()
+    app.processEvents()
 
 
 def test_drag_drop_rows_move_to_visible_folder(

@@ -13,24 +13,28 @@ always broadly compatible MP3: **CBR 192 kbps, 44.1 kHz, stereo, ID3v2.3**.
 
 1. Connect or manually select the mounted Shokz volume. Automatically detected media is clearly
    labelled; manual selection is available for devices whose USB metadata cannot be recognized.
-2. Browse to a folder and choose **Select destination folder**.
+2. Browse the device files as needed. Standalone search downloads ask for their own destination.
 3. Search YouTube Music, or connect an account and select **My playlists**. Open a playlist,
    use the **<** and **>** buttons to navigate, then select tracks and choose
    **Download / transfer selected**.
 4. To transfer an entire playlist, choose **Download whole playlist** (or use the playlist's
    right-click menu). Shokz Refill creates or reuses a folder that keeps the playlist's original
-   capitalization and spaces, such as `My Running Mix`, below the selected destination.
+   capitalization and spaces, such as `My Running Mix`, directly at the device root.
 5. Watch download, conversion, and transfer progress in the queue. Failed items can be retried and
    active or queued items can be cancelled.
 
 For songs selected outside a playlist, Shokz Refill always asks for a destination using its in-app
-folder tree. Choose an existing folder or create a new one in the dialog; downloading directly to
-the device root is intentionally disabled.
+folder tree. The device root is hidden: choose an existing folder or create a new top-level folder
+in the dialog. Downloading directly to the device root is intentionally disabled.
+
+Click a YouTube Music result-column header to sort ascending; click it again for descending order.
+Before the first click, search relevance order is preserved.
 
 The device browser can create, rename, move, and recursively delete folders; rename, move, or delete MP3s;
 and add local MP3 files. `System Volume Information` is hidden. Moves support multi-selection:
 drag selected items onto a visible folder, or use **Move selected…** to choose a destination from
-the in-app folder tree. Moves remain inside the selected device. Recursive deletes require explicit
+the in-app folder tree. Folders remain flat at the device root and cannot be nested; MP3 files can
+be moved into a folder. Moves remain inside the selected device. Recursive deletes require explicit
 confirmation and do not follow symbolic links outside the device. Name
 collisions get a deterministic numbered name and never overwrite an existing file. Interrupted
 transfers remain visibly marked as `.part` and resume only when the cached source fingerprint still
@@ -113,7 +117,7 @@ binary distributor's accompanying documentation. Shokz Refill's own source is MI
 
 - Automatic detection intentionally ignores unrecognized removable drives; use manual selection for
   Shokz volumes with unusual labels or USB metadata.
-- Empty folders only can be deleted, reducing the risk of accidental recursive loss.
+- Recursive folder deletion requires an explicit confirmation.
 - YouTube and YouTube Music can change access behavior; authentication may need to be reconnected,
   and some content is unavailable to yt-dlp.
 - A portable build is native to its operating system and CPU architecture.

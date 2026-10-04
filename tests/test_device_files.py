@@ -85,6 +85,22 @@ def test_move_blocks_folder_into_itself_and_outside_device(tmp_path: Path) -> No
         service.move([root / "folder"], outside)
 
 
+def test_folder_hierarchy_is_kept_flat(tmp_path: Path) -> None:
+    root = tmp_path / "device"
+    first = root / "first"
+    second = root / "second"
+    first.mkdir(parents=True)
+    second.mkdir()
+    service = DeviceFileService(root)
+
+    with pytest.raises(ValueError, match="only be created at the device root"):
+        service.create_folder(first, "nested")
+    with pytest.raises(ValueError, match="only be created at the device root"):
+        service.ensure_folder(first, "nested")
+    with pytest.raises(ValueError, match="cannot be placed inside another folder"):
+        service.move([first], second)
+
+
 def test_delete_nonempty_folder_without_following_symlink(tmp_path: Path) -> None:
     root = tmp_path / "device"
     folder = root / "playlist" / "nested"

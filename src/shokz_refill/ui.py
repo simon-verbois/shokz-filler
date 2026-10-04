@@ -48,6 +48,7 @@ from .transfer import TransferManager
 from .youtube import YouTubeMusicService
 
 LOG = logging.getLogger(__name__)
+_SORT_ROLE = int(Qt.ItemDataRole.UserRole) + 1
 
 
 @dataclass(slots=True)
@@ -75,6 +76,21 @@ class Worker(QRunnable):
         except Exception as exc:
             LOG.exception("Background operation failed")
             self.signals.error.emit(str(exc))
+
+
+class SortableTableItem(QTableWidgetItem):
+    def __init__(self, text: str, sort_value: str | int) -> None:
+        super().__init__(text)
+        self.setData(_SORT_ROLE, sort_value)
+
+    def __lt__(self, other: QTableWidgetItem) -> bool:
+        own_value = self.data(_SORT_ROLE)
+        other_value = other.data(_SORT_ROLE)
+        if isinstance(own_value, int) and isinstance(other_value, int):
+            return own_value < other_value
+        if isinstance(own_value, str) and isinstance(other_value, str):
+            return own_value.casefold() < other_value.casefold()
+        return super().__lt__(other)
 
 
 class DeviceFileTable(QTableWidget):
@@ -124,6 +140,7 @@ class DeviceFolderDialog(QDialog):
         self.destination: Path | None = None
         self._workers: set[Worker] = set()
         self._blocked_roots = [path.resolve() for path in sources if path.is_dir()]
+        self._moving_folders = bool(self._blocked_roots)
         self.setWindowTitle(title)
         self.resize(480, 520)
         layout = QVBoxLayout(self)
@@ -154,16 +171,31 @@ class DeviceFolderDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
-        root = QTreeWidgetItem([device.name])
-        root.setData(0, Qt.ItemDataRole.UserRole, str(device.root))
-        root.addChild(QTreeWidgetItem(["Loading…"]))
-        self.tree.addTopLevelItem(root)
-        self.tree.setCurrentItem(root)
-        root.setExpanded(True)
-        self._selection_changed(root, None)
+        if allow_root:
+            root = QTreeWidgetItem([device.name])
+            root.setData(0, Qt.ItemDataRole.UserRole, str(device.root))
+            root.addChild(QTreeWidgetItem(["Loading…"]))
+            self.tree.addTopLevelItem(root)
+            self.tree.setCurrentItem(root)
+            root.setExpanded(True)
+            self._selection_changed(root, None)
+        else:
+            # The invisible tree root represents the device root. Its children are
+            # shown directly, so the forbidden device root cannot be selected.
+            root = self.tree.invisibleRootItem()
+            root.setData(0, Qt.ItemDataRole.UserRole, str(device.root))
+            self._load_children(root)
+            self._selection_changed(None, None)
 
     def _is_blocked(self, path: Path) -> bool:
         return any(is_within(source, path) for source in self._blocked_roots)
+
+    def _is_valid_destination(self, path: Path) -> bool:
+        return (
+            not self._is_blocked(path)
+            and (self.allow_root or path != self.device.root)
+            and (not self._moving_folders or path == self.device.root)
+        )
 
     def _load_children(self, item: QTreeWidgetItem) -> None:
         if item.data(0, self._LOADED_ROLE):
@@ -195,7 +227,10 @@ class DeviceFolderDialog(QDialog):
                     continue
                 child = QTreeWidgetItem([folder.name])
                 child.setData(0, Qt.ItemDataRole.UserRole, str(folder))
-                if self._is_blocked(folder):
+                if self._moving_folders:
+                    child.setDisabled(True)
+                    child.setToolTip(0, "Folders can only be placed at the device root")
+                elif self._is_blocked(folder):
                     child.setDisabled(True)
                     child.setToolTip(0, "A folder cannot be moved inside itself")
                 else:
@@ -218,7 +253,7 @@ class DeviceFolderDialog(QDialog):
         raw_path = item.data(0, Qt.ItemDataRole.UserRole) if item is not None else None
         if isinstance(raw_path, str):
             path = Path(raw_path)
-            if not self._is_blocked(path) and (self.allow_root or path != self.device.root):
+            if self._is_valid_destination(path):
                 self.destination = path
                 self.accept()
 
@@ -230,18 +265,15 @@ class DeviceFolderDialog(QDialog):
             self.ok_button.setEnabled(False)
             return
         path = Path(raw_path)
-        valid = not self._is_blocked(path) and (self.allow_root or path != self.device.root)
-        self.ok_button.setEnabled(valid)
+        self.ok_button.setEnabled(self._is_valid_destination(path))
 
     def _create_folder(self) -> None:
-        item = self.tree.currentItem()
-        raw_path = item.data(0, Qt.ItemDataRole.UserRole) if item is not None else None
-        if not isinstance(raw_path, str):
-            return
+        # Shokz Refill deliberately keeps a flat folder layout. New folders are
+        # always top-level, even when an existing folder happens to be selected.
+        parent = self.device.root
         name, accepted = QInputDialog.getText(self, "New folder", "Folder name:")
         if not accepted or not name:
             return
-        parent = Path(raw_path)
         self.new_folder_button.setEnabled(False)
         self.ok_button.setEnabled(False)
         self.feedback.setText("Creating folder…")
@@ -306,6 +338,8 @@ class MainWindow(QMainWindow):
         self.folder_history_index = -1
         self.destination: Path | None = None
         self.result_objects: list[Track | Playlist] = []
+        self.results_sort_column: int | None = None
+        self.results_sort_order = Qt.SortOrder.AscendingOrder
         self.browser_page = BrowserPage("YouTube Music", [])
         self.browser_history: list[BrowserPage] = []
         self.browser_history_index = -1
@@ -446,6 +480,8 @@ class MainWindow(QMainWindow):
         results_header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         results_header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
         results_header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        results_header.setSortIndicatorShown(False)
+        results_header.sectionClicked.connect(self._sort_results)
         self.results.setColumnWidth(1, 280)
         self.results.cellDoubleClicked.connect(self._result_double_clicked)
         layout.addWidget(self.results)
@@ -641,6 +677,7 @@ class MainWindow(QMainWindow):
 
     def _show_results(self, objects: object) -> None:
         self.result_objects = list(objects) if isinstance(objects, list) else []
+        self.results.setSortingEnabled(False)
         if not self.result_objects:
             self.results.setRowCount(1)
             self.results.setItem(0, 0, QTableWidgetItem("No results found"))
@@ -649,23 +686,56 @@ class MainWindow(QMainWindow):
         self.results.setRowCount(len(self.result_objects))
         for row, item in enumerate(self.result_objects):
             if isinstance(item, Track):
+                duration_seconds = (
+                    item.duration_seconds if item.duration_seconds is not None else -1
+                )
                 duration = (
                     ""
                     if item.duration_seconds is None
                     else f"{item.duration_seconds // 60}:{item.duration_seconds % 60:02d}"
                 )
-                values = (item.title, item.artist, duration)
+                values: tuple[tuple[str, str | int], ...] = (
+                    (item.title, item.title),
+                    (item.artist, item.artist),
+                    (duration, duration_seconds),
+                )
             else:
-                values = (item.title, f"{item.count} tracks" if item.count else "Playlist", "")
-            for column, value in enumerate(values):
-                self.results.setItem(row, column, QTableWidgetItem(value))
+                values = (
+                    (item.title, item.title),
+                    (f"{item.count} tracks" if item.count else "Playlist", item.count or 0),
+                    ("", -1),
+                )
+            for column, (text, sort_value) in enumerate(values):
+                table_item = SortableTableItem(text, sort_value)
+                if column == 0:
+                    table_item.setData(Qt.ItemDataRole.UserRole, item)
+                self.results.setItem(row, column, table_item)
+        if self.results_sort_column is not None:
+            self.results.sortItems(self.results_sort_column, self.results_sort_order)
+
+    def _sort_results(self, column: int) -> None:
+        if self.results_sort_column == column:
+            self.results_sort_order = (
+                Qt.SortOrder.DescendingOrder
+                if self.results_sort_order == Qt.SortOrder.AscendingOrder
+                else Qt.SortOrder.AscendingOrder
+            )
+        else:
+            self.results_sort_column = column
+            self.results_sort_order = Qt.SortOrder.AscendingOrder
+        header = self.results.horizontalHeader()
+        header.setSortIndicatorShown(True)
+        header.setSortIndicator(column, self.results_sort_order)
+        self.results.sortItems(column, self.results_sort_order)
 
     def _selected_result_objects(self) -> list[Track | Playlist]:
-        return [
-            self.result_objects[index.row()]
-            for index in self.results.selectionModel().selectedRows()
-            if index.row() < len(self.result_objects)
-        ]
+        selected: list[Track | Playlist] = []
+        for index in self.results.selectionModel().selectedRows():
+            table_item = self.results.item(index.row(), 0)
+            value = table_item.data(Qt.ItemDataRole.UserRole) if table_item else None
+            if isinstance(value, (Track, Playlist)):
+                selected.append(value)
+        return selected
 
     def _open_selected_playlist(self) -> None:
         selected = self._selected_result_objects()
@@ -681,9 +751,10 @@ class MainWindow(QMainWindow):
         )
 
     def _result_double_clicked(self, row: int, _column: int) -> None:
-        if not 0 <= row < len(self.result_objects):
+        table_item = self.results.item(row, 0)
+        item = table_item.data(Qt.ItemDataRole.UserRole) if table_item else None
+        if not isinstance(item, (Track, Playlist)):
             return
-        item = self.result_objects[row]
         if isinstance(item, Playlist):
             self._open_playlist(item)
         elif self.browser_page.playlist is not None:
@@ -747,14 +818,14 @@ class MainWindow(QMainWindow):
         if not tracks:
             self._show_error("This playlist has no downloadable tracks")
             return
-        if not self.device or not self.destination or not self.device.root.exists():
-            self._show_error("No connected Shokz destination is selected")
+        if not self.device or not self.device.root.exists():
+            self._show_error("No connected Shokz device is selected")
             return
-        device, base = self.device, self.destination
+        device = self.device
         folder_name = playlist_folder_name(playlist.title)
 
         def prepare() -> Path:
-            return DeviceFileService(device.root).ensure_folder(base, folder_name)
+            return DeviceFileService(device.root).ensure_folder(device.root, folder_name)
 
         def enqueue(value: object) -> None:
             if isinstance(value, Path):

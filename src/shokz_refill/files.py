@@ -40,12 +40,17 @@ class DeviceFileService:
         )
 
     def create_folder(self, parent: Path, name: str) -> Path:
-        target = self.checked(parent) / sanitize_component(name)
+        folder = self.checked(parent)
+        if folder != self.root:
+            raise ValueError("Folders can only be created at the device root")
+        target = folder / sanitize_component(name)
         self.checked(target, missing=True).mkdir()
         return target
 
     def ensure_folder(self, parent: Path, name: str) -> Path:
         folder = self.checked(parent)
+        if folder != self.root:
+            raise ValueError("Folders can only be created at the device root")
         target = folder / sanitize_component(name)
         if target.is_symlink():
             raise ValueError(f"{target.name} is a symbolic link, not a safe folder")
@@ -87,6 +92,8 @@ class DeviceFileService:
                 raise ValueError("The device root cannot be moved")
             if source.is_dir() and is_within(source, folder):
                 raise ValueError(f"{source.name} cannot be moved inside itself")
+            if source.is_dir() and folder != self.root:
+                raise ValueError("A folder cannot be placed inside another folder")
 
         moved: list[Path] = []
         for source in sources:
