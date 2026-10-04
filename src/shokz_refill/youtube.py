@@ -139,5 +139,12 @@ class YouTubeMusicService:
         ]
 
     def playlist_tracks(self, playlist_id: str) -> list[Track]:
-        data = self._public().get_playlist(playlist_id, limit=None)
+        client = self._authenticated() if self.authenticated else self._public()
+        try:
+            data = client.get_playlist(playlist_id, limit=None)
+        except Exception:
+            message = "Could not load this playlist from YouTube Music"
+            if self.authenticated:
+                message += ". Your connection may have expired; disconnect and reconnect it"
+            raise RuntimeError(message) from None
         return [track for item in data.get("tracks") or [] if (track := map_track(item))]

@@ -110,6 +110,8 @@ class MainWindow(QMainWindow):
         self._workers: set[Worker] = set()
         self.device: Device | None = None
         self.current_folder: Path | None = None
+        self.folder_history: list[Path] = []
+        self.folder_history_index = -1
         self.destination: Path | None = None
         self.result_objects: list[Track | Playlist] = []
         self.browser_page = BrowserPage("YouTube Music", [])
@@ -133,6 +135,7 @@ class MainWindow(QMainWindow):
             try:
                 self.device = manual_device(Path(self.config.manual_device))
                 self.current_folder = self.device.root
+                self._reset_folder_history(self.device.root)
                 saved = self.device.root / self.config.destination_relative
                 self.destination = (
                     saved.resolve()
@@ -141,6 +144,9 @@ class MainWindow(QMainWindow):
                 )
             except (OSError, ValueError):
                 self.device = None
+        if self.device is not None:
+            self._refresh_files()
+            self._render_device()
         self._poll_devices()
         self.device_timer = QTimer(self)
         self.device_timer.timeout.connect(self._poll_devices)
@@ -172,6 +178,7 @@ class MainWindow(QMainWindow):
         queue_layout.addLayout(queue_header)
         self.queue_table = QTableWidget(0, 4)
         self.queue_table.setHorizontalHeaderLabels(["Track", "Status", "Progress", "Details"])
+        self.queue_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.queue_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.queue_table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.queue_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -235,12 +242,13 @@ class MainWindow(QMainWindow):
         layout.addLayout(navigation)
         self.results = QTableWidget(0, 3)
         self.results.setHorizontalHeaderLabels(["Title", "Artist / count", "Duration"])
+        self.results.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.results.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.results.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.results.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.results.customContextMenuRequested.connect(self._results_context_menu)
         self.results.horizontalHeader().setStretchLastSection(True)
-        self.results.doubleClicked.connect(self._open_selected_playlist)
+        self.results.cellDoubleClicked.connect(self._result_double_clicked)
         select_all.clicked.connect(self.results.selectAll)
         layout.addWidget(self.results)
         row = QHBoxLayout()
@@ -268,14 +276,22 @@ class MainWindow(QMainWindow):
         top.addWidget(self.storage_label)
         layout.addLayout(top)
         location = QHBoxLayout()
-        up = QPushButton("Up")
-        up.clicked.connect(self._go_up)
+        self.folder_back = QPushButton("<")
+        self.folder_back.setToolTip("Go back to the previously visited folder")
+        self.folder_back.setEnabled(False)
+        self.folder_back.clicked.connect(self._folder_go_back)
+        self.folder_forward = QPushButton(">")
+        self.folder_forward.setToolTip("Go forward to the next visited folder")
+        self.folder_forward.setEnabled(False)
+        self.folder_forward.clicked.connect(self._folder_go_forward)
         self.path_label = QLabel("—")
-        location.addWidget(up)
+        location.addWidget(self.folder_back)
+        location.addWidget(self.folder_forward)
         location.addWidget(self.path_label, 1)
         layout.addLayout(location)
         self.files = QTableWidget(0, 3)
         self.files.setHorizontalHeaderLabels(["Name", "Type", "Size"])
+        self.files.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.files.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.files.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.files.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
@@ -429,17 +445,37 @@ class MainWindow(QMainWindow):
         selected = self._selected_result_objects()
         playlist = next((item for item in selected if isinstance(item, Playlist)), None)
         if playlist:
-            self._run(
-                lambda: self.youtube.playlist_tracks(playlist.playlist_id),
-                lambda objects: self._enter_playlist(playlist, objects),
-                "Loading playlist…",
-            )
+            self._open_playlist(playlist)
+
+    def _open_playlist(self, playlist: Playlist) -> None:
+        self._run(
+            lambda: self.youtube.playlist_tracks(playlist.playlist_id),
+            lambda objects: self._enter_playlist(playlist, objects),
+            "Loading playlist…",
+        )
+
+    def _result_double_clicked(self, row: int, _column: int) -> None:
+        if not 0 <= row < len(self.result_objects):
+            return
+        item = self.result_objects[row]
+        if isinstance(item, Playlist):
+            self._open_playlist(item)
+        elif self.browser_page.playlist is not None:
+            self._prepare_playlist_download(self.browser_page.playlist, [item])
+        else:
+            self._download_tracks([item])
 
     def _download_selected(self) -> None:
         tracks = [item for item in self._selected_result_objects() if isinstance(item, Track)]
         if not tracks:
             self._show_error("Select one or more songs first")
             return
+        if self.browser_page.playlist is not None:
+            self._prepare_playlist_download(self.browser_page.playlist, tracks)
+            return
+        self._download_tracks(tracks)
+
+    def _download_tracks(self, tracks: list[Track]) -> None:
         if not self.device or not self.destination or not self.device.root.exists():
             self._show_error("No connected Shokz destination is selected")
             return
@@ -565,6 +601,8 @@ class MainWindow(QMainWindow):
         if current_root and selected_index == 0:
             self.device = None
             self.current_folder = None
+            self.folder_history = []
+            self.folder_history_index = -1
             self.destination = None
             self._render_device()
             self.statusBar().showMessage("Shokz device disconnected")
@@ -576,6 +614,7 @@ class MainWindow(QMainWindow):
         self.device = value if isinstance(value, Device) else None
         if self.device:
             self.current_folder = self.device.root
+            self._reset_folder_history(self.device.root)
             self.destination = self.device.root
             if not self.device.automatic:
                 self.config.manual_device = str(self.device.root)
@@ -588,6 +627,11 @@ class MainWindow(QMainWindow):
                     self._resumed_transfers,
                     "Checking interrupted transfers…",
                 )
+        else:
+            self.current_folder = None
+            self.folder_history = []
+            self.folder_history_index = -1
+            self.destination = None
         self._render_device()
 
     def _resumed_transfers(self, result: object) -> None:
@@ -611,13 +655,18 @@ class MainWindow(QMainWindow):
             return
         self.device = device
         self.current_folder = device.root
+        self._reset_folder_history(device.root)
         self.destination = device.root
         self.config.manual_device = str(device.root)
         self._update_devices([device])
         self.device_combo.setCurrentIndex(1)
+        self._refresh_files()
+        self._render_device()
 
     def _render_device(self) -> None:
         if not self.device:
+            self.folder_back.setEnabled(False)
+            self.folder_forward.setEnabled(False)
             self.storage_label.setText("No Shokz connected")
             self.path_label.setText("—")
             self.destination_label.setText("Destination: select a Shokz folder")
@@ -632,6 +681,10 @@ class MainWindow(QMainWindow):
         except OSError:
             self.storage_label.setText("Device disconnected")
         self.path_label.setText(str(self.current_folder or self.device.root))
+        self.folder_back.setEnabled(self.folder_history_index > 0)
+        self.folder_forward.setEnabled(
+            0 <= self.folder_history_index < len(self.folder_history) - 1
+        )
         self.destination_label.setText(f"Destination: {self.destination or self.device.root}")
 
     def _refresh_files(self) -> None:
@@ -703,12 +756,35 @@ class MainWindow(QMainWindow):
     def _open_folder(self) -> None:
         selected = self._selected_paths()
         if selected and selected[0].is_dir():
-            self.current_folder = selected[0]
+            self._navigate_folder(selected[0])
+
+    def _reset_folder_history(self, folder: Path) -> None:
+        self.folder_history = [folder]
+        self.folder_history_index = 0
+
+    def _navigate_folder(self, folder: Path) -> None:
+        if not self.device or not folder.is_dir() or not is_within(self.device.root, folder):
+            self._show_error("Invalid destination path")
+            return
+        self.folder_history = self.folder_history[: self.folder_history_index + 1]
+        self.folder_history.append(folder)
+        self.folder_history_index += 1
+        self.current_folder = folder
+        self._render_device()
+        self._refresh_files()
+
+    def _folder_go_back(self) -> None:
+        if self.folder_history_index > 0:
+            self.folder_history_index -= 1
+            self.current_folder = self.folder_history[self.folder_history_index]
+            self._render_device()
             self._refresh_files()
 
-    def _go_up(self) -> None:
-        if self.device and self.current_folder and self.current_folder != self.device.root:
-            self.current_folder = self.current_folder.parent
+    def _folder_go_forward(self) -> None:
+        if self.folder_history_index < len(self.folder_history) - 1:
+            self.folder_history_index += 1
+            self.current_folder = self.folder_history[self.folder_history_index]
+            self._render_device()
             self._refresh_files()
 
     def _new_folder(self) -> None:

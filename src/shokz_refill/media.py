@@ -15,6 +15,7 @@ from .models import Track
 
 Progress = Callable[[int], None]
 Cancelled = Callable[[], bool]
+_SAFE_DOWNLOAD_HEADERS = {"accept-language", "user-agent"}
 
 
 def bundled_binary(name: str) -> Path:
@@ -45,6 +46,53 @@ def shutil_which(name: str) -> str | None:
 
 class DownloadCancelled(Exception):
     pass
+
+
+def _download_auth_options(
+    auth_path: Path, work_dir: Path
+) -> tuple[dict[str, object], Path | None]:
+    try:
+        raw = json.loads(auth_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return {}, None
+    if not isinstance(raw, dict):
+        return {}, None
+
+    headers: dict[str, str] = {}
+    cookie_header = ""
+    for key, value in raw.items():
+        name = str(key)
+        if name.casefold() == "cookie":
+            cookie_header = str(value)
+        elif name.casefold() in _SAFE_DOWNLOAD_HEADERS:
+            headers[name] = str(value)
+
+    options: dict[str, object] = {}
+    if headers:
+        options["http_headers"] = headers
+    if not cookie_header:
+        return options, None
+
+    cookies: dict[str, str] = {}
+    for part in cookie_header.split(";"):
+        name, separator, value = part.strip().partition("=")
+        if separator and name and not any(character in name + value for character in "\r\n\t"):
+            cookies[name] = value
+    if not cookies:
+        return options, None
+
+    work_dir.mkdir(parents=True, exist_ok=True)
+    cookie_path = work_dir / "youtube-cookies.txt"
+    temporary = cookie_path.with_suffix(".tmp")
+    lines = ["# Netscape HTTP Cookie File", "# Created locally by Shokz Refill"]
+    lines.extend(
+        f".youtube.com\tTRUE\t/\tTRUE\t0\t{name}\t{value}" for name, value in cookies.items()
+    )
+    temporary.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    os.chmod(temporary, 0o600)
+    temporary.replace(cookie_path)
+    options["cookiefile"] = str(cookie_path)
+    return options, cookie_path
 
 
 class MediaDownloader:
@@ -79,15 +127,10 @@ class MediaDownloader:
             "ffmpeg_location": str(bundled_binary("ffmpeg").parent),
             "js_runtimes": {"deno": {"path": str(bundled_binary("deno"))}},
         }
+        cookie_path: Path | None = None
         if self.auth_path and self.auth_path.is_file():
-            try:
-                headers = json.loads(self.auth_path.read_text(encoding="utf-8"))
-                if isinstance(headers, dict):
-                    options["http_headers"] = {
-                        str(key): str(value) for key, value in headers.items()
-                    }
-            except (OSError, ValueError, TypeError):
-                pass
+            auth_options, cookie_path = _download_auth_options(self.auth_path, work_dir)
+            options.update(auth_options)
         try:
             with yt_dlp.YoutubeDL(options) as downloader:
                 info = downloader.extract_info(track.url, download=True)
@@ -98,6 +141,9 @@ class MediaDownloader:
             if cancelled():
                 raise DownloadCancelled("Download cancelled") from None
             raise RuntimeError(f"Download failed: {exc}") from None
+        finally:
+            if cookie_path is not None:
+                cookie_path.unlink(missing_ok=True)
         progress(100)
         if prepared.exists():
             return prepared

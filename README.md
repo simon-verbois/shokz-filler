@@ -31,6 +31,10 @@ resume only when the cached source fingerprint still matches.
 Right-click menus expose the relevant actions for YouTube results, Shokz files/folders, and queue
 items without duplicating unrelated file-manager features.
 
+Tables are read-only. Double-clicking a playlist opens it; double-clicking a song downloads it.
+Songs opened from a playlist use that playlist's automatic destination folder. In the Shokz file
+browser, **<** and **>** move backward and forward through visited folders.
+
 ## YouTube Music authentication
 
 Public search does not require a login. To show your library playlists, click **Connect YouTube
@@ -40,8 +44,10 @@ into the dialog. This is the current browser-header flow supported by ytmusicapi
 Shokz Refill server.
 
 The resulting browser session data remains in your per-user configuration directory with owner-only
-permissions (`~/.config/shokz-refill` on Linux or `%APPDATA%\shokz-refill` on Windows). It is never
-logged. **Disconnect** removes it locally. Logging out of YouTube can invalidate it.
+permissions (`~/.config/shokz-refill` on Linux or `%APPDATA%\shokz-refill` on Windows). For
+downloads, cookies are scoped to YouTube through a short-lived cookie file instead of being sent as
+a global HTTP header. Credentials are never logged. **Disconnect** removes the stored session
+locally. Logging out of YouTube can invalidate it.
 
 Shokz Refill does not bypass DRM. Downloads work only where yt-dlp can legitimately access the
 source. You are responsible for having the rights or authorization to download and transfer media.

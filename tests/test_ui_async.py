@@ -74,3 +74,58 @@ def test_whole_playlist_creates_automatic_folder(
     window.close()
     assert queued == [root / "ma_playlist_été_2026"]
     assert queued[0].is_dir()
+
+
+def test_double_click_track_in_playlist_uses_playlist_folder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app = QApplication.instance() or QApplication([])
+    root = tmp_path / "device"
+    root.mkdir()
+    window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
+    window.device = manual_device(root)
+    window.destination = root
+    playlist = Playlist("playlist-id", "Road Trip")
+    track = Track("video-id", "Song", ("Artist",))
+    window._set_browser_page(window.browser_page.__class__(playlist.title, [track], playlist))
+    queued: list[Path] = []
+
+    def enqueue(_tracks: object, destination: Path, _root: Path) -> list[object]:
+        queued.append(destination)
+        return []
+
+    monkeypatch.setattr(window.queue, "enqueue", enqueue)
+    window._result_double_clicked(0, 0)
+    deadline = time.monotonic() + 3
+    while not queued and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.01)
+    window.pool.waitForDone(3_000)
+    window.close()
+    assert queued == [root / "road_trip"]
+
+
+def test_device_folder_back_and_forward_history(tmp_path: Path) -> None:
+    app = QApplication.instance() or QApplication([])
+    root = tmp_path / "device"
+    first = root / "first"
+    second = first / "second"
+    second.mkdir(parents=True)
+    window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
+    window.device = manual_device(root)
+    window.current_folder = root
+    window._reset_folder_history(root)
+
+    window._navigate_folder(first)
+    window._navigate_folder(second)
+    window._folder_go_back()
+    assert window.current_folder == first
+    assert window.folder_forward.isEnabled()
+    window._folder_go_back()
+    assert window.current_folder == root
+    window._folder_go_forward()
+    assert window.current_folder == first
+
+    window.pool.waitForDone(3_000)
+    window.close()
+    app.processEvents()

@@ -38,3 +38,13 @@ def test_mapping_and_mocked_service(tmp_path: Path) -> None:
     assert service.playlist_tracks("PL1")[0].video_id == "v2"
     assert map_track({"title": "missing"}) is None
     assert map_playlist({"browseId": "VLPL3", "title": "Browse"}).playlist_id == "PL3"  # type: ignore[union-attr]
+
+
+def test_connected_service_uses_authentication_for_private_playlist(tmp_path: Path) -> None:
+    auth_path = tmp_path / "auth.json"
+    auth_path.write_text("{}", encoding="utf-8")
+    service = YouTubeMusicService(auth_path)
+    authenticated = FakeClient()
+    service._auth_client = authenticated
+
+    assert service.playlist_tracks("private-playlist")[0].video_id == "v2"
