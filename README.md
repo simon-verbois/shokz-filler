@@ -119,14 +119,47 @@ The resulting `dist\Shokz-Refill-windows-x86_64.exe` includes Python, PySide6, y
 scripts, Deno, dependencies, ffmpeg and ffprobe. Its SHA-256 checksum is written beside it.
 Windows must be built natively; the Linux build cannot cross-compile it.
 
+## macOS
+
+On a native Intel or Apple Silicon macOS build machine with Homebrew and Python 3.12 installed:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -e '.[dev]'
+scripts/build_macos.sh
+```
+
+The architecture-specific one-file binary and checksum are written under `dist`.
+
+## Forgejo CI and releases
+
+The Forgejo workflow keeps the existing triggers: pull requests run the quality gate, and tags
+matching `YYYY.*.*` run tests followed by native Linux, Windows, and macOS builds. The three builds
+are collected only after all required jobs succeed, then the cleaned source mirror, tag, and release
+assets are pushed to <https://github.com/simon-verbois/shokz-filler>.
+
+The Forgejo installation must provide runners labelled `ubuntu-latest`, `windows-latest`, and
+`macos-latest`. Configure `GITHUBPAT_TOKEN` preferably as an Actions secret (an existing Actions
+variable with the same name is also supported) with write access to the public GitHub repository.
+From a clean `main` branch, create a release with:
+
+```bash
+scripts/release.sh
+```
+
+The script generates the ISO year/week release number, commits `VERSION`, tags it, and pushes the
+branch and tag atomically to Forgejo. The tag starts the release workflow. Forgejo uses v3 artifact
+actions for compatibility and publishes the GitHub release through GitHub CLI.
+
 ## ffmpeg distribution
 
 Build scripts bundle an ffmpeg build that includes `libmp3lame`, so end users do not need a system
 installation. The Linux fetch script uses the GPLv3 static builds published by John Van Sickle; the
-Windows script uses Gyan's GPL essentials build. ffmpeg is a separate bundled executable and is
-redistributed under its applicable GPL terms. Distributors should retain the build's license/source
-notices and provide the corresponding source offer/link; see <https://ffmpeg.org/legal.html> and the
-binary distributor's accompanying documentation. Shokz Refill's own source is MIT licensed.
+Windows script uses Gyan's GPL essentials build; and the macOS script packages the native Homebrew
+ffmpeg build. ffmpeg is a separate bundled executable and is redistributed under its applicable GPL
+terms. Distributors should retain the build's license/source notices and provide the corresponding
+source offer/link; see <https://ffmpeg.org/legal.html> and the binary distributor's accompanying
+documentation. Shokz Refill's own source is MIT licensed.
 
 ## Known limitations
 
@@ -139,6 +172,7 @@ binary distributor's accompanying documentation. Shokz Refill's own source is MI
 - The one-file build extracts its bundled libraries to the operating system's temporary directory
   while running, so startup is slower and Linux systems with a `noexec` temporary directory need to
   point `TMPDIR` to an executable filesystem.
+- macOS release binaries are not Apple-notarized; Gatekeeper may require explicit user approval.
 
 ## Screenshot
 

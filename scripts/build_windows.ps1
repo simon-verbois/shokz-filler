@@ -3,7 +3,11 @@ $ProjectDir = Split-Path -Parent $PSScriptRoot
 Set-Location $ProjectDir
 
 if (-not (Test-Path ".venv\Scripts\python.exe")) {
-    py -3.12 -m venv .venv
+    if (Get-Command py -ErrorAction SilentlyContinue) {
+        py -3.12 -m venv .venv
+    } else {
+        python -m venv .venv
+    }
 }
 & .venv\Scripts\python.exe -m pip install --upgrade pip
 & .venv\Scripts\python.exe -m pip install ".[dev]"
