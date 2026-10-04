@@ -39,3 +39,47 @@ def test_file_operations_and_collision(tmp_path: Path) -> None:
     service.delete(second)
     service.delete(folder)
     assert manual_device(root).automatic is False
+
+
+def test_list_hides_system_volume_information(tmp_path: Path) -> None:
+    root = tmp_path / "device"
+    root.mkdir()
+    (root / "System Volume Information").mkdir()
+    (root / "Music").mkdir()
+
+    assert [path.name for path in DeviceFileService(root).list_dir(root)] == ["Music"]
+
+
+def test_move_selected_items_safely(tmp_path: Path) -> None:
+    root = tmp_path / "device"
+    source_folder = root / "source"
+    destination = root / "destination"
+    source_folder.mkdir(parents=True)
+    destination.mkdir()
+    first = source_folder / "song.mp3"
+    second = source_folder / "other.mp3"
+    first.write_bytes(b"first")
+    second.write_bytes(b"second")
+    (destination / "song.mp3").write_bytes(b"existing")
+    service = DeviceFileService(root)
+
+    moved = service.move([first, second], destination)
+
+    assert [path.name for path in moved] == ["song (2).mp3", "other.mp3"]
+    assert (destination / "song.mp3").read_bytes() == b"existing"
+    assert (destination / "song (2).mp3").read_bytes() == b"first"
+    assert not first.exists() and not second.exists()
+
+
+def test_move_blocks_folder_into_itself_and_outside_device(tmp_path: Path) -> None:
+    root = tmp_path / "device"
+    child = root / "folder" / "child"
+    outside = tmp_path / "outside"
+    child.mkdir(parents=True)
+    outside.mkdir()
+    service = DeviceFileService(root)
+
+    with pytest.raises(ValueError, match="inside itself"):
+        service.move([root / "folder"], child)
+    with pytest.raises(ValueError, match="leaves the selected device"):
+        service.move([root / "folder"], outside)

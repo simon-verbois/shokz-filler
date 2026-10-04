@@ -7,6 +7,8 @@ from pathlib import Path
 from .device import is_within
 from .naming import collision_path, sanitize_component
 
+_HIDDEN_DEVICE_NAMES = {"system volume information"}
+
 
 class DeviceFileService:
     def __init__(self, root: Path) -> None:
@@ -30,7 +32,9 @@ class DeviceFileService:
             (
                 item
                 for item in folder.iterdir()
-                if not item.is_symlink() and (item.is_dir() or item.suffix.casefold() == ".mp3")
+                if item.name.casefold() not in _HIDDEN_DEVICE_NAMES
+                and not item.is_symlink()
+                and (item.is_dir() or item.suffix.casefold() == ".mp3")
             ),
             key=lambda item: (not item.is_dir(), item.name.casefold()),
         )
@@ -71,6 +75,28 @@ class DeviceFileService:
             target.rmdir()  # Deliberately only empty folders.
         else:
             target.unlink()
+
+    def move(self, paths: list[Path], destination: Path) -> list[Path]:
+        folder = self.checked(destination)
+        if not folder.is_dir():
+            raise ValueError("The move destination is not a folder")
+
+        sources = [self.checked(path) for path in paths]
+        for source in sources:
+            if source == self.root:
+                raise ValueError("The device root cannot be moved")
+            if source.is_dir() and is_within(source, folder):
+                raise ValueError(f"{source.name} cannot be moved inside itself")
+
+        moved: list[Path] = []
+        for source in sources:
+            if source.parent == folder:
+                moved.append(source)
+                continue
+            target = collision_path(self.checked(folder / source.name, missing=True))
+            source.rename(target)
+            moved.append(target)
+        return moved
 
     def import_mp3(self, source: Path, destination: Path) -> Path:
         if source.suffix.casefold() != ".mp3" or not source.is_file():

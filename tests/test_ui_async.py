@@ -37,10 +37,12 @@ def test_playlist_navigation_has_back_history(tmp_path: Path) -> None:
     assert window.browser_page.playlist == playlist
     assert window.browser_back.isEnabled()
     assert window.download_playlist_button.isEnabled()
-    assert window.browser_location.text().endswith("My Playlist")
     window._browser_go_back()
     assert window.browser_page.items == [playlist]
     assert not window.browser_back.isEnabled()
+    assert window.browser_forward.isEnabled()
+    window._browser_go_forward()
+    assert window.browser_page.playlist == playlist
     window.pool.waitForDone(3_000)
     window.close()
     app.processEvents()

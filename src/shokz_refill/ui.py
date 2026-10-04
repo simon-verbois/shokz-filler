@@ -116,6 +116,7 @@ class MainWindow(QMainWindow):
         self.result_objects: list[Track | Playlist] = []
         self.browser_page = BrowserPage("YouTube Music", [])
         self.browser_history: list[BrowserPage] = []
+        self.browser_history_index = -1
         self.file_objects: list[Path] = []
         self.queue_rows: dict[str, int] = {}
         transfer_state = store.cache_dir / "transfers.json"
@@ -211,6 +212,16 @@ class MainWindow(QMainWindow):
         auth.addWidget(library)
         layout.addLayout(auth)
         search = QHBoxLayout()
+        self.browser_back = QPushButton("<")
+        self.browser_back.setFixedWidth(34)
+        self.browser_back.setToolTip("Go back to the previous YouTube Music page")
+        self.browser_back.setEnabled(False)
+        self.browser_back.clicked.connect(self._browser_go_back)
+        self.browser_forward = QPushButton(">")
+        self.browser_forward.setFixedWidth(34)
+        self.browser_forward.setToolTip("Go forward to the next YouTube Music page")
+        self.browser_forward.setEnabled(False)
+        self.browser_forward.clicked.connect(self._browser_go_forward)
         self.search_edit = QLineEdit()
         self.search_edit.setPlaceholderText("Search YouTube Music")
         self.search_edit.returnPressed.connect(self._search)
@@ -218,28 +229,24 @@ class MainWindow(QMainWindow):
         self.search_type.addItems(["Songs", "Playlists"])
         search_button = QPushButton("Search")
         search_button.clicked.connect(self._search)
-        open_playlist = QPushButton("Open playlist")
-        open_playlist.clicked.connect(self._open_selected_playlist)
-        select_all = QPushButton("Select all tracks")
+        search.addWidget(self.browser_back)
+        search.addWidget(self.browser_forward)
         search.addWidget(self.search_edit)
         search.addWidget(self.search_type)
         search.addWidget(search_button)
-        search.addWidget(open_playlist)
-        search.addWidget(select_all)
         layout.addLayout(search)
-        navigation = QHBoxLayout()
-        self.browser_back = QPushButton("← Back")
-        self.browser_back.setEnabled(False)
-        self.browser_back.clicked.connect(self._browser_go_back)
-        self.browser_location = QLabel("YouTube Music")
-        self.browser_location.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        result_actions = QHBoxLayout()
+        open_playlist = QPushButton("Open playlist")
+        open_playlist.clicked.connect(self._open_selected_playlist)
+        select_all = QPushButton("Select all")
         self.download_playlist_button = QPushButton("Download whole playlist")
         self.download_playlist_button.setEnabled(False)
         self.download_playlist_button.clicked.connect(self._download_current_playlist)
-        navigation.addWidget(self.browser_back)
-        navigation.addWidget(self.browser_location, 1)
-        navigation.addWidget(self.download_playlist_button)
-        layout.addLayout(navigation)
+        result_actions.addWidget(open_playlist)
+        result_actions.addWidget(select_all)
+        result_actions.addStretch()
+        result_actions.addWidget(self.download_playlist_button)
+        layout.addLayout(result_actions)
         self.results = QTableWidget(0, 3)
         self.results.setHorizontalHeaderLabels(["Title", "Artist / count", "Duration"])
         self.results.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
@@ -277,17 +284,18 @@ class MainWindow(QMainWindow):
         layout.addLayout(top)
         location = QHBoxLayout()
         self.folder_back = QPushButton("<")
+        self.folder_back.setFixedWidth(34)
         self.folder_back.setToolTip("Go back to the previously visited folder")
         self.folder_back.setEnabled(False)
         self.folder_back.clicked.connect(self._folder_go_back)
         self.folder_forward = QPushButton(">")
+        self.folder_forward.setFixedWidth(34)
         self.folder_forward.setToolTip("Go forward to the next visited folder")
         self.folder_forward.setEnabled(False)
         self.folder_forward.clicked.connect(self._folder_go_forward)
-        self.path_label = QLabel("—")
         location.addWidget(self.folder_back)
         location.addWidget(self.folder_forward)
-        location.addWidget(self.path_label, 1)
+        location.addStretch()
         layout.addLayout(location)
         self.files = QTableWidget(0, 3)
         self.files.setHorizontalHeaderLabels(["Name", "Type", "Size"])
@@ -303,6 +311,7 @@ class MainWindow(QMainWindow):
         for label, handler in (
             ("New folder", self._new_folder),
             ("Rename", self._rename),
+            ("Move selected…", self._move_selected),
             ("Delete", self._delete),
             ("Add local MP3", self._add_local),
             ("Select destination folder", self._select_destination),
@@ -389,19 +398,29 @@ class MainWindow(QMainWindow):
 
     def _set_browser_root(self, title: str, objects: object) -> None:
         items = list(objects) if isinstance(objects, list) else []
-        self.browser_history.clear()
-        self._set_browser_page(BrowserPage(title, items))
+        page = BrowserPage(title, items)
+        self.browser_history = [page]
+        self.browser_history_index = 0
+        self._set_browser_page(page)
 
     def _set_browser_page(self, page: BrowserPage) -> None:
         self.browser_page = page
-        self.browser_location.setText(f"YouTube Music  ›  {page.title}")
-        self.browser_back.setEnabled(bool(self.browser_history))
+        self.browser_back.setEnabled(self.browser_history_index > 0)
+        self.browser_forward.setEnabled(
+            0 <= self.browser_history_index < len(self.browser_history) - 1
+        )
         self.download_playlist_button.setEnabled(page.playlist is not None)
         self._show_results(page.items)
 
     def _browser_go_back(self) -> None:
-        if self.browser_history:
-            self._set_browser_page(self.browser_history.pop())
+        if self.browser_history_index > 0:
+            self.browser_history_index -= 1
+            self._set_browser_page(self.browser_history[self.browser_history_index])
+
+    def _browser_go_forward(self) -> None:
+        if self.browser_history_index < len(self.browser_history) - 1:
+            self.browser_history_index += 1
+            self._set_browser_page(self.browser_history[self.browser_history_index])
 
     def _enter_playlist(self, playlist: Playlist, objects: object) -> None:
         tracks: list[Track | Playlist] = (
@@ -409,8 +428,11 @@ class MainWindow(QMainWindow):
             if isinstance(objects, list)
             else []
         )
-        self.browser_history.append(self.browser_page)
-        self._set_browser_page(BrowserPage(playlist.title, tracks, playlist))
+        page = BrowserPage(playlist.title, tracks, playlist)
+        self.browser_history = self.browser_history[: self.browser_history_index + 1]
+        self.browser_history.append(page)
+        self.browser_history_index += 1
+        self._set_browser_page(page)
 
     def _show_results(self, objects: object) -> None:
         self.result_objects = list(objects) if isinstance(objects, list) else []
@@ -546,7 +568,12 @@ class MainWindow(QMainWindow):
         )
         tracks_action = menu.addAction("Download selected track(s)") if tracks else None
         select_all_action = menu.addAction("Select all")
-        back_action = menu.addAction("Back") if self.browser_history else None
+        back_action = menu.addAction("Back") if self.browser_history_index > 0 else None
+        forward_action = (
+            menu.addAction("Forward")
+            if self.browser_history_index < len(self.browser_history) - 1
+            else None
+        )
         chosen = menu.exec(self.results.viewport().mapToGlobal(position))
         if open_action is not None and chosen == open_action:
             self._open_selected_playlist()
@@ -561,6 +588,8 @@ class MainWindow(QMainWindow):
             self.results.selectAll()
         elif back_action is not None and chosen == back_action:
             self._browser_go_back()
+        elif forward_action is not None and chosen == forward_action:
+            self._browser_go_forward()
 
     def _poll_devices(self) -> None:
         worker = Worker(self.detector.scan)
@@ -668,7 +697,6 @@ class MainWindow(QMainWindow):
             self.folder_back.setEnabled(False)
             self.folder_forward.setEnabled(False)
             self.storage_label.setText("No Shokz connected")
-            self.path_label.setText("—")
             self.destination_label.setText("Destination: select a Shokz folder")
             self.files.setRowCount(0)
             return
@@ -680,7 +708,6 @@ class MainWindow(QMainWindow):
             )
         except OSError:
             self.storage_label.setText("Device disconnected")
-        self.path_label.setText(str(self.current_folder or self.device.root))
         self.folder_back.setEnabled(self.folder_history_index > 0)
         self.folder_forward.setEnabled(
             0 <= self.folder_history_index < len(self.folder_history) - 1
@@ -734,6 +761,7 @@ class MainWindow(QMainWindow):
             menu.addAction("Use as download destination") if single_folder else None
         )
         rename_action = menu.addAction("Rename") if len(selected) == 1 else None
+        move_action = menu.addAction("Move selected…") if selected else None
         delete_action = menu.addAction("Delete") if selected else None
         if selected:
             menu.addSeparator()
@@ -746,6 +774,8 @@ class MainWindow(QMainWindow):
             self._set_destination(single_folder)
         elif rename_action is not None and chosen == rename_action:
             self._rename()
+        elif move_action is not None and chosen == move_action:
+            self._move_selected()
         elif delete_action is not None and chosen == delete_action:
             self._delete()
         elif chosen == new_folder_action:
@@ -832,6 +862,32 @@ class MainWindow(QMainWindow):
             delete_selected,
             lambda _v: self._refresh_files(),
             "Deleting…",
+        )
+
+    def _move_selected(self) -> None:
+        selected = self._selected_paths()
+        if not self.device or not self.current_folder or not selected:
+            self._show_error("Select one or more files or folders to move")
+            return
+        chosen = QFileDialog.getExistingDirectory(
+            self,
+            f"Move {len(selected)} selected item(s) to",
+            str(self.current_folder),
+        )
+        if not chosen:
+            return
+        service = DeviceFileService(self.device.root)
+        destination = Path(chosen)
+
+        def completed(value: object) -> None:
+            count = len(value) if isinstance(value, list) else 0
+            self.statusBar().showMessage(f"Moved {count} item(s)")
+            self._refresh_files()
+
+        self._run(
+            lambda: service.move(selected, destination),
+            completed,
+            "Moving selected items…",
         )
 
     def _add_local(self) -> None:
