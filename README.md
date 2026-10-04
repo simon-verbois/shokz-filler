@@ -23,6 +23,10 @@ always broadly compatible MP3: **CBR 192 kbps, 44.1 kHz, stereo, ID3v2.3**.
 5. Watch download, conversion, and transfer progress in the queue. Failed items can be retried and
    active or queued items can be cancelled.
 
+For songs selected outside a playlist, Shokz Refill always asks for a destination using its in-app
+folder tree. Choose an existing folder or create a new one in the dialog; downloading directly to
+the device root is intentionally disabled.
+
 The device browser can create, rename, move, and recursively delete folders; rename, move, or delete MP3s;
 and add local MP3 files. `System Volume Information` is hidden. Moves support multi-selection:
 drag selected items onto a visible folder, or use **Move selected…** to choose a destination from

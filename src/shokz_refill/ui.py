@@ -105,27 +105,51 @@ class DeviceFileTable(QTableWidget):
         event.accept()
 
 
-class MoveDestinationDialog(QDialog):
+class DeviceFolderDialog(QDialog):
     _LOADED_ROLE = int(Qt.ItemDataRole.UserRole) + 1
 
-    def __init__(self, device: Device, sources: list[Path], parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        device: Device,
+        sources: list[Path],
+        parent: QWidget | None = None,
+        *,
+        title: str = "Choose destination folder",
+        allow_root: bool = True,
+        allow_create: bool = False,
+    ) -> None:
         super().__init__(parent)
         self.device = device
+        self.allow_root = allow_root
         self.destination: Path | None = None
         self._workers: set[Worker] = set()
         self._blocked_roots = [path.resolve() for path in sources if path.is_dir()]
-        self.setWindowTitle("Move selected items")
+        self.setWindowTitle(title)
         self.resize(480, 520)
         layout = QVBoxLayout(self)
         label = QLabel(f"Choose a destination folder on {device.name}")
         layout.addWidget(label)
+        self.feedback = QLabel(
+            "Choose an existing folder or create a new one. The device root cannot be used."
+            if not allow_root
+            else ""
+        )
+        self.feedback.setWordWrap(True)
+        layout.addWidget(self.feedback)
         self.tree = QTreeWidget()
         self.tree.setHeaderLabel("Folder")
         self.tree.itemExpanded.connect(self._load_children)
+        self.tree.currentItemChanged.connect(self._selection_changed)
         layout.addWidget(self.tree)
         buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
+        self.new_folder_button = buttons.addButton(
+            "New folder", QDialogButtonBox.ButtonRole.ActionRole
+        )
+        self.new_folder_button.setVisible(allow_create)
+        self.new_folder_button.clicked.connect(self._create_folder)
+        self.ok_button = buttons.button(QDialogButtonBox.StandardButton.Ok)
         buttons.accepted.connect(self._accept_selection)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
@@ -136,6 +160,7 @@ class MoveDestinationDialog(QDialog):
         self.tree.addTopLevelItem(root)
         self.tree.setCurrentItem(root)
         root.setExpanded(True)
+        self._selection_changed(root, None)
 
     def _is_blocked(self, path: Path) -> bool:
         return any(is_within(source, path) for source in self._blocked_roots)
@@ -193,9 +218,51 @@ class MoveDestinationDialog(QDialog):
         raw_path = item.data(0, Qt.ItemDataRole.UserRole) if item is not None else None
         if isinstance(raw_path, str):
             path = Path(raw_path)
-            if not self._is_blocked(path):
+            if not self._is_blocked(path) and (self.allow_root or path != self.device.root):
                 self.destination = path
                 self.accept()
+
+    def _selection_changed(
+        self, current: QTreeWidgetItem | None, _previous: QTreeWidgetItem | None
+    ) -> None:
+        raw_path = current.data(0, Qt.ItemDataRole.UserRole) if current is not None else None
+        if not isinstance(raw_path, str):
+            self.ok_button.setEnabled(False)
+            return
+        path = Path(raw_path)
+        valid = not self._is_blocked(path) and (self.allow_root or path != self.device.root)
+        self.ok_button.setEnabled(valid)
+
+    def _create_folder(self) -> None:
+        item = self.tree.currentItem()
+        raw_path = item.data(0, Qt.ItemDataRole.UserRole) if item is not None else None
+        if not isinstance(raw_path, str):
+            return
+        name, accepted = QInputDialog.getText(self, "New folder", "Folder name:")
+        if not accepted or not name:
+            return
+        parent = Path(raw_path)
+        self.new_folder_button.setEnabled(False)
+        self.ok_button.setEnabled(False)
+        self.feedback.setText("Creating folder…")
+        worker = Worker(lambda: DeviceFileService(self.device.root).create_folder(parent, name))
+        self._workers.add(worker)
+
+        def completed(value: object) -> None:
+            self._workers.discard(worker)
+            if isinstance(value, Path):
+                self.destination = value
+                self.accept()
+
+        def failed(message: str) -> None:
+            self._workers.discard(worker)
+            self.feedback.setText(message or "The folder could not be created")
+            self.new_folder_button.setEnabled(True)
+            self._selection_changed(self.tree.currentItem(), None)
+
+        worker.signals.result.connect(completed)
+        worker.signals.error.connect(failed)
+        QThreadPool.globalInstance().start(worker)
 
 
 class AuthDialog(QDialog):
@@ -635,11 +702,25 @@ class MainWindow(QMainWindow):
         self._download_tracks(tracks)
 
     def _download_tracks(self, tracks: list[Track]) -> None:
-        if not self.device or not self.destination or not self.device.root.exists():
-            self._show_error("No connected Shokz destination is selected")
+        if not self.device or not self.device.root.exists():
+            self._show_error("No connected Shokz device is selected")
             return
-        device, destination = self.device, self.destination
-        self._enqueue_tracks(tracks, destination, device)
+        device = self.device
+        dialog = DeviceFolderDialog(
+            device,
+            [],
+            self,
+            title="Choose download folder",
+            allow_root=False,
+            allow_create=True,
+        )
+        if dialog.exec() != QDialog.DialogCode.Accepted or dialog.destination is None:
+            return
+        self.destination = dialog.destination
+        self.config.destination_relative = str(dialog.destination.relative_to(device.root))
+        self._render_device()
+        self._refresh_files()
+        self._enqueue_tracks(tracks, dialog.destination, device)
 
     def _enqueue_tracks(self, tracks: list[Track], destination: Path, device: Device) -> None:
         self.queue.enqueue(tracks, destination, device.root)
@@ -1013,7 +1094,12 @@ class MainWindow(QMainWindow):
         if not self.device or not self.current_folder or not selected:
             self._show_error("Select one or more files or folders to move")
             return
-        dialog = MoveDestinationDialog(self.device, selected, self)
+        dialog = DeviceFolderDialog(
+            self.device,
+            selected,
+            self,
+            title="Move selected items",
+        )
         if dialog.exec() != QDialog.DialogCode.Accepted or dialog.destination is None:
             return
         self._move_paths(selected, dialog.destination)

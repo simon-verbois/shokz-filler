@@ -6,12 +6,12 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtWidgets import QApplication, QHeaderView  # noqa: E402
+from PySide6.QtWidgets import QApplication, QDialog, QHeaderView, QInputDialog  # noqa: E402
 
 from shokz_refill.config import ConfigStore  # noqa: E402
 from shokz_refill.device import manual_device  # noqa: E402
 from shokz_refill.models import Playlist, Track  # noqa: E402
-from shokz_refill.ui import MainWindow, MoveDestinationDialog  # noqa: E402
+from shokz_refill.ui import DeviceFolderDialog, MainWindow  # noqa: E402
 
 
 def test_background_result_reaches_ui(tmp_path: Path) -> None:
@@ -129,6 +129,40 @@ def test_double_click_track_in_playlist_uses_playlist_folder(
     assert queued == [root / "Road Trip"]
 
 
+def test_loose_tracks_require_non_root_folder_dialog(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app = QApplication.instance() or QApplication([])
+    root = tmp_path / "device"
+    destination = root / "Singles"
+    destination.mkdir(parents=True)
+    window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
+    window.device = manual_device(root)
+    queued: list[Path] = []
+
+    class FakeFolderDialog:
+        def __init__(self, *_args: object, **kwargs: object) -> None:
+            assert kwargs["allow_root"] is False
+            assert kwargs["allow_create"] is True
+            self.destination = destination
+
+        def exec(self) -> QDialog.DialogCode:
+            return QDialog.DialogCode.Accepted
+
+    def enqueue(_tracks: object, folder: Path, _root: Path) -> list[object]:
+        queued.append(folder)
+        return []
+
+    monkeypatch.setattr("shokz_refill.ui.DeviceFolderDialog", FakeFolderDialog)
+    monkeypatch.setattr(window.queue, "enqueue", enqueue)
+    window._download_tracks([Track("video-id", "Song", ("Artist",))])
+
+    assert queued == [destination]
+    window.pool.waitForDone(3_000)
+    window.close()
+    app.processEvents()
+
+
 def test_device_folder_back_and_forward_history(tmp_path: Path) -> None:
     app = QApplication.instance() or QApplication([])
     root = tmp_path / "device"
@@ -160,7 +194,7 @@ def test_move_dialog_loads_internal_folder_tree(tmp_path: Path) -> None:
     root = tmp_path / "device"
     (root / "Music" / "Running").mkdir(parents=True)
     (root / "System Volume Information").mkdir()
-    dialog = MoveDestinationDialog(manual_device(root), [])
+    dialog = DeviceFolderDialog(manual_device(root), [])
     deadline = time.monotonic() + 3
     root_item = dialog.tree.topLevelItem(0)
     while root_item.childCount() == 1 and root_item.child(0).text(0) == "Loading…":
@@ -173,6 +207,31 @@ def test_move_dialog_loads_internal_folder_tree(tmp_path: Path) -> None:
     dialog.tree.setCurrentItem(root_item)
     dialog._accept_selection()
     assert dialog.destination == root
+    dialog.close()
+
+
+def test_download_folder_dialog_blocks_root_and_creates_folder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app = QApplication.instance() or QApplication([])
+    root = tmp_path / "device"
+    root.mkdir()
+    dialog = DeviceFolderDialog(manual_device(root), [], allow_root=False, allow_create=True)
+    assert not dialog.ok_button.isEnabled()
+    monkeypatch.setattr(
+        QInputDialog,
+        "getText",
+        staticmethod(lambda *_args, **_kwargs: ("My New Folder!", True)),
+    )
+
+    dialog._create_folder()
+    deadline = time.monotonic() + 3
+    while dialog.result() != QDialog.DialogCode.Accepted and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.01)
+
+    assert dialog.destination == root / "My New Folder"
+    assert dialog.destination.is_dir()
     dialog.close()
 
 
