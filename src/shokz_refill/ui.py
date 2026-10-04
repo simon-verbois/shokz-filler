@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QObject, QRunnable, Qt, QThreadPool, QTimer, Signal, Slot
+from PySide6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent
 from PySide6.QtWidgets import (
     QAbstractItemView,
     QComboBox,
@@ -28,6 +29,8 @@ from PySide6.QtWidgets import (
     QTableWidgetItem,
     QTabWidget,
     QTextEdit,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
 )
@@ -71,6 +74,127 @@ class Worker(QRunnable):
         except Exception as exc:
             LOG.exception("Background operation failed")
             self.signals.error.emit(str(exc))
+
+
+class DeviceFileTable(QTableWidget):
+    moveRequested = Signal(object, int)
+
+    def dragEnterEvent(self, event: QDragEnterEvent) -> None:
+        if event.source() is self:
+            event.setDropAction(Qt.DropAction.MoveAction)
+            event.accept()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event: QDragMoveEvent) -> None:
+        if event.source() is self:
+            event.setDropAction(Qt.DropAction.MoveAction)
+            event.accept()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        if event.source() is not self:
+            event.ignore()
+            return
+        rows = sorted({index.row() for index in self.selectionModel().selectedRows()})
+        target_row = self.rowAt(event.position().toPoint().y())
+        self.moveRequested.emit(rows, target_row)
+        event.setDropAction(Qt.DropAction.MoveAction)
+        event.accept()
+
+
+class MoveDestinationDialog(QDialog):
+    _LOADED_ROLE = int(Qt.ItemDataRole.UserRole) + 1
+
+    def __init__(self, device: Device, sources: list[Path], parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.device = device
+        self.destination: Path | None = None
+        self._workers: set[Worker] = set()
+        self._blocked_roots = [path.resolve() for path in sources if path.is_dir()]
+        self.setWindowTitle("Move selected items")
+        self.resize(480, 520)
+        layout = QVBoxLayout(self)
+        label = QLabel(f"Choose a destination folder on {device.name}")
+        layout.addWidget(label)
+        self.tree = QTreeWidget()
+        self.tree.setHeaderLabel("Folder")
+        self.tree.itemExpanded.connect(self._load_children)
+        layout.addWidget(self.tree)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        buttons.accepted.connect(self._accept_selection)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
+
+        root = QTreeWidgetItem([device.name])
+        root.setData(0, Qt.ItemDataRole.UserRole, str(device.root))
+        root.addChild(QTreeWidgetItem(["Loading…"]))
+        self.tree.addTopLevelItem(root)
+        self.tree.setCurrentItem(root)
+        root.setExpanded(True)
+
+    def _is_blocked(self, path: Path) -> bool:
+        return any(is_within(source, path) for source in self._blocked_roots)
+
+    def _load_children(self, item: QTreeWidgetItem) -> None:
+        if item.data(0, self._LOADED_ROLE):
+            return
+        raw_path = item.data(0, Qt.ItemDataRole.UserRole)
+        if not isinstance(raw_path, str):
+            return
+        item.setData(0, self._LOADED_ROLE, True)
+        item.takeChildren()
+        loading = QTreeWidgetItem(["Loading…"])
+        loading.setDisabled(True)
+        item.addChild(loading)
+        path = Path(raw_path)
+        worker = Worker(
+            lambda: [
+                entry
+                for entry in DeviceFileService(self.device.root).list_dir(path)
+                if entry.is_dir()
+            ]
+        )
+        self._workers.add(worker)
+
+        def completed(value: object) -> None:
+            self._workers.discard(worker)
+            item.takeChildren()
+            folders = list(value) if isinstance(value, list) else []
+            for folder in folders:
+                if not isinstance(folder, Path):
+                    continue
+                child = QTreeWidgetItem([folder.name])
+                child.setData(0, Qt.ItemDataRole.UserRole, str(folder))
+                if self._is_blocked(folder):
+                    child.setDisabled(True)
+                    child.setToolTip(0, "A folder cannot be moved inside itself")
+                else:
+                    child.addChild(QTreeWidgetItem(["Loading…"]))
+                item.addChild(child)
+
+        def failed(message: str) -> None:
+            self._workers.discard(worker)
+            item.takeChildren()
+            error = QTreeWidgetItem([f"Unable to read folder: {message}"])
+            error.setDisabled(True)
+            item.addChild(error)
+
+        worker.signals.result.connect(completed)
+        worker.signals.error.connect(failed)
+        QThreadPool.globalInstance().start(worker)
+
+    def _accept_selection(self) -> None:
+        item = self.tree.currentItem()
+        raw_path = item.data(0, Qt.ItemDataRole.UserRole) if item is not None else None
+        if isinstance(raw_path, str):
+            path = Path(raw_path)
+            if not self._is_blocked(path):
+                self.destination = path
+                self.accept()
 
 
 class AuthDialog(QDialog):
@@ -297,11 +421,17 @@ class MainWindow(QMainWindow):
         location.addWidget(self.folder_forward)
         location.addStretch()
         layout.addLayout(location)
-        self.files = QTableWidget(0, 3)
+        self.files = DeviceFileTable(0, 3)
         self.files.setHorizontalHeaderLabels(["Name", "Type", "Size"])
         self.files.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.files.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.files.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.files.setDragEnabled(True)
+        self.files.setAcceptDrops(True)
+        self.files.setDropIndicatorShown(True)
+        self.files.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)
+        self.files.setDefaultDropAction(Qt.DropAction.MoveAction)
+        self.files.moveRequested.connect(self._move_rows_to_folder)
         self.files.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.files.customContextMenuRequested.connect(self._files_context_menu)
         self.files.horizontalHeader().setStretchLastSection(True)
@@ -869,15 +999,30 @@ class MainWindow(QMainWindow):
         if not self.device or not self.current_folder or not selected:
             self._show_error("Select one or more files or folders to move")
             return
-        chosen = QFileDialog.getExistingDirectory(
-            self,
-            f"Move {len(selected)} selected item(s) to",
-            str(self.current_folder),
-        )
-        if not chosen:
+        dialog = MoveDestinationDialog(self.device, selected, self)
+        if dialog.exec() != QDialog.DialogCode.Accepted or dialog.destination is None:
             return
-        service = DeviceFileService(self.device.root)
-        destination = Path(chosen)
+        self._move_paths(selected, dialog.destination)
+
+    def _move_rows_to_folder(self, rows: object, target_row: int) -> None:
+        if not isinstance(rows, list) or not 0 <= target_row < len(self.file_objects):
+            self._show_error("Drop the selected items onto a folder")
+            return
+        destination = self.file_objects[target_row]
+        if not destination.is_dir():
+            self._show_error("Drop the selected items onto a folder")
+            return
+        selected = [
+            self.file_objects[row]
+            for row in rows
+            if isinstance(row, int) and 0 <= row < len(self.file_objects)
+        ]
+        self._move_paths(selected, destination)
+
+    def _move_paths(self, selected: list[Path], destination: Path) -> None:
+        if not self.device or not selected:
+            return
+        root = self.device.root
 
         def completed(value: object) -> None:
             count = len(value) if isinstance(value, list) else 0
@@ -885,7 +1030,7 @@ class MainWindow(QMainWindow):
             self._refresh_files()
 
         self._run(
-            lambda: service.move(selected, destination),
+            lambda: DeviceFileService(root).move(selected, destination),
             completed,
             "Moving selected items…",
         )

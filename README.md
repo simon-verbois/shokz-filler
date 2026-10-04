@@ -24,10 +24,12 @@ always broadly compatible MP3: **CBR 192 kbps, 44.1 kHz, stereo, ID3v2.3**.
    active or queued items can be cancelled.
 
 The device browser can create, rename, move, and delete empty folders; rename, move, or delete MP3s;
-and add local MP3 files. `System Volume Information` is hidden. Moves support multi-selection and
-remain inside the selected device. Deletes require confirmation. Name collisions get a deterministic
-numbered name and never overwrite an existing file. Interrupted transfers remain visibly marked as
-`.part` and resume only when the cached source fingerprint still matches.
+and add local MP3 files. `System Volume Information` is hidden. Moves support multi-selection:
+drag selected items onto a visible folder, or use **Move selected…** to choose a destination from
+the in-app folder tree. Moves remain inside the selected device. Deletes require confirmation. Name
+collisions get a deterministic numbered name and never overwrite an existing file. Interrupted
+transfers remain visibly marked as `.part` and resume only when the cached source fingerprint still
+matches.
 
 Right-click menus expose the relevant actions for YouTube results, Shokz files/folders, and queue
 items without duplicating unrelated file-manager features.

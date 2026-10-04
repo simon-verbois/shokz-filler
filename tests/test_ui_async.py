@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication  # noqa: E402
 from shokz_refill.config import ConfigStore  # noqa: E402
 from shokz_refill.device import manual_device  # noqa: E402
 from shokz_refill.models import Playlist, Track  # noqa: E402
-from shokz_refill.ui import MainWindow  # noqa: E402
+from shokz_refill.ui import MainWindow, MoveDestinationDialog  # noqa: E402
 
 
 def test_background_result_reaches_ui(tmp_path: Path) -> None:
@@ -128,6 +128,54 @@ def test_device_folder_back_and_forward_history(tmp_path: Path) -> None:
     window._folder_go_forward()
     assert window.current_folder == first
 
+    window.pool.waitForDone(3_000)
+    window.close()
+    app.processEvents()
+
+
+def test_move_dialog_loads_internal_folder_tree(tmp_path: Path) -> None:
+    app = QApplication.instance() or QApplication([])
+    root = tmp_path / "device"
+    (root / "Music" / "Running").mkdir(parents=True)
+    (root / "System Volume Information").mkdir()
+    dialog = MoveDestinationDialog(manual_device(root), [])
+    deadline = time.monotonic() + 3
+    root_item = dialog.tree.topLevelItem(0)
+    while root_item.childCount() == 1 and root_item.child(0).text(0) == "Loading…":
+        if time.monotonic() >= deadline:
+            break
+        app.processEvents()
+        time.sleep(0.01)
+
+    assert [root_item.child(index).text(0) for index in range(root_item.childCount())] == ["Music"]
+    dialog.tree.setCurrentItem(root_item)
+    dialog._accept_selection()
+    assert dialog.destination == root
+    dialog.close()
+
+
+def test_drag_drop_rows_move_to_visible_folder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app = QApplication.instance() or QApplication([])
+    root = tmp_path / "device"
+    destination = root / "Music"
+    destination.mkdir(parents=True)
+    song = root / "song.mp3"
+    song.write_bytes(b"song")
+    window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
+    window.device = manual_device(root)
+    window.file_objects = [destination, song]
+    requested: list[tuple[list[Path], Path]] = []
+    monkeypatch.setattr(
+        window,
+        "_move_paths",
+        lambda paths, folder: requested.append((paths, folder)),
+    )
+
+    window._move_rows_to_folder([1], 0)
+
+    assert requested == [([song], destination)]
     window.pool.waitForDone(3_000)
     window.close()
     app.processEvents()
