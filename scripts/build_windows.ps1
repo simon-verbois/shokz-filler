@@ -38,4 +38,10 @@ if (-not (Test-Path "$BinDir\DENO-LICENSE.md")) {
 & .venv\Scripts\python.exe -m ruff check .
 & .venv\Scripts\python.exe -m mypy
 & .venv\Scripts\python.exe -m PyInstaller --noconfirm --clean shokz-refill.spec
-Compress-Archive -Path "dist\Shokz-Refill" -DestinationPath "dist\Shokz-Refill-windows-x86_64.zip" -Force
+$Artifact = "dist\Shokz-Refill-windows-x86_64.exe"
+Move-Item "dist\Shokz-Refill.exe" $Artifact -Force
+& $Artifact --smoke-test
+if ($LASTEXITCODE -ne 0) { throw "Packaged application smoke test failed" }
+$Hash = (Get-FileHash $Artifact -Algorithm SHA256).Hash.ToLowerInvariant()
+Set-Content -Path "$Artifact.sha256" -Value "$Hash  Shokz-Refill-windows-x86_64.exe"
+Write-Host "Portable Windows executable: $Artifact"

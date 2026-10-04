@@ -11,4 +11,9 @@ if [[ ! -x src/shokz_refill/bin/ffmpeg || ! -x src/shokz_refill/bin/deno ]]; the
   scripts/fetch_ffmpeg_linux.sh
 fi
 "$python_bin" -m PyInstaller --noconfirm --clean shokz-refill.spec
-tar -C dist -czf dist/Shokz-Refill-linux-x86_64.tar.gz Shokz-Refill
+artifact="$project_dir/dist/Shokz-Refill-linux-x86_64"
+mv -f "$project_dir/dist/Shokz-Refill" "$artifact"
+chmod 0755 "$artifact"
+QT_QPA_PLATFORM=offscreen "$artifact" --smoke-test
+(cd "$(dirname "$artifact")" && sha256sum "$(basename "$artifact")" > "$(basename "$artifact").sha256")
+echo "Portable Linux binary: $artifact"

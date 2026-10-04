@@ -1,12 +1,18 @@
 # -*- mode: python ; coding: utf-8 -*-
 from pathlib import Path
+import sys
 
 from PyInstaller.utils.hooks import collect_all, copy_metadata
 
 root = Path(SPECPATH)
 package = root / "src" / "shokz_refill"
 binaries = []
-for name in ("ffmpeg", "ffprobe", "deno", "ffmpeg.exe", "ffprobe.exe", "deno.exe"):
+runtime_names = (
+    ("ffmpeg.exe", "ffprobe.exe", "deno.exe")
+    if sys.platform == "win32"
+    else ("ffmpeg", "ffprobe", "deno")
+)
+for name in runtime_names:
     candidate = package / "bin" / name
     if candidate.exists():
         binaries.append((str(candidate), "shokz_refill/bin"))
@@ -41,20 +47,13 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
     a.scripts,
+    a.binaries,
+    a.datas,
     [],
-    exclude_binaries=True,
-    name="shokz-refill",
+    name="Shokz-Refill",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
     console=False,
-)
-coll = COLLECT(
-    exe,
-    a.binaries,
-    a.datas,
-    strip=False,
-    upx=False,
-    name="Shokz-Refill",
 )

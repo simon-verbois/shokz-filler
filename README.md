@@ -77,9 +77,15 @@ source. You are responsible for having the rights or authorization to download a
 
 ## Linux / Fedora
 
-Run the portable build by extracting `Shokz-Refill-linux-x86_64.tar.gz` and launching
-`Shokz-Refill/shokz-refill`. Device discovery uses `lsblk`; manual folder selection works on any
-mounted volume.
+The portable build is one executable. Make it executable if needed, then launch it:
+
+```bash
+chmod +x Shokz-Refill-linux-x86_64
+./Shokz-Refill-linux-x86_64
+```
+
+It bundles Python, PySide6, yt-dlp, Deno, ffmpeg and the other runtime dependencies. Device
+discovery uses `lsblk`; manual folder selection works on any mounted volume.
 
 For development:
 
@@ -95,9 +101,11 @@ Build and verify:
 .venv/bin/python -m pytest
 .venv/bin/python -m ruff check .
 .venv/bin/python -m mypy
-scripts/fetch_ffmpeg_linux.sh
-.venv/bin/python -m PyInstaller --noconfirm --clean shokz-refill.spec
+scripts/build_linux.sh
 ```
+
+The resulting single binary is `dist/Shokz-Refill-linux-x86_64` with its SHA-256 checksum beside
+it.
 
 ## Windows
 
@@ -107,8 +115,8 @@ Install 64-bit Python 3.12 only on the build machine, then run:
 powershell -ExecutionPolicy Bypass -File scripts\build_windows.ps1
 ```
 
-The resulting zip under `dist` includes Python, PySide6, yt-dlp with its EJS scripts, Deno,
-dependencies, ffmpeg and ffprobe.
+The resulting `dist\Shokz-Refill-windows-x86_64.exe` includes Python, PySide6, yt-dlp with its EJS
+scripts, Deno, dependencies, ffmpeg and ffprobe. Its SHA-256 checksum is written beside it.
 Windows must be built natively; the Linux build cannot cross-compile it.
 
 ## ffmpeg distribution
@@ -128,6 +136,9 @@ binary distributor's accompanying documentation. Shokz Refill's own source is MI
 - YouTube and YouTube Music can change access behavior; authentication may need to be reconnected,
   and some content is unavailable to yt-dlp.
 - A portable build is native to its operating system and CPU architecture.
+- The one-file build extracts its bundled libraries to the operating system's temporary directory
+  while running, so startup is slower and Linux systems with a `noexec` temporary directory need to
+  point `TMPDIR` to an executable filesystem.
 
 ## Screenshot
 
