@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QDialogButtonBox,
     QFileDialog,
     QHBoxLayout,
+    QHeaderView,
     QInputDialog,
     QLabel,
     QLineEdit,
@@ -308,7 +309,14 @@ class MainWindow(QMainWindow):
         self.queue_table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.queue_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.queue_table.customContextMenuRequested.connect(self._queue_context_menu)
-        self.queue_table.horizontalHeader().setStretchLastSection(True)
+        queue_header_view = self.queue_table.horizontalHeader()
+        queue_header_view.setStretchLastSection(False)
+        queue_header_view.setSectionResizeMode(0, QHeaderView.ResizeMode.Interactive)
+        queue_header_view.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        queue_header_view.setSectionResizeMode(2, QHeaderView.ResizeMode.Fixed)
+        queue_header_view.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
+        self.queue_table.setColumnWidth(0, 300)
+        self.queue_table.setColumnWidth(2, 160)
         queue_layout.addWidget(self.queue_table)
         splitter = QSplitter(Qt.Orientation.Vertical)
         splitter.addWidget(self.tabs)
@@ -378,7 +386,12 @@ class MainWindow(QMainWindow):
         self.results.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.results.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.results.customContextMenuRequested.connect(self._results_context_menu)
-        self.results.horizontalHeader().setStretchLastSection(True)
+        results_header = self.results.horizontalHeader()
+        results_header.setStretchLastSection(False)
+        results_header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        results_header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
+        results_header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        self.results.setColumnWidth(1, 280)
         self.results.cellDoubleClicked.connect(self._result_double_clicked)
         select_all.clicked.connect(self.results.selectAll)
         layout.addWidget(self.results)
@@ -434,7 +447,11 @@ class MainWindow(QMainWindow):
         self.files.moveRequested.connect(self._move_rows_to_folder)
         self.files.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.files.customContextMenuRequested.connect(self._files_context_menu)
-        self.files.horizontalHeader().setStretchLastSection(True)
+        files_header = self.files.horizontalHeader()
+        files_header.setStretchLastSection(False)
+        files_header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
+        files_header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        files_header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         self.files.doubleClicked.connect(self._open_folder)
         layout.addWidget(self.files)
         actions = QHBoxLayout()
@@ -584,7 +601,6 @@ class MainWindow(QMainWindow):
                 values = (item.title, f"{item.count} tracks" if item.count else "Playlist", "")
             for column, value in enumerate(values):
                 self.results.setItem(row, column, QTableWidgetItem(value))
-        self.results.resizeColumnsToContents()
 
     def _selected_result_objects(self) -> list[Track | Playlist]:
         return [
@@ -863,7 +879,6 @@ class MainWindow(QMainWindow):
                 values = (path.name, "Unavailable", "")
             for column, text in enumerate(values):
                 self.files.setItem(row, column, QTableWidgetItem(text))
-        self.files.resizeColumnsToContents()
         self._render_device()
 
     def _selected_paths(self) -> list[Path]:

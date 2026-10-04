@@ -6,7 +6,7 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtWidgets import QApplication  # noqa: E402
+from PySide6.QtWidgets import QApplication, QHeaderView  # noqa: E402
 
 from shokz_refill.config import ConfigStore  # noqa: E402
 from shokz_refill.device import manual_device  # noqa: E402
@@ -26,6 +26,28 @@ def test_background_result_reaches_ui(tmp_path: Path) -> None:
     window.pool.waitForDone(3_000)
     window.close()
     assert received == ["result"]
+
+
+def test_table_columns_have_readable_default_layout(tmp_path: Path) -> None:
+    app = QApplication.instance() or QApplication([])
+    window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
+
+    assert window.files.horizontalHeader().sectionResizeMode(0) == QHeaderView.ResizeMode.Stretch
+    assert (
+        window.files.horizontalHeader().sectionResizeMode(1)
+        == QHeaderView.ResizeMode.ResizeToContents
+    )
+    assert (
+        window.files.horizontalHeader().sectionResizeMode(2)
+        == QHeaderView.ResizeMode.ResizeToContents
+    )
+    assert window.results.horizontalHeader().sectionResizeMode(0) == QHeaderView.ResizeMode.Stretch
+    assert (
+        window.queue_table.horizontalHeader().sectionResizeMode(3) == QHeaderView.ResizeMode.Stretch
+    )
+    window.pool.waitForDone(3_000)
+    window.close()
+    app.processEvents()
 
 
 def test_playlist_navigation_has_back_history(tmp_path: Path) -> None:
