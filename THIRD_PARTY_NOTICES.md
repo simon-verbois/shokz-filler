@@ -8,7 +8,6 @@ used in this project's build scripts.
 - FFmpeg project and source: <https://ffmpeg.org/>
 - Linux static build/source information: <https://johnvansickle.com/ffmpeg/>
 - Windows build/source information: <https://www.gyan.dev/ffmpeg/builds/>
-- macOS build/source information: <https://formulae.brew.sh/formula/ffmpeg>
 - PySide6 / Qt for Python: <https://doc.qt.io/qtforpython-6/licenses.html>
 - yt-dlp: <https://github.com/yt-dlp/yt-dlp>
 - yt-dlp-ejs: <https://github.com/yt-dlp/ejs>
