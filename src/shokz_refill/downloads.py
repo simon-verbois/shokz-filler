@@ -8,7 +8,6 @@ from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from pathlib import Path
 
-from .duplicates import DuplicateIndex
 from .media import AudioConverter, DownloadCancelled, MediaDownloader
 from .models import DownloadJob, JobStatus, Track
 from .naming import track_filename
@@ -65,26 +64,13 @@ class DownloadQueue:
         self._lock = threading.Lock()
 
     def enqueue(
-        self, tracks: list[Track], destination: Path, device_root: Path, duplicates: DuplicateIndex
+        self, tracks: list[Track], destination: Path, device_root: Path
     ) -> list[DownloadJob]:
         created: list[DownloadJob] = []
         for track in tracks:
             job = DownloadJob(uuid.uuid4().hex, track, destination)
             self.jobs[job.job_id] = job
             created.append(job)
-            already_queued = any(
-                existing.track.video_id == track.video_id
-                and existing.status not in {JobStatus.FAILED, JobStatus.CANCELLED}
-                for existing in self.jobs.values()
-                if existing.job_id != job.job_id
-            )
-            if already_queued or duplicates.match(
-                source_id=track.video_id, artist=track.artist, title=track.title
-            ):
-                job.status = JobStatus.DUPLICATE
-                job.error = "Already present on the selected device"
-                self.callback(job)
-                continue
             self.callback(job)
             self._futures[job.job_id] = self._executor.submit(self._run, job, device_root)
         return created
@@ -159,11 +145,6 @@ class DownloadQueue:
 
     def shutdown(self) -> None:
         for job in self.jobs.values():
-            if job.status not in {
-                JobStatus.COMPLETE,
-                JobStatus.FAILED,
-                JobStatus.CANCELLED,
-                JobStatus.DUPLICATE,
-            }:
+            if job.status not in {JobStatus.COMPLETE, JobStatus.FAILED, JobStatus.CANCELLED}:
                 job.cancel_requested = True
         self._executor.shutdown(wait=False, cancel_futures=True)

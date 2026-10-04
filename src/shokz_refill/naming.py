@@ -6,6 +6,7 @@ from pathlib import Path
 
 _INVALID = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
 _SPACE = re.compile(r"\s+")
+_FOLDER_SEPARATOR = re.compile(r"[\s_]+")
 _RESERVED = {
     "CON",
     "PRN",
@@ -30,6 +31,12 @@ def sanitize_component(value: str, *, max_bytes: int = 180) -> str:
 
 def track_filename(artist: str, title: str) -> str:
     return sanitize_component(f"{artist} - {title}", max_bytes=220) + ".mp3"
+
+
+def playlist_folder_name(title: str) -> str:
+    value = sanitize_component(title, max_bytes=180).casefold()
+    value = _FOLDER_SEPARATOR.sub("_", value).strip("._")
+    return sanitize_component(value or "playlist", max_bytes=180).casefold()
 
 
 def collision_path(path: Path) -> Path:

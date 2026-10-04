@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import shutil
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +19,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QLineEdit,
     QMainWindow,
+    QMenu,
     QMessageBox,
     QProgressBar,
     QPushButton,
@@ -33,16 +35,22 @@ from PySide6.QtWidgets import (
 from .config import ConfigStore
 from .device import DeviceDetector, is_within, manual_device
 from .downloads import DownloadQueue, cleanup_stale_cache
-from .duplicates import DuplicateIndex
 from .files import DeviceFileService
 from .media import MediaDownloader
-from .metadata import read_identity, validate_source_mp3
+from .metadata import validate_source_mp3
 from .models import Device, DownloadJob, JobStatus, Playlist, Track
-from .naming import sanitize_component
+from .naming import playlist_folder_name, sanitize_component
 from .transfer import TransferManager
 from .youtube import YouTubeMusicService
 
 LOG = logging.getLogger(__name__)
+
+
+@dataclass(slots=True)
+class BrowserPage:
+    title: str
+    items: list[Track | Playlist]
+    playlist: Playlist | None = None
 
 
 class WorkerSignals(QObject):
@@ -104,6 +112,8 @@ class MainWindow(QMainWindow):
         self.current_folder: Path | None = None
         self.destination: Path | None = None
         self.result_objects: list[Track | Playlist] = []
+        self.browser_page = BrowserPage("YouTube Music", [])
+        self.browser_history: list[BrowserPage] = []
         self.file_objects: list[Path] = []
         self.queue_rows: dict[str, int] = {}
         transfer_state = store.cache_dir / "transfers.json"
@@ -164,6 +174,8 @@ class MainWindow(QMainWindow):
         self.queue_table.setHorizontalHeaderLabels(["Track", "Status", "Progress", "Details"])
         self.queue_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.queue_table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.queue_table.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.queue_table.customContextMenuRequested.connect(self._queue_context_menu)
         self.queue_table.horizontalHeader().setStretchLastSection(True)
         queue_layout.addWidget(self.queue_table)
         splitter = QSplitter(Qt.Orientation.Vertical)
@@ -208,10 +220,25 @@ class MainWindow(QMainWindow):
         search.addWidget(open_playlist)
         search.addWidget(select_all)
         layout.addLayout(search)
+        navigation = QHBoxLayout()
+        self.browser_back = QPushButton("← Back")
+        self.browser_back.setEnabled(False)
+        self.browser_back.clicked.connect(self._browser_go_back)
+        self.browser_location = QLabel("YouTube Music")
+        self.browser_location.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.download_playlist_button = QPushButton("Download whole playlist")
+        self.download_playlist_button.setEnabled(False)
+        self.download_playlist_button.clicked.connect(self._download_current_playlist)
+        navigation.addWidget(self.browser_back)
+        navigation.addWidget(self.browser_location, 1)
+        navigation.addWidget(self.download_playlist_button)
+        layout.addLayout(navigation)
         self.results = QTableWidget(0, 3)
         self.results.setHorizontalHeaderLabels(["Title", "Artist / count", "Duration"])
         self.results.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.results.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.results.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.results.customContextMenuRequested.connect(self._results_context_menu)
         self.results.horizontalHeader().setStretchLastSection(True)
         self.results.doubleClicked.connect(self._open_selected_playlist)
         select_all.clicked.connect(self.results.selectAll)
@@ -251,6 +278,8 @@ class MainWindow(QMainWindow):
         self.files.setHorizontalHeaderLabels(["Name", "Type", "Size"])
         self.files.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.files.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.files.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.files.customContextMenuRequested.connect(self._files_context_menu)
         self.files.horizontalHeader().setStretchLastSection(True)
         self.files.doubleClicked.connect(self._open_folder)
         layout.addWidget(self.files)
@@ -328,10 +357,44 @@ class MainWindow(QMainWindow):
             if self.search_type.currentText() == "Songs"
             else self.youtube.search_playlists
         )
-        self._run(lambda: function(query), self._show_results, "Searching YouTube Music…")
+        title = f"Search: {query}"
+        self._run(
+            lambda: function(query),
+            lambda objects: self._set_browser_root(title, objects),
+            "Searching YouTube Music…",
+        )
 
     def _load_library(self) -> None:
-        self._run(self.youtube.library_playlists, self._show_results, "Loading your playlists…")
+        self._run(
+            self.youtube.library_playlists,
+            lambda objects: self._set_browser_root("My playlists", objects),
+            "Loading your playlists…",
+        )
+
+    def _set_browser_root(self, title: str, objects: object) -> None:
+        items = list(objects) if isinstance(objects, list) else []
+        self.browser_history.clear()
+        self._set_browser_page(BrowserPage(title, items))
+
+    def _set_browser_page(self, page: BrowserPage) -> None:
+        self.browser_page = page
+        self.browser_location.setText(f"YouTube Music  ›  {page.title}")
+        self.browser_back.setEnabled(bool(self.browser_history))
+        self.download_playlist_button.setEnabled(page.playlist is not None)
+        self._show_results(page.items)
+
+    def _browser_go_back(self) -> None:
+        if self.browser_history:
+            self._set_browser_page(self.browser_history.pop())
+
+    def _enter_playlist(self, playlist: Playlist, objects: object) -> None:
+        tracks: list[Track | Playlist] = (
+            [item for item in objects if isinstance(item, Track)]
+            if isinstance(objects, list)
+            else []
+        )
+        self.browser_history.append(self.browser_page)
+        self._set_browser_page(BrowserPage(playlist.title, tracks, playlist))
 
     def _show_results(self, objects: object) -> None:
         self.result_objects = list(objects) if isinstance(objects, list) else []
@@ -359,6 +422,7 @@ class MainWindow(QMainWindow):
         return [
             self.result_objects[index.row()]
             for index in self.results.selectionModel().selectedRows()
+            if index.row() < len(self.result_objects)
         ]
 
     def _open_selected_playlist(self) -> None:
@@ -367,7 +431,7 @@ class MainWindow(QMainWindow):
         if playlist:
             self._run(
                 lambda: self.youtube.playlist_tracks(playlist.playlist_id),
-                self._show_results,
+                lambda objects: self._enter_playlist(playlist, objects),
                 "Loading playlist…",
             )
 
@@ -380,12 +444,87 @@ class MainWindow(QMainWindow):
             self._show_error("No connected Shokz destination is selected")
             return
         device, destination = self.device, self.destination
+        self._enqueue_tracks(tracks, destination, device)
 
-        def enqueue(index: object) -> None:
-            if isinstance(index, DuplicateIndex):
-                self.queue.enqueue(tracks, destination, device.root, index)
+    def _enqueue_tracks(self, tracks: list[Track], destination: Path, device: Device) -> None:
+        self.queue.enqueue(tracks, destination, device.root)
 
-        self._run(lambda: DuplicateIndex.scan(device.root), enqueue, "Scanning for duplicates…")
+    def _download_current_playlist(self) -> None:
+        playlist = self.browser_page.playlist
+        if playlist is not None:
+            tracks = [item for item in self.browser_page.items if isinstance(item, Track)]
+            self._prepare_playlist_download(playlist, tracks)
+
+    def _download_playlist(self, playlist: Playlist) -> None:
+        self._run(
+            lambda: self.youtube.playlist_tracks(playlist.playlist_id),
+            lambda objects: self._prepare_playlist_download(
+                playlist,
+                [item for item in objects if isinstance(item, Track)]
+                if isinstance(objects, list)
+                else [],
+            ),
+            f"Loading {playlist.title}…",
+        )
+
+    def _prepare_playlist_download(self, playlist: Playlist, tracks: list[Track]) -> None:
+        if not tracks:
+            self._show_error("This playlist has no downloadable tracks")
+            return
+        if not self.device or not self.destination or not self.device.root.exists():
+            self._show_error("No connected Shokz destination is selected")
+            return
+        device, base = self.device, self.destination
+        folder_name = playlist_folder_name(playlist.title)
+
+        def prepare() -> Path:
+            return DeviceFileService(device.root).ensure_folder(base, folder_name)
+
+        def enqueue(value: object) -> None:
+            if isinstance(value, Path):
+                self.queue.enqueue(tracks, value, device.root)
+                self.statusBar().showMessage(f"Queued {len(tracks)} track(s) in {value.name}")
+                self._refresh_files()
+
+        self._run(prepare, enqueue, f"Preparing folder {folder_name}…")
+
+    def _results_context_menu(self, position: Any) -> None:
+        row = self.results.rowAt(position.y())
+        clicked_item = self.results.item(row, 0) if row >= 0 else None
+        if (
+            0 <= row < len(self.result_objects)
+            and clicked_item is not None
+            and not clicked_item.isSelected()
+        ):
+            self.results.clearSelection()
+            self.results.selectRow(row)
+        selected = self._selected_result_objects()
+        playlist = next((item for item in selected if isinstance(item, Playlist)), None)
+        tracks = [item for item in selected if isinstance(item, Track)]
+        menu = QMenu(self)
+        open_action = menu.addAction("Open playlist") if playlist else None
+        playlist_action = (
+            menu.addAction("Download playlist to automatic folder")
+            if playlist or self.browser_page.playlist
+            else None
+        )
+        tracks_action = menu.addAction("Download selected track(s)") if tracks else None
+        select_all_action = menu.addAction("Select all")
+        back_action = menu.addAction("Back") if self.browser_history else None
+        chosen = menu.exec(self.results.viewport().mapToGlobal(position))
+        if open_action is not None and chosen == open_action:
+            self._open_selected_playlist()
+        elif playlist_action is not None and chosen == playlist_action:
+            if playlist:
+                self._download_playlist(playlist)
+            else:
+                self._download_current_playlist()
+        elif tracks_action is not None and chosen == tracks_action:
+            self._download_selected()
+        elif chosen == select_all_action:
+            self.results.selectAll()
+        elif back_action is not None and chosen == back_action:
+            self._browser_go_back()
 
     def _poll_devices(self) -> None:
         worker = Worker(self.detector.scan)
@@ -519,8 +658,47 @@ class MainWindow(QMainWindow):
 
     def _selected_paths(self) -> list[Path]:
         return [
-            self.file_objects[index.row()] for index in self.files.selectionModel().selectedRows()
+            self.file_objects[index.row()]
+            for index in self.files.selectionModel().selectedRows()
+            if index.row() < len(self.file_objects)
         ]
+
+    def _files_context_menu(self, position: Any) -> None:
+        row = self.files.rowAt(position.y())
+        clicked_item = self.files.item(row, 0) if row >= 0 else None
+        if (
+            0 <= row < len(self.file_objects)
+            and clicked_item is not None
+            and not clicked_item.isSelected()
+        ):
+            self.files.clearSelection()
+            self.files.selectRow(row)
+        selected = self._selected_paths()
+        single_folder = selected[0] if len(selected) == 1 and selected[0].is_dir() else None
+        menu = QMenu(self)
+        open_action = menu.addAction("Open folder") if single_folder else None
+        destination_action = (
+            menu.addAction("Use as download destination") if single_folder else None
+        )
+        rename_action = menu.addAction("Rename") if len(selected) == 1 else None
+        delete_action = menu.addAction("Delete") if selected else None
+        if selected:
+            menu.addSeparator()
+        new_folder_action = menu.addAction("New folder here")
+        add_mp3_action = menu.addAction("Add local MP3 here")
+        chosen = menu.exec(self.files.viewport().mapToGlobal(position))
+        if open_action is not None and chosen == open_action:
+            self._open_folder()
+        elif destination_action is not None and chosen == destination_action:
+            self._set_destination(single_folder)
+        elif rename_action is not None and chosen == rename_action:
+            self._rename()
+        elif delete_action is not None and chosen == delete_action:
+            self._delete()
+        elif chosen == new_folder_action:
+            self._new_folder()
+        elif chosen == add_mp3_action:
+            self._add_local()
 
     def _open_folder(self) -> None:
         selected = self._selected_paths()
@@ -590,34 +768,30 @@ class MainWindow(QMainWindow):
         sources = [Path(name) for name in names]
         root, folder = self.device.root, self.current_folder
 
-        def copy_files() -> tuple[int, int]:
-            index = DuplicateIndex.scan(root)
-            copied = skipped = 0
+        def copy_files() -> int:
+            copied = 0
             for source in sources:
                 validate_source_mp3(source)
-                identity = read_identity(source)
-                if index.match(artist=identity.artist, title=identity.title, filename=source.name):
-                    skipped += 1
-                    continue
                 safe_name = sanitize_component(source.stem, max_bytes=220) + ".mp3"
-                target = self.transfer.transfer(source, folder / safe_name, root)
-                index.add(target, identity)
+                self.transfer.transfer(source, folder / safe_name, root)
                 copied += 1
-            return copied, skipped
+            return copied
 
         self._run(copy_files, self._local_added, "Copying MP3 files…")
 
     def _local_added(self, result: object) -> None:
-        copied, skipped = result if isinstance(result, tuple) else (0, 0)
-        self.statusBar().showMessage(f"Copied {copied}; skipped {skipped} duplicate(s)")
+        copied = result if isinstance(result, int) else 0
+        self.statusBar().showMessage(f"Copied {copied} MP3 file(s)")
         self._refresh_files()
 
     def _select_destination(self) -> None:
         if self.device and self.current_folder:
-            self.destination = self.current_folder
-            self.config.destination_relative = str(
-                self.current_folder.relative_to(self.device.root)
-            )
+            self._set_destination(self.current_folder)
+
+    def _set_destination(self, folder: Path | None) -> None:
+        if self.device and folder and folder.is_dir() and is_within(self.device.root, folder):
+            self.destination = folder.resolve()
+            self.config.destination_relative = str(folder.relative_to(self.device.root))
             self._render_device()
             self.tabs.setCurrentIndex(0)
 
@@ -662,6 +836,23 @@ class MainWindow(QMainWindow):
             if isinstance(value, str):
                 ids.append(value)
         return ids
+
+    def _queue_context_menu(self, position: Any) -> None:
+        row = self.queue_table.rowAt(position.y())
+        clicked_item = self.queue_table.item(row, 0) if row >= 0 else None
+        if row >= 0 and clicked_item is not None and not clicked_item.isSelected():
+            self.queue_table.clearSelection()
+            self.queue_table.selectRow(row)
+        if not self._selected_job_ids():
+            return
+        menu = QMenu(self)
+        retry_action = menu.addAction("Retry failed/cancelled")
+        cancel_action = menu.addAction("Cancel selected")
+        chosen = menu.exec(self.queue_table.viewport().mapToGlobal(position))
+        if chosen == retry_action:
+            self._retry_jobs()
+        elif chosen == cancel_action:
+            self._cancel_jobs()
 
     def _retry_jobs(self) -> None:
         if self.device:

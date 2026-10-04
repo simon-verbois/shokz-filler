@@ -48,7 +48,6 @@ class JobStatus(StrEnum):
     COMPLETE = "complete"
     FAILED = "failed"
     CANCELLED = "cancelled"
-    DUPLICATE = "duplicate"
 
 
 @dataclass(slots=True)

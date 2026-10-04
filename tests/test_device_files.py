@@ -17,6 +17,8 @@ def test_path_validation_blocks_escape_and_symlink(tmp_path: Path) -> None:
     assert not is_within(root, root / "escape" / "file.mp3", allow_missing=True)
     with pytest.raises(ValueError):
         DeviceFileService(root).checked(root / "escape" / "file.mp3", missing=True)
+    with pytest.raises(ValueError, match="symbolic link"):
+        DeviceFileService(root).ensure_folder(root, "escape")
 
 
 def test_file_operations_and_collision(tmp_path: Path) -> None:
@@ -24,6 +26,7 @@ def test_file_operations_and_collision(tmp_path: Path) -> None:
     root.mkdir()
     service = DeviceFileService(root)
     folder = service.create_folder(root, "Music")
+    assert service.ensure_folder(root, "Music") == folder
     source = tmp_path / "song.mp3"
     source.write_bytes(b"audio")
     first = service.import_mp3(source, folder)

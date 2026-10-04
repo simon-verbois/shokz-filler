@@ -1,6 +1,11 @@
 from pathlib import Path
 
-from shokz_refill.naming import collision_path, sanitize_component, track_filename
+from shokz_refill.naming import (
+    collision_path,
+    playlist_folder_name,
+    sanitize_component,
+    track_filename,
+)
 
 
 def test_sanitize_windows_and_length() -> None:
@@ -8,6 +13,8 @@ def test_sanitize_windows_and_length() -> None:
     assert sanitize_component("CON") == "_CON"
     assert len(sanitize_component("é" * 200).encode()) <= 180
     assert track_filename("Artist", "Title") == "Artist - Title.mp3"
+    assert playlist_folder_name("  Ma Playlist ÉTÉ / 2026  ") == "ma_playlist_été_2026"
+    assert playlist_folder_name("CON") == "_con"
 
 
 def test_collision_path(tmp_path: Path) -> None:

@@ -7,8 +7,7 @@ device.
 
 The application searches songs and playlists, opens playlist tracks, loads account-library
 playlists, downloads up to three tracks concurrently, and transfers them sequentially. Output is
-always broadly compatible MP3: **CBR 192 kbps, 44.1 kHz, stereo, ID3v2.3**. Duplicate checks use
-the YouTube source ID first, then artist/title metadata, then the normalized filename.
+always broadly compatible MP3: **CBR 192 kbps, 44.1 kHz, stereo, ID3v2.3**.
 
 ## Use
 
@@ -16,14 +15,21 @@ the YouTube source ID first, then artist/title metadata, then the normalized fil
    labelled; manual selection is available for devices whose USB metadata cannot be recognized.
 2. Browse to a folder and choose **Select destination folder**.
 3. Search YouTube Music, or connect an account and select **My playlists**. Open a playlist,
-   select tracks, then choose **Download / transfer selected**.
-4. Watch download, conversion, and transfer progress in the queue. Failed items can be retried and
+   use the breadcrumb and **Back** button to navigate, then select tracks and choose
+   **Download / transfer selected**.
+4. To transfer an entire playlist, choose **Download whole playlist** (or use the playlist's
+   right-click menu). Shokz Refill creates or reuses a lowercase folder with underscores, such as
+   `my_running_mix`, below the selected destination.
+5. Watch download, conversion, and transfer progress in the queue. Failed items can be retried and
    active or queued items can be cancelled.
 
 The device browser can create, rename, and delete empty folders; rename or delete MP3s; and add
 local MP3 files. Deletes require confirmation. Name collisions get a deterministic numbered name
 and never overwrite an existing file. Interrupted transfers remain visibly marked as `.part` and
 resume only when the cached source fingerprint still matches.
+
+Right-click menus expose the relevant actions for YouTube results, Shokz files/folders, and queue
+items without duplicating unrelated file-manager features.
 
 ## YouTube Music authentication
 

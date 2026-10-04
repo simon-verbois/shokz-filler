@@ -40,6 +40,19 @@ class DeviceFileService:
         self.checked(target, missing=True).mkdir()
         return target
 
+    def ensure_folder(self, parent: Path, name: str) -> Path:
+        folder = self.checked(parent)
+        target = folder / sanitize_component(name)
+        if target.is_symlink():
+            raise ValueError(f"{target.name} is a symbolic link, not a safe folder")
+        checked = self.checked(target, missing=not target.exists())
+        if checked.exists():
+            if checked.is_symlink() or not checked.is_dir():
+                raise ValueError(f"{checked.name} exists but is not a safe folder")
+            return checked
+        checked.mkdir()
+        return checked
+
     def rename(self, path: Path, new_name: str) -> Path:
         source = self.checked(path)
         suffix = source.suffix if source.is_file() else ""

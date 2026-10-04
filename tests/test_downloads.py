@@ -1,7 +1,6 @@
 from pathlib import Path
 
 from shokz_refill.downloads import DownloadQueue
-from shokz_refill.duplicates import DuplicateIndex
 from shokz_refill.models import JobStatus, Track
 
 
@@ -29,7 +28,7 @@ class FakeTransfer:
         return destination
 
 
-def test_queue_completes_and_marks_duplicate(tmp_path: Path) -> None:
+def test_queue_completes_repeated_tracks(tmp_path: Path) -> None:
     statuses: list[JobStatus] = []
     queue = DownloadQueue(
         tmp_path / "cache",
@@ -39,14 +38,12 @@ def test_queue_completes_and_marks_duplicate(tmp_path: Path) -> None:
         lambda job: statuses.append(job.status),
     )
     track = Track("id", "Song", ("Artist",))
-    job = queue.enqueue([track], tmp_path, tmp_path, DuplicateIndex())[0]
+    job = queue.enqueue([track], tmp_path, tmp_path)[0]
     queue._futures[job.job_id].result(timeout=3)
     assert job.status == JobStatus.COMPLETE
     assert (tmp_path / "Artist - Song.mp3").read_bytes() == b"mp3"
-    duplicate = DuplicateIndex(source_ids={"id"})
-    duplicate_job = queue.enqueue([track], tmp_path, tmp_path, duplicate)[0]
-    assert duplicate_job.status == JobStatus.DUPLICATE
-    repeated_job = queue.enqueue([track], tmp_path, tmp_path, DuplicateIndex())[0]
-    assert repeated_job.status == JobStatus.DUPLICATE
+    repeated_job = queue.enqueue([track], tmp_path, tmp_path)[0]
+    queue._futures[repeated_job.job_id].result(timeout=3)
+    assert repeated_job.status == JobStatus.COMPLETE
     assert JobStatus.DOWNLOADING in statuses and JobStatus.TRANSFERRING in statuses
     queue.shutdown()
