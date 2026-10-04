@@ -72,7 +72,7 @@ class DeviceFileService:
         if target == self.root:
             raise ValueError("The device root cannot be deleted")
         if target.is_dir():
-            target.rmdir()  # Deliberately only empty folders.
+            shutil.rmtree(target)
         else:
             target.unlink()
 
@@ -90,10 +90,16 @@ class DeviceFileService:
 
         moved: list[Path] = []
         for source in sources:
-            if source.parent == folder:
+            safe_name = (
+                sanitize_component(source.stem, max_bytes=220) + ".mp3"
+                if source.is_file()
+                else sanitize_component(source.name)
+            )
+            target = self.checked(folder / safe_name, missing=True)
+            if target == source:
                 moved.append(source)
                 continue
-            target = collision_path(self.checked(folder / source.name, missing=True))
+            target = collision_path(target)
             source.rename(target)
             moved.append(target)
         return moved

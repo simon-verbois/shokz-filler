@@ -96,7 +96,7 @@ def test_whole_playlist_creates_automatic_folder(
         time.sleep(0.01)
     window.pool.waitForDone(3_000)
     window.close()
-    assert queued == [root / "ma_playlist_été_2026"]
+    assert queued == [root / "Ma Playlist ÉTÉ 2026"]
     assert queued[0].is_dir()
 
 
@@ -126,7 +126,7 @@ def test_double_click_track_in_playlist_uses_playlist_folder(
         time.sleep(0.01)
     window.pool.waitForDone(3_000)
     window.close()
-    assert queued == [root / "road_trip"]
+    assert queued == [root / "Road Trip"]
 
 
 def test_device_folder_back_and_forward_history(tmp_path: Path) -> None:

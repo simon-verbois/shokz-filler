@@ -18,18 +18,23 @@ always broadly compatible MP3: **CBR 192 kbps, 44.1 kHz, stereo, ID3v2.3**.
    use the **<** and **>** buttons to navigate, then select tracks and choose
    **Download / transfer selected**.
 4. To transfer an entire playlist, choose **Download whole playlist** (or use the playlist's
-   right-click menu). Shokz Refill creates or reuses a lowercase folder with underscores, such as
-   `my_running_mix`, below the selected destination.
+   right-click menu). Shokz Refill creates or reuses a folder that keeps the playlist's original
+   capitalization and spaces, such as `My Running Mix`, below the selected destination.
 5. Watch download, conversion, and transfer progress in the queue. Failed items can be retried and
    active or queued items can be cancelled.
 
-The device browser can create, rename, move, and delete empty folders; rename, move, or delete MP3s;
+The device browser can create, rename, move, and recursively delete folders; rename, move, or delete MP3s;
 and add local MP3 files. `System Volume Information` is hidden. Moves support multi-selection:
 drag selected items onto a visible folder, or use **Move selected…** to choose a destination from
-the in-app folder tree. Moves remain inside the selected device. Deletes require confirmation. Name
+the in-app folder tree. Moves remain inside the selected device. Recursive deletes require explicit
+confirmation and do not follow symbolic links outside the device. Name
 collisions get a deterministic numbered name and never overwrite an existing file. Interrupted
 transfers remain visibly marked as `.part` and resume only when the cached source fingerprint still
 matches.
+
+Names created by Shokz Refill keep readable Unicode letters, numbers, spaces, hyphens and
+underscores. Other punctuation, emoji, control characters and filesystem-reserved characters are
+removed consistently from MP3 and folder names.
 
 Right-click menus expose the relevant actions for YouTube results, Shokz files/folders, and queue
 items without duplicating unrelated file-manager features.

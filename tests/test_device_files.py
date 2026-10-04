@@ -32,9 +32,9 @@ def test_file_operations_and_collision(tmp_path: Path) -> None:
     first = service.import_mp3(source, folder)
     second = service.import_mp3(source, folder)
     assert first.name == "song.mp3"
-    assert second.name == "song (2).mp3"
+    assert second.name == "song 2.mp3"
     renamed = service.rename(first, "new:name")
-    assert renamed.name == "new_name.mp3"
+    assert renamed.name == "newname.mp3"
     service.delete(renamed)
     service.delete(second)
     service.delete(folder)
@@ -65,9 +65,9 @@ def test_move_selected_items_safely(tmp_path: Path) -> None:
 
     moved = service.move([first, second], destination)
 
-    assert [path.name for path in moved] == ["song (2).mp3", "other.mp3"]
+    assert [path.name for path in moved] == ["song 2.mp3", "other.mp3"]
     assert (destination / "song.mp3").read_bytes() == b"existing"
-    assert (destination / "song (2).mp3").read_bytes() == b"first"
+    assert (destination / "song 2.mp3").read_bytes() == b"first"
     assert not first.exists() and not second.exists()
 
 
@@ -83,3 +83,20 @@ def test_move_blocks_folder_into_itself_and_outside_device(tmp_path: Path) -> No
         service.move([root / "folder"], child)
     with pytest.raises(ValueError, match="leaves the selected device"):
         service.move([root / "folder"], outside)
+
+
+def test_delete_nonempty_folder_without_following_symlink(tmp_path: Path) -> None:
+    root = tmp_path / "device"
+    folder = root / "playlist" / "nested"
+    outside = tmp_path / "outside"
+    folder.mkdir(parents=True)
+    outside.mkdir()
+    (folder / "song.mp3").write_bytes(b"song")
+    protected = outside / "keep.mp3"
+    protected.write_bytes(b"keep")
+    (folder / "outside-link").symlink_to(outside, target_is_directory=True)
+
+    DeviceFileService(root).delete(root / "playlist")
+
+    assert not (root / "playlist").exists()
+    assert protected.read_bytes() == b"keep"

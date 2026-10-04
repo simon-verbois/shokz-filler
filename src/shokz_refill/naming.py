@@ -4,9 +4,8 @@ import re
 import unicodedata
 from pathlib import Path
 
-_INVALID = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
+_SPECIAL = re.compile(r"[^\w\s-]+", re.UNICODE)
 _SPACE = re.compile(r"\s+")
-_FOLDER_SEPARATOR = re.compile(r"[\s_]+")
 _RESERVED = {
     "CON",
     "PRN",
@@ -19,8 +18,8 @@ _RESERVED = {
 
 def sanitize_component(value: str, *, max_bytes: int = 180) -> str:
     value = unicodedata.normalize("NFC", value)
-    value = _SPACE.sub(" ", _INVALID.sub("_", value)).strip(" .")
-    if not value:
+    value = _SPACE.sub(" ", _SPECIAL.sub("", value)).strip()
+    if not value or not any(character.isalnum() for character in value):
         value = "Untitled"
     if value.upper() in _RESERVED:
         value = f"_{value}"
@@ -34,16 +33,14 @@ def track_filename(artist: str, title: str) -> str:
 
 
 def playlist_folder_name(title: str) -> str:
-    value = sanitize_component(title, max_bytes=180).casefold()
-    value = _FOLDER_SEPARATOR.sub("_", value).strip("._")
-    return sanitize_component(value or "playlist", max_bytes=180).casefold()
+    return sanitize_component(title, max_bytes=180)
 
 
 def collision_path(path: Path) -> Path:
     if not path.exists() and not path.with_name(path.name + ".shokz-refill.part").exists():
         return path
     for number in range(2, 10_000):
-        candidate = path.with_name(f"{path.stem} ({number}){path.suffix}")
+        candidate = path.with_name(f"{path.stem} {number}{path.suffix}")
         if (
             not candidate.exists()
             and not candidate.with_name(candidate.name + ".shokz-refill.part").exists()

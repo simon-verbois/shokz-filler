@@ -15,7 +15,7 @@ def test_transfer_success_and_collision(tmp_path: Path) -> None:
     target = manager.transfer(source, root / "song.mp3", root)
     assert target.read_bytes() == source.read_bytes()
     second = manager.transfer(source, root / "song.mp3", root)
-    assert second.name == "song (2).mp3"
+    assert second.name == "song 2.mp3"
 
 
 def test_interrupted_transfer_resumes(tmp_path: Path) -> None:

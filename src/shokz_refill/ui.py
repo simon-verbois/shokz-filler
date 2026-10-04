@@ -979,11 +979,19 @@ class MainWindow(QMainWindow):
     def _delete(self) -> None:
         selected = self._selected_paths()
         if not self.device or not selected:
-            self._show_error("Select one or more files or empty folders")
+            self._show_error("Select one or more files or folders")
             return
+        includes_folders = any(path.is_dir() for path in selected)
+        detail = (
+            " Selected folders and everything inside them will be permanently deleted."
+            if includes_folders
+            else ""
+        )
         if (
             QMessageBox.question(
-                self, "Delete", f"Permanently delete {len(selected)} selected item(s)?"
+                self,
+                "Delete",
+                f"Permanently delete {len(selected)} selected item(s)?{detail}",
             )
             != QMessageBox.StandardButton.Yes
         ):
