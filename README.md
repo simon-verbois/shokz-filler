@@ -121,8 +121,9 @@ Windows must be built natively; the Linux build cannot cross-compile it.
 
 ## Forgejo CI and releases
 
-The Forgejo workflow keeps the existing triggers: pull requests run the quality gate, and tags
-matching `YYYY.*.*` run tests followed by native Linux and Windows builds. Both builds are collected
+The Forgejo workflow runs the quality gate on pull requests and runs quality checks followed by
+native Linux and Windows builds on pushes to `main` or manual dispatches. Tags matching `YYYY.*.*`
+also run the builds and publish a release. Both release builds are collected
 only after all required jobs succeed, then the cleaned source mirror, tag, and release assets are
 pushed to <https://github.com/simon-verbois/shokz-filler>.
 
