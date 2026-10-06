@@ -1,4 +1,5 @@
 .venv/
+.ci-tools/
 __pycache__/
 *.py[cod]
 .pytest_cache/

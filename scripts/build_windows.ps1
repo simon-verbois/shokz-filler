@@ -1,4 +1,6 @@
+#Requires -Version 7.3
 $ErrorActionPreference = "Stop"
+$PSNativeCommandUseErrorActionPreference = $true
 $ProjectDir = Split-Path -Parent $PSScriptRoot
 Set-Location $ProjectDir
 
@@ -9,12 +11,13 @@ if (-not (Test-Path ".venv\Scripts\python.exe")) {
         python -m venv .venv
     }
 }
+$env:QT_QPA_PLATFORM = "offscreen"
 & .venv\Scripts\python.exe -m pip install --upgrade pip
 & .venv\Scripts\python.exe -m pip install ".[dev]"
 
 $BinDir = "src\shokz_refill\bin"
 New-Item -ItemType Directory -Force $BinDir | Out-Null
-if (-not (Test-Path "$BinDir\ffmpeg.exe")) {
+if (-not (Test-Path "$BinDir\ffmpeg.exe") -or -not (Test-Path "$BinDir\ffprobe.exe")) {
     $Archive = Join-Path $env:TEMP "shokz-refill-ffmpeg.zip"
     $Extract = Join-Path $env:TEMP "shokz-refill-ffmpeg"
     Invoke-WebRequest "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile $Archive
@@ -44,8 +47,8 @@ if (-not (Test-Path "$BinDir\DENO-LICENSE.md")) {
 & .venv\Scripts\python.exe -m PyInstaller --noconfirm --clean shokz-refill.spec
 $Artifact = "dist\Shokz-Refill-windows-x86_64.exe"
 Move-Item "dist\Shokz-Refill.exe" $Artifact -Force
-& $Artifact --smoke-test
-if ($LASTEXITCODE -ne 0) { throw "Packaged application smoke test failed" }
+$SmokeTest = Start-Process -FilePath (Join-Path $ProjectDir $Artifact) -ArgumentList "--smoke-test" -Wait -PassThru
+if ($SmokeTest.ExitCode -ne 0) { throw "Packaged application smoke test failed ($($SmokeTest.ExitCode))" }
 $Hash = (Get-FileHash $Artifact -Algorithm SHA256).Hash.ToLowerInvariant()
 Set-Content -Path "$Artifact.sha256" -Value "$Hash  Shokz-Refill-windows-x86_64.exe"
 Write-Host "Portable Windows executable: $Artifact"

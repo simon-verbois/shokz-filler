@@ -109,10 +109,10 @@ it.
 
 ## Windows
 
-Install 64-bit Python 3.12 only on the build machine, then run:
+Install 64-bit Python 3.12 and PowerShell 7.3 or newer only on the build machine, then run:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\build_windows.ps1
+pwsh -ExecutionPolicy Bypass -File scripts\build_windows.ps1
 ```
 
 The resulting `dist\Shokz-Refill-windows-x86_64.exe` includes Python, PySide6, yt-dlp with its EJS
@@ -126,7 +126,12 @@ matching `YYYY.*.*` run tests followed by native Linux and Windows builds. Both 
 only after all required jobs succeed, then the cleaned source mirror, tag, and release assets are
 pushed to <https://github.com/simon-verbois/shokz-filler>.
 
-The Forgejo installation must provide runners labelled `ubuntu-latest` and `windows-latest`.
+The Forgejo installation must provide runners labelled `ubuntu-latest` and `windows-11`.
+The Windows host job uses PowerShell 7, checks out the exact commit over the LAN, and downloads
+portable Python (via uv) and Node into its fresh checkout without administrator rights. Node runs
+the official v3 artifact upload script directly; no JavaScript Actions or cache are needed on that
+runner. A manual workflow dispatch runs quality checks and both native builds without publishing
+a release, allowing the runner and checkout authentication to be tested first.
 Configure `GITHUBPAT_TOKEN` preferably as an Actions secret (an existing Actions variable with the
 same name is also supported) with write access to the public GitHub repository. From a clean `main`
 branch, create a release with:
