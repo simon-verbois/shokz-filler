@@ -14,7 +14,9 @@ from .models import Playlist, Track
 class TimeoutSession(requests.Session):
     def request(self, method: str, url: str, **kwargs: Any) -> requests.Response:  # type: ignore[override]
         kwargs.setdefault("timeout", 15)
-        return super().request(method, url, **kwargs)
+        response = super().request(method, url, **kwargs)
+        response.raise_for_status()
+        return response
 
 
 class YTMusicClient(Protocol):
@@ -70,10 +72,25 @@ class YouTubeMusicService:
         self._client = client
         self._public_client: YTMusicClient | None = None
         self._auth_client: YTMusicClient | None = None
+        self._auth_invalid = False
+        self._auth_verified = False
 
     @property
     def authenticated(self) -> bool:
-        return self._client is not None or self.auth_path.is_file()
+        return self._client is not None or (not self._auth_invalid and self.auth_path.is_file())
+
+    @property
+    def connection_verified(self) -> bool:
+        return self._client is not None or (self.authenticated and self._auth_verified)
+
+    def _invalid_session(self) -> PermissionError:
+        self._auth_invalid = True
+        self._auth_verified = False
+        self._auth_client = None
+        return PermissionError(
+            "The saved YouTube Music session could not be validated; it may be invalid or expired. "
+            "Click Connect YouTube Music and paste fresh request headers."
+        )
 
     def _public(self) -> YTMusicClient:
         if self._client is not None:
@@ -85,13 +102,18 @@ class YouTubeMusicService:
     def _authenticated(self) -> YTMusicClient:
         if self._client is not None:
             return self._client
+        if self._auth_invalid:
+            raise self._invalid_session()
         if not self.auth_path.is_file():
             raise PermissionError("Connect YouTube Music first")
         if self._auth_client is None:
-            self._auth_client = cast(
-                YTMusicClient,
-                YTMusic(str(self.auth_path), requests_session=TimeoutSession()),
-            )
+            try:
+                self._auth_client = cast(
+                    YTMusicClient,
+                    YTMusic(str(self.auth_path), requests_session=TimeoutSession()),
+                )
+            except Exception:
+                raise self._invalid_session() from None
         return self._auth_client
 
     def connect_headers(self, raw_headers: str) -> str:
@@ -106,6 +128,8 @@ class YouTubeMusicService:
             info = client.get_account_info()
             temporary.replace(self.auth_path)
             self._auth_client = cast(YTMusicClient, client)
+            self._auth_invalid = False
+            self._auth_verified = True
             name = str(info.get("accountName") or info.get("channelHandle") or "Connected")
             return name
         except Exception:
@@ -115,6 +139,8 @@ class YouTubeMusicService:
     def disconnect(self) -> None:
         self._client = None
         self._auth_client = None
+        self._auth_invalid = False
+        self._auth_verified = False
         self.auth_path.unlink(missing_ok=True)
 
     def search_songs(self, query: str) -> list[Track]:
@@ -132,11 +158,26 @@ class YouTubeMusicService:
         ]
 
     def library_playlists(self) -> list[Playlist]:
-        return [
-            playlist
-            for item in self._authenticated().get_library_playlists(limit=None)
-            if (playlist := map_playlist(item))
-        ]
+        client = self._authenticated()
+        try:
+            if not self.connection_verified:
+                client.get_account_info()
+            items = client.get_library_playlists(limit=None)
+            playlists = [playlist for item in items if (playlist := map_playlist(item))]
+        except (requests.Timeout, requests.ConnectionError):
+            raise RuntimeError(
+                "Could not reach YouTube Music. Check your connection and try My playlists again."
+            ) from None
+        except requests.HTTPError as exc:
+            if exc.response is not None and exc.response.status_code in (401, 403):
+                raise self._invalid_session() from None
+            raise RuntimeError(
+                "YouTube Music is temporarily unavailable. Try again later."
+            ) from None
+        except Exception:
+            raise self._invalid_session() from None
+        self._auth_verified = True
+        return playlists
 
     def playlist_tracks(self, playlist_id: str) -> list[Track]:
         client = self._authenticated() if self.authenticated else self._public()

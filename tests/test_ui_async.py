@@ -6,6 +6,7 @@ import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+from PySide6.QtCore import QThread  # noqa: E402
 from PySide6.QtWidgets import QApplication, QDialog, QHeaderView, QInputDialog  # noqa: E402
 
 from shokz_refill.config import ConfigStore  # noqa: E402
@@ -26,6 +27,44 @@ def test_background_result_reaches_ui(tmp_path: Path) -> None:
     window.pool.waitForDone(3_000)
     window.close()
     assert received == ["result"]
+
+
+def test_expired_library_error_runs_on_ui_thread(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app = QApplication.instance() or QApplication([])
+    store = ConfigStore(tmp_path / "config", tmp_path / "cache")
+    store.ensure_dirs()
+    store.auth_path.write_text("{}", encoding="utf-8")
+    window = MainWindow(store)
+    window.show()
+    assert "not yet verified" in window.auth_label.text()
+    calls: list[tuple[str, QThread]] = []
+    request_threads: list[QThread] = []
+
+    class ExpiredClient:
+        def get_account_info(self) -> object:
+            request_threads.append(QThread.currentThread())
+            raise KeyError("expired session")
+
+    monkeypatch.setattr(window.youtube, "_auth_client", ExpiredClient())
+    monkeypatch.setattr(
+        window, "_show_error", lambda message: calls.append((message, QThread.currentThread()))
+    )
+    window._load_library()
+    deadline = time.monotonic() + 3
+    while not calls and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.01)
+    assert calls and calls[0][1] == app.thread()
+    assert request_threads and request_threads[0] != app.thread()
+    assert "paste fresh request headers" in calls[0][0]
+    assert window.auth_label.text() == "YouTube Music: not connected"
+    assert window.isVisible()
+    assert store.auth_path.is_file()
+    window.pool.waitForDone(3_000)
+    window.close()
+    app.processEvents()
 
 
 def test_table_columns_have_readable_default_layout(tmp_path: Path) -> None:

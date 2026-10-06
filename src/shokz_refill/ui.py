@@ -334,6 +334,9 @@ class MainWindow(QMainWindow):
         self.pool = QThreadPool.globalInstance()
         self._workers: set[Worker] = set()
         self.device: Device | None = None
+        self._worker_callbacks: dict[
+            WorkerSignals, tuple[Worker, Callable[[Any], None], Callable[[str], None] | None]
+        ] = {}
         self.current_folder: Path | None = None
         self.folder_history: list[Path] = []
         self.folder_history_index = -1
@@ -590,32 +593,45 @@ class MainWindow(QMainWindow):
         worker = Worker(function)
         self._workers.add(worker)
 
-        def completed(value: object) -> None:
-            self._workers.discard(worker)
-            self.statusBar().showMessage("Ready")
-            success(value)
-
-        def failed(message: str) -> None:
-            self._workers.discard(worker)
-            if failure is None:
-                self._show_error(message)
-            else:
-                failure(message)
-
-        worker.signals.result.connect(completed)
-        worker.signals.error.connect(failed)
+        self._worker_callbacks[worker.signals] = (worker, success, failure)
+        worker.signals.result.connect(self._worker_completed, Qt.ConnectionType.QueuedConnection)
+        worker.signals.error.connect(self._worker_failed, Qt.ConnectionType.QueuedConnection)
         self.pool.start(worker)
+
+    @Slot(object)
+    def _worker_completed(self, value: object) -> None:
+        signals = self.sender()
+        if not isinstance(signals, WorkerSignals):
+            return
+        worker, success, _ = self._worker_callbacks.pop(signals)
+        self._workers.discard(worker)
+        self.statusBar().showMessage("Ready")
+        success(value)
+
+    @Slot(str)
+    def _worker_failed(self, message: str) -> None:
+        signals = self.sender()
+        if not isinstance(signals, WorkerSignals):
+            return
+        worker, _, failure = self._worker_callbacks.pop(signals)
+        self._workers.discard(worker)
+        if failure is None:
+            self._show_error(message)
+        else:
+            failure(message)
 
     def _show_error(self, message: str) -> None:
         self.statusBar().showMessage("Operation failed")
         QMessageBox.warning(self, "Shokz Refill", message or "The operation failed")
 
     def _refresh_auth_label(self) -> None:
-        self.auth_label.setText(
-            "YouTube Music: connected"
-            if self.youtube.authenticated
-            else "YouTube Music: not connected"
-        )
+        if self.youtube.connection_verified:
+            label = "YouTube Music: connected"
+        elif self.youtube.authenticated:
+            label = "YouTube Music: saved session (not yet verified)"
+        else:
+            label = "YouTube Music: not connected"
+        self.auth_label.setText(label)
 
     def _connect_youtube(self) -> None:
         dialog = AuthDialog(self)
@@ -655,9 +671,18 @@ class MainWindow(QMainWindow):
     def _load_library(self) -> None:
         self._run(
             self.youtube.library_playlists,
-            lambda objects: self._set_browser_root("My playlists", objects),
+            self._library_loaded,
             "Loading your playlists…",
+            failure=self._library_failed,
         )
+
+    def _library_failed(self, message: str) -> None:
+        self._refresh_auth_label()
+        self._show_error(message)
+
+    def _library_loaded(self, objects: object) -> None:
+        self._refresh_auth_label()
+        self._set_browser_root("My playlists", objects)
 
     def _set_browser_root(self, title: str, objects: object) -> None:
         items = list(objects) if isinstance(objects, list) else []

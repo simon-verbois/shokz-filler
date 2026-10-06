@@ -71,6 +71,11 @@ headers from an authenticated `/browse` POST request in the browser developer to
 into the dialog. This is the current browser-header flow supported by ytmusicapi and needs no
 Shokz Refill server.
 
+A saved session is labelled as unverified until an account request succeeds. If **My playlists**
+rejects an old or malformed session, the application displays a reconnect message and stays open.
+Use **Connect YouTube Music** to replace it with fresh headers. Temporary network/server failures
+report an error without invalidating the saved session.
+
 The resulting browser session data remains in your per-user configuration directory with owner-only
 permissions (`~/.config/shokz-refill` on Linux or `%APPDATA%\shokz-refill` on Windows). For
 downloads, cookies are scoped to YouTube through a short-lived cookie file instead of being sent as
