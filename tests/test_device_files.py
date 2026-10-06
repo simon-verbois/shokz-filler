@@ -1,3 +1,5 @@
+import os
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -6,18 +8,32 @@ from shokz_refill.device import is_within, manual_device
 from shokz_refill.files import DeviceFileService
 
 
-def test_path_validation_blocks_escape_and_symlink(tmp_path: Path) -> None:
+def _create_directory_link(link: Path, target: Path) -> None:
+    if os.name == "nt":
+        # NTFS junctions need no administrator/symlink privilege. Exercise real
+        # path redirection and deletion safety on the non-admin Windows runner.
+        subprocess.run(
+            ["cmd", "/d", "/c", "mklink", "/J", str(link), str(target)],
+            check=True,
+            capture_output=True,
+        )
+    else:
+        link.symlink_to(target, target_is_directory=True)
+    assert link.resolve(strict=True) == target.resolve(strict=True)
+
+
+def test_path_validation_blocks_escape_and_directory_link(tmp_path: Path) -> None:
     root = tmp_path / "device"
     outside = tmp_path / "outside"
     root.mkdir()
     outside.mkdir()
-    (root / "escape").symlink_to(outside, target_is_directory=True)
+    _create_directory_link(root / "escape", outside)
     assert is_within(root, root / "folder", allow_missing=True)
     assert not is_within(root, root / ".." / "outside")
     assert not is_within(root, root / "escape" / "file.mp3", allow_missing=True)
     with pytest.raises(ValueError):
         DeviceFileService(root).checked(root / "escape" / "file.mp3", missing=True)
-    with pytest.raises(ValueError, match="symbolic link"):
+    with pytest.raises(ValueError, match="symbolic link|leaves the selected device"):
         DeviceFileService(root).ensure_folder(root, "escape")
 
 
@@ -101,7 +117,7 @@ def test_folder_hierarchy_is_kept_flat(tmp_path: Path) -> None:
         service.move([first], second)
 
 
-def test_delete_nonempty_folder_without_following_symlink(tmp_path: Path) -> None:
+def test_delete_nonempty_folder_without_following_directory_link(tmp_path: Path) -> None:
     root = tmp_path / "device"
     folder = root / "playlist" / "nested"
     outside = tmp_path / "outside"
@@ -110,7 +126,7 @@ def test_delete_nonempty_folder_without_following_symlink(tmp_path: Path) -> Non
     (folder / "song.mp3").write_bytes(b"song")
     protected = outside / "keep.mp3"
     protected.write_bytes(b"keep")
-    (folder / "outside-link").symlink_to(outside, target_is_directory=True)
+    _create_directory_link(folder / "outside-link", outside)
 
     DeviceFileService(root).delete(root / "playlist")
 

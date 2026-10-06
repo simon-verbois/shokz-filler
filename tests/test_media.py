@@ -1,4 +1,5 @@
 import json
+import os
 import stat
 from pathlib import Path
 
@@ -28,4 +29,5 @@ def test_download_auth_uses_scoped_cookie_file(tmp_path: Path) -> None:
     assert ".youtube.com\tTRUE\t/\tTRUE\t0\tSID\tsecret-one" in cookie_text
     assert ".youtube.com\tTRUE\t/\tTRUE\t0\t__Secure-3PSID\tsecret=two" in cookie_text
     assert "Authorization" not in cookie_text
-    assert stat.S_IMODE(cookie_path.stat().st_mode) == 0o600
+    if os.name == "posix":
+        assert stat.S_IMODE(cookie_path.stat().st_mode) == 0o600
