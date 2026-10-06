@@ -34,6 +34,11 @@ in the dialog. Downloading directly to the device root is intentionally disabled
 Click a YouTube Music result-column header to sort ascending; click it again for descending order.
 Before the first click, search relevance order is preserved.
 
+Click the magnifying glass in a column header to filter by text (case-insensitive).
+Filters are available for result titles/artists, device names/types, and queue tracks/statuses;
+multiple column filters combine. Clear the text or right-click the magnifying glass to clear
+one or all filters. Hidden rows are deselected before any operation on selected items.
+
 The device browser can create, rename, move, and recursively delete folders; rename, move, or delete MP3s;
 and add local MP3 files. `System Volume Information` is hidden. Moves support multi-selection:
 drag selected items onto a visible folder, or use **Move selected…** to choose a destination from

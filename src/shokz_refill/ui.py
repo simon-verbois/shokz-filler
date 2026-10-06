@@ -44,6 +44,7 @@ from .media import MediaDownloader
 from .metadata import validate_source_mp3
 from .models import Device, DownloadJob, JobStatus, Playlist, Track
 from .naming import playlist_folder_name, sanitize_component
+from .table_filters import ColumnFilters
 from .transfer import TransferManager
 from .youtube import YouTubeMusicService
 
@@ -418,6 +419,7 @@ class MainWindow(QMainWindow):
         queue_header_view.setSectionResizeMode(3, QHeaderView.ResizeMode.Stretch)
         self.queue_table.setColumnWidth(0, 300)
         self.queue_table.setColumnWidth(2, 160)
+        self.queue_filters = ColumnFilters(self.queue_table, (0, 1))
         queue_layout.addWidget(self.queue_table)
         splitter = QSplitter(Qt.Orientation.Vertical)
         splitter.addWidget(self.tabs)
@@ -483,6 +485,7 @@ class MainWindow(QMainWindow):
         results_header.setSortIndicatorShown(False)
         results_header.sectionClicked.connect(self._sort_results)
         self.results.setColumnWidth(1, 280)
+        self.result_filters = ColumnFilters(self.results, (0, 1))
         self.results.cellDoubleClicked.connect(self._result_double_clicked)
         layout.addWidget(self.results)
         row = QHBoxLayout()
@@ -546,6 +549,7 @@ class MainWindow(QMainWindow):
         files_header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         files_header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         files_header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
+        self.file_filters = ColumnFilters(self.files, (0, 1))
         self.files.doubleClicked.connect(self._open_folder)
         layout.addWidget(self.files)
         actions = QHBoxLayout()
