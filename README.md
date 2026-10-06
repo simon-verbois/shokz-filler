@@ -121,9 +121,8 @@ Windows must be built natively; the Linux build cannot cross-compile it.
 
 ## Forgejo CI and releases
 
-The Forgejo workflow runs the quality gate on pull requests and runs quality checks followed by
-native Linux and Windows builds on pushes to `main` or manual dispatches. Tags matching `YYYY.*.*`
-also run the builds and publish a release. Both release builds are collected
+The Forgejo workflow runs only when a release tag matching `YYYY.*.*` is pushed. It runs quality
+checks followed by native Linux and Windows builds, then publishes the release. Both builds are collected
 only after all required jobs succeed, then the cleaned source mirror, tag, and release assets are
 pushed to <https://github.com/simon-verbois/shokz-filler>.
 
@@ -131,8 +130,7 @@ The Forgejo installation must provide runners labelled `ubuntu-latest` and `wind
 The Windows host job uses PowerShell 7, checks out the exact commit over the LAN, and downloads
 portable Python (via uv) and Node into its fresh checkout without administrator rights. Node runs
 the official v3 artifact upload script directly; no JavaScript Actions or cache are needed on that
-runner. A manual workflow dispatch runs quality checks and both native builds without publishing
-a release, allowing the runner and checkout authentication to be tested first.
+runner. Branch pushes and pull requests do not trigger the workflow.
 Configure `GITHUBPAT_TOKEN` preferably as an Actions secret (an existing Actions variable with the
 same name is also supported) with write access to the public GitHub repository. From a clean `main`
 branch, create a release with:
