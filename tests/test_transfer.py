@@ -1,4 +1,6 @@
+import os
 import shutil
+import stat
 from pathlib import Path
 
 import pytest
@@ -165,6 +167,7 @@ def test_finalization_preserves_late_conflict(tmp_path: Path) -> None:
     assert result.read_bytes() == source.read_bytes()
 
 
+@pytest.mark.skipif(os.name == "nt", reason="Windows locks the directory while the partial is open")
 def test_destination_replaced_during_copy_fails_without_complete_file(tmp_path: Path) -> None:
     root = tmp_path / "device"
     folder = root / "music"
@@ -184,6 +187,39 @@ def test_destination_replaced_during_copy_fails_without_complete_file(tmp_path: 
         )
     assert not (folder / "song.mp3").exists()
     assert list(detached.glob("*.part"))
+
+
+def test_changed_destination_identity_preserves_partial_on_all_platforms(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "device"
+    folder = root / "music"
+    folder.mkdir(parents=True)
+    source = tmp_path / "source.mp3"
+    source.write_bytes(b"abcdefghij")
+    changed = False
+    original_stat = Path.stat
+
+    def device_stat(path: Path, *, follow_symlinks: bool = True) -> os.stat_result:
+        info = original_stat(path, follow_symlinks=follow_symlinks)
+        if path == folder and changed:
+            values = list(info)
+            values[stat.ST_INO] += 1
+            return os.stat_result(values)
+        return info
+
+    def progress(value: int) -> None:
+        nonlocal changed
+        if value >= 20:
+            changed = True
+
+    monkeypatch.setattr(Path, "stat", device_stat)
+    with pytest.raises(OSError, match="changed"):
+        TransferManager(tmp_path / "state.json", chunk_size=2).transfer(
+            source, folder / "song.mp3", root, progress
+        )
+    assert not (folder / "song.mp3").exists()
+    assert list(folder.glob("*.part"))
 
 
 def test_cancellation_at_end_keeps_partial_for_explicit_resume(tmp_path: Path) -> None:

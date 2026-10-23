@@ -22,20 +22,23 @@ def website(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def test_build_excludes_credentials_and_private_docs(website: Path) -> None:
-    (website / ".creds").write_text("private")
-    (website / "docs" / ".creds").write_text("private")
-    (website / "docs" / "development.md").write_text("developer notes")
+    (website / ".creds").write_text("private", encoding="utf-8")
+    (website / "docs" / ".creds").write_text("private", encoding="utf-8")
+    (website / "docs" / "development.md").write_text("developer notes", encoding="utf-8")
     output = website / "build" / "site"
     build_site.build(output)
     assert {p.relative_to(output).as_posix() for p in output.rglob("*") if p.is_file()} == set(
         build_site.FILES
     )
-    assert (website / ".creds").read_text() == "private"
+    assert (website / ".creds").read_text(encoding="utf-8") == "private"
 
 
 def test_root_relative_url_fails_instead_of_publishing_a_broken_project_site(website: Path) -> None:
     page = website / "docs" / "index.html"
-    page.write_text(page.read_text().replace('href="styles.css"', 'href="/styles.css"'))
+    page.write_text(
+        page.read_text(encoding="utf-8").replace('href="styles.css"', 'href="/styles.css"'),
+        encoding="utf-8",
+    )
     with pytest.raises(ValueError, match="project-prefix"):
         build_site.build(website / "build" / "site")
     assert not (website / "build" / "site").exists()
@@ -43,14 +46,17 @@ def test_root_relative_url_fails_instead_of_publishing_a_broken_project_site(web
 
 def test_missing_tutorial_anchor_is_rejected(website: Path) -> None:
     page = website / "docs" / "index.html"
-    page.write_text(page.read_text().replace('href="#guide"', 'href="#missing-guide"'))
+    page.write_text(
+        page.read_text(encoding="utf-8").replace('href="#guide"', 'href="#missing-guide"'),
+        encoding="utf-8",
+    )
     with pytest.raises(ValueError, match="Unknown fragment"):
         build_site.validate(website / "docs")
 
 
 def test_public_symlink_cannot_publish_a_private_file(website: Path) -> None:
     secret = website / ".creds"
-    secret.write_text("private")
+    secret.write_text("private", encoding="utf-8")
     asset = website / "docs" / "screenshots" / "music.png"
     asset.unlink()
     try:
@@ -65,10 +71,10 @@ def test_nonempty_build_directory_is_preserved(website: Path) -> None:
     output = website / "build" / "site"
     output.mkdir(parents=True)
     existing = output / "keep.txt"
-    existing.write_text("keep")
+    existing.write_text("keep", encoding="utf-8")
     with pytest.raises(ValueError, match="existing files are never deleted"):
         build_site.build(output)
-    assert existing.read_text() == "keep"
+    assert existing.read_text(encoding="utf-8") == "keep"
 
 
 def test_five_languages_have_local_assets_canonical_urls_and_accessible_copy(website: Path) -> None:
@@ -98,9 +104,9 @@ def test_missing_translation_fails_without_writing_any_pages(website: Path) -> N
     source = website / "docs"
     original = {name: (source / name).read_bytes() for name in build_site.PAGES}
     path = source / "locales" / "de.json"
-    catalogue = json.loads(path.read_text())
+    catalogue = json.loads(path.read_text(encoding="utf-8"))
     del catalogue["copy-083"]
-    path.write_text(json.dumps(catalogue))
+    path.write_text(json.dumps(catalogue), encoding="utf-8")
     with pytest.raises(ValueError, match="Incomplete or stale de"):
         build_site.generate(source)
     assert original == {name: (source / name).read_bytes() for name in build_site.PAGES}
@@ -108,24 +114,24 @@ def test_missing_translation_fails_without_writing_any_pages(website: Path) -> N
 
 def test_stale_translated_page_cannot_be_published(website: Path) -> None:
     path = website / "docs" / "es" / "index.html"
-    path.write_text(path.read_text() + "\n<!-- stale -->")
+    path.write_text(path.read_text(encoding="utf-8") + "\n<!-- stale -->", encoding="utf-8")
     with pytest.raises(ValueError, match="Stale generated page: es/index.html"):
         build_site.build(website / "build" / "site")
 
 
 def test_translations_cannot_inject_scripts_or_links(website: Path) -> None:
     path = website / "docs" / "locales" / "nl.json"
-    catalogue = json.loads(path.read_text())
+    catalogue = json.loads(path.read_text(encoding="utf-8"))
     catalogue["copy-012"] = "<script>alert(1)</script>"
-    path.write_text(json.dumps(catalogue))
+    path.write_text(json.dumps(catalogue), encoding="utf-8")
     with pytest.raises(ValueError, match="Unsupported translation markup"):
         build_site.render_pages(website / "docs")
 
 
 def test_unbalanced_inline_translation_is_rejected(website: Path) -> None:
     path = website / "docs" / "locales" / "es.json"
-    catalogue = json.loads(path.read_text())
+    catalogue = json.loads(path.read_text(encoding="utf-8"))
     catalogue["copy-012"] = "<em>Unclosed"
-    path.write_text(json.dumps(catalogue))
+    path.write_text(json.dumps(catalogue), encoding="utf-8")
     with pytest.raises(ValueError, match="Unbalanced es translation"):
         build_site.render_pages(website / "docs")
