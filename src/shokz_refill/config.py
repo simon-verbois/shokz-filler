@@ -3,9 +3,14 @@ from __future__ import annotations
 import json
 import os
 import sys
+import threading
+import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
+
+from .book_export import DEFAULT_ANNOUNCEMENT, BookExportOptions
+from .cancellation import check_cancelled
 
 
 def _platform_dir(kind: str) -> Path:
@@ -26,6 +31,15 @@ class AppConfig:
     destination_relative: str = "."
     window_width: int = 1100
     window_height: int = 760
+    book_tts_template: str = DEFAULT_ANNOUNCEMENT
+    book_tts_voice: str = "fr"
+    book_tts_rate: int = 95
+    book_tts_engine: str = "piper-v1"
+
+    def book_export_options(self) -> BookExportOptions:
+        return BookExportOptions(
+            True, self.book_tts_template, self.book_tts_voice, self.book_tts_rate
+        )
 
 
 class ConfigStore:
@@ -34,6 +48,7 @@ class ConfigStore:
         self.cache_dir = cache_dir or _platform_dir("cache")
         self.path = self.config_dir / "config.json"
         self.auth_path = self.config_dir / "browser.json"
+        self._lock = threading.RLock()
 
     def ensure_dirs(self) -> None:
         self.config_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -43,17 +58,43 @@ class ConfigStore:
         self.ensure_dirs()
         try:
             raw: dict[str, Any] = json.loads(self.path.read_text(encoding="utf-8"))
-            valid = {key: raw[key] for key in asdict(AppConfig()) if key in raw}
-            return AppConfig(**valid)
+            if not isinstance(raw, dict):
+                return AppConfig()
+            defaults = asdict(AppConfig())
+            valid = {
+                key: raw[key]
+                for key, default in defaults.items()
+                if key in raw and type(raw[key]) is type(default)
+            }
+            for dimension in ("window_width", "window_height"):
+                if dimension in valid and not 640 <= valid[dimension] <= 7680:
+                    del valid[dimension]
+            if raw.get("book_tts_engine") != "piper-v1":
+                valid["book_tts_rate"] = 95
+                valid["book_tts_engine"] = "piper-v1"
+            config = AppConfig(**valid)
+            try:
+                config.book_export_options().validate()
+            except ValueError:
+                config.book_tts_template = DEFAULT_ANNOUNCEMENT
+                config.book_tts_voice = "fr"
+                config.book_tts_rate = 95
+            return config
         except (OSError, ValueError, TypeError):
             return AppConfig()
 
     def save(self, config: AppConfig) -> None:
-        self.ensure_dirs()
-        temporary = self.path.with_suffix(".tmp")
-        temporary.write_text(json.dumps(asdict(config), indent=2) + "\n", encoding="utf-8")
-        os.chmod(temporary, 0o600)
-        temporary.replace(self.path)
-
-    def remove_auth(self) -> None:
-        self.auth_path.unlink(missing_ok=True)
+        with self._lock:
+            check_cancelled()
+            self.ensure_dirs()
+            temporary = self.path.with_name(self.path.name + f".{uuid.uuid4().hex}.tmp")
+            try:
+                descriptor = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                    handle.write(json.dumps(asdict(config), indent=2) + "\n")
+                    handle.flush()
+                    os.fsync(handle.fileno())
+                check_cancelled()
+                temporary.replace(self.path)
+            finally:
+                temporary.unlink(missing_ok=True)

@@ -86,7 +86,9 @@ class ColumnFilters(QObject):
         item = self.table.horizontalHeaderItem(column)
         name = item.text() if item else str(column)
         text, accepted = QInputDialog.getText(
-            self.table, f"Filter {name}", "Contains (leave empty to clear):",
+            self.table,
+            f"Filter {name}",
+            "Contains (leave empty to clear):",
             text=self.filters.get(column, ""),
         )
         if accepted:

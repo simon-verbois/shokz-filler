@@ -97,7 +97,8 @@ def test_playlist_navigation_has_back_history(tmp_path: Path) -> None:
     window._enter_playlist(playlist, [Track("video-id", "Song", ("Artist",))])
     assert window.browser_page.playlist == playlist
     assert window.browser_back.isEnabled()
-    assert window.download_playlist_button.isEnabled()
+    assert not window.download_playlist_button.isEnabled()
+    assert window.browser_title.text().startswith("My Playlist")
     window._browser_go_back()
     assert window.browser_page.items == [playlist]
     assert not window.browser_back.isEnabled()
@@ -235,6 +236,7 @@ def test_move_dialog_loads_internal_folder_tree(tmp_path: Path) -> None:
     root = tmp_path / "device"
     (root / "Music" / "Running").mkdir(parents=True)
     (root / "System Volume Information").mkdir()
+    (root / "SYSTEM").mkdir()
     dialog = DeviceFolderDialog(manual_device(root), [])
     deadline = time.monotonic() + 3
     root_item = dialog.tree.topLevelItem(0)
@@ -328,6 +330,7 @@ def test_drag_drop_rows_move_to_visible_folder(
     window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
     window.device = manual_device(root)
     window.file_objects = [destination, song]
+    window._file_kinds = {destination: True, song: False}
     requested: list[tuple[list[Path], Path]] = []
     monkeypatch.setattr(
         window,
@@ -375,3 +378,190 @@ def test_move_operation_stays_visible_until_completion(tmp_path: Path) -> None:
     window.pool.waitForDone(3_000)
     window.close()
     app.processEvents()
+
+
+def pump_until(app, predicate, timeout: float = 3) -> None:  # type: ignore[no-untyped-def]
+    deadline = time.monotonic() + timeout
+    while not predicate() and time.monotonic() < deadline:
+        app.processEvents()
+        time.sleep(0.001)
+    assert predicate()
+
+
+def test_late_search_response_cannot_replace_newer_results(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import threading
+
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(MainWindow, "_poll_devices", lambda _self: None)
+    window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
+    entered = threading.Event()
+    release = threading.Event()
+
+    def search(query: str) -> list[Track]:
+        if query == "old":
+            entered.set()
+            assert release.wait(2)
+        return [Track(query, query)]
+
+    monkeypatch.setattr(window.youtube, "search_songs", search)
+    try:
+        window.search_edit.setText("old")
+        window._search()
+        assert entered.wait(2)
+        window.search_edit.setText("new")
+        window._search()
+        pump_until(app, lambda: window.result_objects == [Track("new", "new")])
+        release.set()
+        pump_until(app, lambda: window.tasks.idle)
+        assert window.result_objects == [Track("new", "new")]
+    finally:
+        release.set()
+        window.close()
+        pump_until(app, lambda: not window.isVisible() and window.tasks.idle)
+
+
+def test_stale_folder_listing_cannot_replace_current_folder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import threading
+
+    from shokz_refill.files import DeviceFileService
+
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(MainWindow, "_poll_devices", lambda _self: None)
+    root = tmp_path / "device"
+    first = root / "first"
+    second = root / "second"
+    first.mkdir(parents=True)
+    second.mkdir()
+    (first / "old.mp3").write_bytes(b"old")
+    (second / "new.mp3").write_bytes(b"new")
+    entered = threading.Event()
+    release = threading.Event()
+    original = DeviceFileService.list_dir
+
+    def list_dir(service, path):  # type: ignore[no-untyped-def]
+        if path == first:
+            entered.set()
+            assert release.wait(2)
+        return original(service, path)
+
+    monkeypatch.setattr(DeviceFileService, "list_dir", list_dir)
+    window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
+    window.device = manual_device(root)
+    try:
+        window._navigate_folder(first)
+        assert entered.wait(2)
+        window._navigate_folder(second)
+        pump_until(app, lambda: window.file_objects == [second / "new.mp3"])
+        release.set()
+        pump_until(app, lambda: window.tasks.idle)
+        assert window.file_objects == [second / "new.mp3"]
+    finally:
+        release.set()
+        window.close()
+        pump_until(app, lambda: window.tasks.idle)
+
+
+def test_selected_destination_is_used_without_second_dialog(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(MainWindow, "_poll_devices", lambda _self: None)
+    root = tmp_path / "device"
+    folder = root / "Singles"
+    folder.mkdir(parents=True)
+    window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
+    window.device = manual_device(root)
+    window._set_destination(folder)
+    queued: list[Path] = []
+    monkeypatch.setattr(window.queue, "enqueue", lambda tracks, dest, root: queued.append(dest))
+
+    def no_dialog(*args, **kwargs):  # type: ignore[no-untyped-def]
+        raise AssertionError("The chosen download folder must be reused")
+
+    monkeypatch.setattr("shokz_refill.ui.DeviceFolderDialog", no_dialog)
+    window._download_tracks([Track("id", "Song")])
+    assert queued == [folder]
+    assert "Singles" in window.destination_label.text()
+    window.close()
+    pump_until(app, lambda: window.tasks.idle)
+
+
+def test_close_cancels_work_and_waits_without_blocking_qt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import threading
+
+    from shokz_refill.cancellation import check_cancelled
+
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(MainWindow, "_poll_devices", lambda _self: None)
+    window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
+    window.show()
+    entered = threading.Event()
+    release = threading.Event()
+    callbacks: list[object] = []
+
+    def work() -> str:
+        entered.set()
+        assert release.wait(2)
+        check_cancelled()
+        return "outdated"
+
+    window._run(work, callbacks.append)
+    assert entered.wait(2)
+    window.close()
+    assert window._closing and window.isVisible()
+    app.processEvents()
+    release.set()
+    pump_until(app, lambda: not window.isVisible())
+    assert window.tasks.idle and window.queue.idle
+    assert not callbacks
+
+
+def test_selecting_device_does_not_resume_cancelled_copies_automatically(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(MainWindow, "_poll_devices", lambda _self: None)
+    root = tmp_path / "device"
+    root.mkdir()
+    window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
+    resumed: list[object] = []
+    monkeypatch.setattr(window.transfer, "resume_for_device", lambda *args: resumed.append(args))
+    window._update_devices([manual_device(root)])
+    pump_until(app, lambda: window.tasks.idle)
+    assert not resumed
+    assert window.resume_button.isEnabled()
+    window.close()
+    app.processEvents()
+
+
+def test_pending_download_reserves_destination_folder(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from shokz_refill.models import DownloadJob, JobStatus
+
+    app = QApplication.instance() or QApplication([])
+    monkeypatch.setattr(MainWindow, "_poll_devices", lambda _self: None)
+    root = tmp_path / "device"
+    folder = root / "Music"
+    folder.mkdir(parents=True)
+    window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
+    window.device = manual_device(root)
+    window.current_folder = root
+    window._show_files([(folder, True, 0)])
+    window.files.selectRow(0)
+    job = DownloadJob("job", Track("id", "Song"), folder, device_root=root)
+    window.queue.jobs[job.job_id] = job
+    window._update_actions()
+    for label in ("Rename", "Move selected…", "Delete"):
+        assert not window.file_buttons[label].isEnabled()
+    job.status = JobStatus.COMPLETE
+    window._update_actions()
+    assert window.file_buttons["Rename"].isEnabled()
+    window.close()
+    pump_until(app, lambda: window.tasks.idle)

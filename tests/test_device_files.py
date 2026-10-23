@@ -6,6 +6,7 @@ import pytest
 
 from shokz_refill.device import is_within, manual_device
 from shokz_refill.files import DeviceFileService
+from shokz_refill.transfer import TransferManager
 
 
 def _create_directory_link(link: Path, target: Path) -> None:
@@ -45,8 +46,9 @@ def test_file_operations_and_collision(tmp_path: Path) -> None:
     assert service.ensure_folder(root, "Music") == folder
     source = tmp_path / "song.mp3"
     source.write_bytes(b"audio")
-    first = service.import_mp3(source, folder)
-    second = service.import_mp3(source, folder)
+    transfer = TransferManager(tmp_path / "transfers.json")
+    first = transfer.transfer(source, folder / "song.mp3", root)
+    second = transfer.transfer(source, folder / "song.mp3", root)
     assert first.name == "song.mp3"
     assert second.name == "song 2.mp3"
     renamed = service.rename(first, "new:name")
@@ -57,13 +59,22 @@ def test_file_operations_and_collision(tmp_path: Path) -> None:
     assert manual_device(root).automatic is False
 
 
-def test_list_hides_system_volume_information(tmp_path: Path) -> None:
+@pytest.mark.parametrize("hidden_name", ["System Volume Information", "SYSTEM", "System", "system"])
+def test_list_hides_system_folders(tmp_path: Path, hidden_name: str) -> None:
     root = tmp_path / "device"
     root.mkdir()
-    (root / "System Volume Information").mkdir()
+    hidden = root / hidden_name
+    hidden.mkdir()
     (root / "Music").mkdir()
+    (root / "Systems").mkdir()
+    (root / "system.mp3").write_bytes(b"audio")
 
-    assert [path.name for path in DeviceFileService(root).list_dir(root)] == ["Music"]
+    assert [path.name for path in DeviceFileService(root).list_dir(root)] == [
+        "Music",
+        "Systems",
+        "system.mp3",
+    ]
+    assert hidden.is_dir()
 
 
 def test_move_selected_items_safely(tmp_path: Path) -> None:
@@ -132,3 +143,46 @@ def test_delete_nonempty_folder_without_following_directory_link(tmp_path: Path)
 
     assert not (root / "playlist").exists()
     assert protected.read_bytes() == b"keep"
+
+
+def test_device_mutations_wait_for_active_transfer(tmp_path: Path) -> None:
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+
+    root = tmp_path / "device"
+    folder = root / "music"
+    folder.mkdir(parents=True)
+    source = tmp_path / "source.mp3"
+    source.write_bytes(b"audio")
+    copying = threading.Event()
+    release = threading.Event()
+    rename_started = threading.Event()
+
+    def progress(value: int) -> None:
+        if value == 0:
+            copying.set()
+            assert release.wait(2)
+
+    def rename() -> Path:
+        rename_started.set()
+        return DeviceFileService(root).rename(folder, "renamed")
+
+    with ThreadPoolExecutor(2) as executor:
+        transfer = executor.submit(
+            TransferManager(tmp_path / "state.json").transfer,
+            source,
+            folder / "song.mp3",
+            root,
+            progress,
+        )
+        assert copying.wait(2)
+        mutation = executor.submit(rename)
+        try:
+            assert rename_started.wait(2)
+            assert not mutation.done()
+            assert folder.exists()
+        finally:
+            release.set()
+        transfer.result(timeout=2)
+        target = mutation.result(timeout=2)
+        assert (target / "song.mp3").read_bytes() == b"audio"

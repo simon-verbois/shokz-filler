@@ -5,13 +5,15 @@ build-backend = "hatchling.build"
 [project]
 name = "shokz-refill"
 version = "1.0.0"
-description = "Load MP3 music from YouTube Music or local files onto Shokz removable storage"
+description = "Load compatible MP3 music and audiobooks from YouTube Music, Audiobookshelf or local files"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}
 dependencies = [
   "PySide6-Essentials>=6.8,<7",
   "mutagen>=1.47,<2",
+  "requests>=2.32,<3",
+  "piper-tts==1.8.0",
   "yt-dlp[default]>=2025.1.15",
   "ytmusicapi>=1.10,<2",
 ]
@@ -48,9 +50,9 @@ packages = ["shokz_refill"]
 exclude = ["build", "dist"]
 
 [[tool.mypy.overrides]]
-module = ["ytmusicapi.*", "yt_dlp.*", "mutagen.*"]
+module = ["ytmusicapi.*", "yt_dlp.*", "mutagen.*", "piper.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = "shokz_refill.metadata"
+module = ["shokz_refill.metadata", "shokz_refill.tts_worker"]
 disallow_untyped_calls = false

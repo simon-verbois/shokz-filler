@@ -1,0 +1,32 @@
+[
+  {
+    "name": "fr_FR-tom-medium.onnx",
+    "url": "https://huggingface.co/rhasspy/piper-voices/resolve/5041a7a49ae5b3a0f30e6837769eb03fdbb231bd/fr/fr_FR/tom/medium/fr_FR-tom-medium.onnx",
+    "sha256": "bf65074ccdeeeeaa832e75edb1c0a513c01c9a972bdf085ff8a6e71ea234fd41"
+  },
+  {
+    "name": "fr_FR-tom-medium.onnx.json",
+    "url": "https://huggingface.co/rhasspy/piper-voices/resolve/5041a7a49ae5b3a0f30e6837769eb03fdbb231bd/fr/fr_FR/tom/medium/fr_FR-tom-medium.onnx.json",
+    "sha256": "2f7f885ad5a0aad802e3cc24e4f57239febdcb142b4876de5d238094674361cc"
+  },
+  {
+    "name": "fr_FR-tom-medium.MODEL_CARD.txt",
+    "url": "https://huggingface.co/rhasspy/piper-voices/resolve/5041a7a49ae5b3a0f30e6837769eb03fdbb231bd/fr/fr_FR/tom/medium/MODEL_CARD",
+    "sha256": "ece4132df4a1ae2f90e22c9f01539aec14acb7f8dc8ded64edd2051945d0f1e9"
+  },
+  {
+    "name": "en_US-john-medium.onnx",
+    "url": "https://huggingface.co/rhasspy/piper-voices/resolve/5041a7a49ae5b3a0f30e6837769eb03fdbb231bd/en/en_US/john/medium/en_US-john-medium.onnx",
+    "sha256": "789c6c875726e627ddee93d51d8727859abe9c091c3d141591f4b83c2072e988"
+  },
+  {
+    "name": "en_US-john-medium.onnx.json",
+    "url": "https://huggingface.co/rhasspy/piper-voices/resolve/5041a7a49ae5b3a0f30e6837769eb03fdbb231bd/en/en_US/john/medium/en_US-john-medium.onnx.json",
+    "sha256": "af60f177b6b550f3d7a302720c0fb89e7f94a82b5dca464775ef63b1c69ba09a"
+  },
+  {
+    "name": "en_US-john-medium.MODEL_CARD.txt",
+    "url": "https://huggingface.co/rhasspy/piper-voices/resolve/5041a7a49ae5b3a0f30e6837769eb03fdbb231bd/en/en_US/john/medium/MODEL_CARD",
+    "sha256": "a056da65cd70dcbda96fc3420fe8d3442dbf3c8b75f49cdf800a715b42e299d1"
+  }
+]

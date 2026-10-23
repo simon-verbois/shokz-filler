@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
@@ -48,6 +48,7 @@ class JobStatus(StrEnum):
     COMPLETE = "complete"
     FAILED = "failed"
     CANCELLED = "cancelled"
+    SKIPPED = "already present"
 
 
 @dataclass(slots=True)
@@ -60,4 +61,4 @@ class DownloadJob:
     error: str = ""
     cached_mp3: Path | None = None
     cancel_requested: bool = False
-    _runtime: dict[str, object] = field(default_factory=dict, repr=False)
+    device_root: Path | None = None

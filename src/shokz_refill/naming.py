@@ -37,18 +37,18 @@ def playlist_folder_name(title: str) -> str:
 
 
 def collision_path(path: Path) -> Path:
-    if not path.exists() and not path.with_name(path.name + ".shokz-refill.part").exists():
+    if (
+        not path.exists()
+        and not path.is_symlink()
+        and not path.with_name(path.name + ".shokz-refill.part").exists()
+    ):
         return path
     for number in range(2, 10_000):
         candidate = path.with_name(f"{path.stem} {number}{path.suffix}")
         if (
             not candidate.exists()
+            and not candidate.is_symlink()
             and not candidate.with_name(candidate.name + ".shokz-refill.part").exists()
         ):
             return candidate
     raise FileExistsError(f"Could not find a free name for {path.name}")
-
-
-def normalized(value: str) -> str:
-    value = unicodedata.normalize("NFKD", value).casefold()
-    return "".join(char for char in value if char.isalnum())

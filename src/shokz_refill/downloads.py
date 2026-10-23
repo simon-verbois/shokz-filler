@@ -6,17 +6,53 @@ import time
 import uuid
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
+from dataclasses import replace
 from pathlib import Path
+from typing import Protocol
 
+from .device import is_within
+from .filesystem import device_operation
 from .media import AudioConverter, DownloadCancelled, MediaDownloader
+from .metadata import read_identity
 from .models import DownloadJob, JobStatus, Track
 from .naming import track_filename
-from .transfer import TransferManager
 
 MAX_CONCURRENT_DOWNLOADS = 3
 MAX_CONCURRENT_CONVERSIONS = 2
 MAX_CONCURRENT_TRANSFERS = 1
 JobCallback = Callable[[DownloadJob], None]
+
+
+class Downloader(Protocol):
+    def download(
+        self,
+        track: Track,
+        work_dir: Path,
+        progress: Callable[[int], None],
+        cancelled: Callable[[], bool],
+    ) -> Path: ...
+
+
+class Converter(Protocol):
+    def convert(
+        self,
+        source: Path,
+        output: Path,
+        track: Track,
+        progress: Callable[[int], None],
+        cancelled: Callable[[], bool],
+    ) -> Path: ...
+
+
+class Transfer(Protocol):
+    def transfer(
+        self,
+        source: Path,
+        destination: Path,
+        device_root: Path,
+        progress: Callable[[int], None],
+        cancelled: Callable[[], bool],
+    ) -> Path: ...
 
 
 def cleanup_stale_cache(cache_dir: Path, state_path: Path, *, max_age_days: int = 14) -> None:
@@ -28,14 +64,20 @@ def cleanup_stale_cache(cache_dir: Path, state_path: Path, *, max_age_days: int 
         import json
 
         states = json.loads(state_path.read_text(encoding="utf-8"))
+        if not isinstance(states, dict) or any(
+            not isinstance(state, dict) for state in states.values()
+        ):
+            return  # An unreadable journal cannot authorize deletion of cached sources.
         if isinstance(states, dict):
             protected = {
                 Path(str(state["source"])).resolve()
                 for state in states.values()
                 if isinstance(state, dict) and "source" in state
             }
-    except (OSError, ValueError, TypeError):
+    except FileNotFoundError:
         pass
+    except (OSError, ValueError, TypeError):
+        return
     cutoff = time.time() - max_age_days * 86_400
     for folder in jobs_dir.iterdir():
         try:
@@ -50,9 +92,9 @@ class DownloadQueue:
     def __init__(
         self,
         cache_dir: Path,
-        transfer: TransferManager,
-        downloader: MediaDownloader | None = None,
-        converter: AudioConverter | None = None,
+        transfer: Transfer,
+        downloader: Downloader | None = None,
+        converter: Converter | None = None,
         callback: JobCallback = lambda _job: None,
     ) -> None:
         self.cache_dir = cache_dir
@@ -65,18 +107,37 @@ class DownloadQueue:
         self._convert_executor = ThreadPoolExecutor(MAX_CONCURRENT_CONVERSIONS, "shokz-convert")
         self._transfer_executor = ThreadPoolExecutor(MAX_CONCURRENT_TRANSFERS, "shokz-transfer")
         self._futures: dict[str, set[Future[None]]] = {}
-        self._lock = threading.Lock()
+        self._lock = threading.RLock()
+        self._closed = False
 
     def enqueue(
         self, tracks: list[Track], destination: Path, device_root: Path
     ) -> list[DownloadJob]:
+        if self._closed:
+            raise RuntimeError("The download queue is shutting down")
         created: list[DownloadJob] = []
         for track in tracks:
-            job = DownloadJob(uuid.uuid4().hex, track, destination)
+            job = DownloadJob(uuid.uuid4().hex, track, destination, device_root=device_root)
+            duplicate = any(
+                item.track.video_id == track.video_id
+                and item.destination == destination
+                and item.status
+                not in {
+                    JobStatus.FAILED,
+                    JobStatus.CANCELLED,
+                    JobStatus.COMPLETE,
+                    JobStatus.SKIPPED,
+                }
+                for item in self.jobs.values()
+            )
             self.jobs[job.job_id] = job
             created.append(job)
-            self.callback(job)
-            self._submit_download(job, device_root)
+            if duplicate:
+                job.error = "This track is already queued for this folder"
+                self._update(job, JobStatus.SKIPPED, 100)
+            else:
+                self.callback(replace(job))
+                self._submit_download(job, device_root)
         return created
 
     def _update(
@@ -86,7 +147,7 @@ class DownloadQueue:
             job.status = status
         if progress is not None:
             job.progress = progress
-        self.callback(job)
+        self.callback(replace(job))
 
     def _track_future(self, job: DownloadJob, future: Future[None]) -> None:
         with self._lock:
@@ -102,25 +163,49 @@ class DownloadQueue:
 
         future.add_done_callback(finished)
 
+    def _submit(
+        self,
+        executor: ThreadPoolExecutor,
+        function: Callable[..., None],
+        job: DownloadJob,
+        *args: object,
+    ) -> None:
+        with self._lock:
+            if self._closed:
+                raise DownloadCancelled("Application is closing")
+            future = executor.submit(function, job, *args)
+            self._track_future(job, future)
+
     def _submit_download(self, job: DownloadJob, device_root: Path) -> None:
-        future = self._download_executor.submit(self._download_stage, job, device_root)
-        self._track_future(job, future)
+        self._submit(self._download_executor, self._download_stage, job, device_root)
 
     def _submit_conversion(
         self, job: DownloadJob, device_root: Path, work: Path, source: Path
     ) -> None:
-        future = self._convert_executor.submit(
-            self._conversion_stage, job, device_root, work, source
-        )
-        self._track_future(job, future)
+        self._submit(self._convert_executor, self._conversion_stage, job, device_root, work, source)
 
     def _submit_transfer(
         self, job: DownloadJob, device_root: Path, work: Path, cached: Path
     ) -> None:
-        future = self._transfer_executor.submit(
-            self._transfer_stage, job, device_root, work, cached
+        self._submit(self._transfer_executor, self._transfer_stage, job, device_root, work, cached)
+
+    @property
+    def idle(self) -> bool:
+        with self._lock:
+            return not any(
+                not future.done() for group in self._futures.values() for future in group
+            )
+
+    @staticmethod
+    def _already_present(job: DownloadJob) -> bool:
+        # IDs are authoritative; filenames and artist/title guesses are deliberately not.
+        return any(
+            not path.is_symlink()
+            and path.suffix.casefold() == ".mp3"
+            and read_identity(path).source_id == job.track.video_id
+            for path in job.destination.iterdir()
+            if path.is_file()
         )
-        self._track_future(job, future)
 
     @staticmethod
     def _raise_if_cancelled(job: DownloadJob) -> None:
@@ -136,9 +221,19 @@ class DownloadQueue:
 
     def _download_stage(self, job: DownloadJob, device_root: Path) -> None:
         work = self.cache_dir / "jobs" / job.job_id
-        work.mkdir(parents=True, exist_ok=True)
         try:
+            work.mkdir(parents=True, exist_ok=True)
             self._raise_if_cancelled(job)
+            if not is_within(device_root, job.destination):
+                raise ValueError("Invalid download destination")
+            with device_operation(lambda: job.cancel_requested):
+                if self._already_present(job):
+                    self._update(job, JobStatus.SKIPPED, 100)
+                    shutil.rmtree(work, ignore_errors=True)
+                    return
+            if job.cached_mp3 is not None and job.cached_mp3.is_file():
+                self._submit_transfer(job, device_root, work, job.cached_mp3)
+                return
             self._update(job, JobStatus.DOWNLOADING, 0)
             source = self.downloader.download(
                 job.track,
@@ -178,13 +273,18 @@ class DownloadQueue:
             self._raise_if_cancelled(job)
             self._update(job, JobStatus.TRANSFERRING, 75)
             target = job.destination / cached.name
-            self.transfer.transfer(
-                cached,
-                target,
-                device_root,
-                lambda p: self._update(job, progress=75 + p // 4),
-                lambda: job.cancel_requested,
-            )
+            with device_operation(lambda: job.cancel_requested):
+                if self._already_present(job):
+                    self._update(job, JobStatus.SKIPPED, 100)
+                    shutil.rmtree(work, ignore_errors=True)
+                    return
+                self.transfer.transfer(
+                    cached,
+                    target,
+                    device_root,
+                    lambda p: self._update(job, progress=75 + p // 4),
+                    lambda: job.cancel_requested,
+                )
             self._update(job, JobStatus.COMPLETE, 100)
             shutil.rmtree(work, ignore_errors=True)
         except Exception as exc:
@@ -192,7 +292,12 @@ class DownloadQueue:
 
     def cancel(self, job_ids: list[str]) -> None:
         for job_id in job_ids:
-            if job := self.jobs.get(job_id):
+            if (job := self.jobs.get(job_id)) and job.status not in {
+                JobStatus.COMPLETE,
+                JobStatus.SKIPPED,
+                JobStatus.FAILED,
+                JobStatus.CANCELLED,
+            }:
                 job.cancel_requested = True
                 with self._lock:
                     futures = list(self._futures.get(job_id, set()))
@@ -204,14 +309,44 @@ class DownloadQueue:
         for job_id in job_ids:
             job = self.jobs.get(job_id)
             if job and job.status in {JobStatus.FAILED, JobStatus.CANCELLED}:
+                with self._lock:
+                    if any(not future.done() for future in self._futures.get(job_id, set())):
+                        continue
+                if any(
+                    other.job_id != job.job_id
+                    and other.track.video_id == job.track.video_id
+                    and other.destination == job.destination
+                    and other.status
+                    not in {
+                        JobStatus.COMPLETE,
+                        JobStatus.FAILED,
+                        JobStatus.CANCELLED,
+                        JobStatus.SKIPPED,
+                    }
+                    for other in self.jobs.values()
+                ):
+                    job.error = "This track is already queued for this folder"
+                    self._update(job)
+                    continue
+                if job.device_root != device_root:
+                    job.error = "Select the original device before retrying this track"
+                    self._update(job)
+                    continue
                 job.cancel_requested = False
                 job.error = ""
                 self._update(job, JobStatus.QUEUED, 0)
                 self._submit_download(job, device_root)
 
     def shutdown(self) -> None:
+        with self._lock:
+            self._closed = True
         for job in self.jobs.values():
-            if job.status not in {JobStatus.COMPLETE, JobStatus.FAILED, JobStatus.CANCELLED}:
+            if job.status not in {
+                JobStatus.COMPLETE,
+                JobStatus.FAILED,
+                JobStatus.CANCELLED,
+                JobStatus.SKIPPED,
+            }:
                 job.cancel_requested = True
         self._download_executor.shutdown(wait=False, cancel_futures=True)
         self._convert_executor.shutdown(wait=False, cancel_futures=True)

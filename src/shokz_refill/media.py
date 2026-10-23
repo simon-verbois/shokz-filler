@@ -4,7 +4,7 @@ import json
 import os
 import subprocess
 import sys
-import threading
+import tempfile
 from collections.abc import Callable
 from pathlib import Path
 
@@ -102,6 +102,8 @@ class MediaDownloader:
     def download(
         self, track: Track, work_dir: Path, progress: Progress, cancelled: Cancelled
     ) -> Path:
+        if cancelled():
+            raise DownloadCancelled("Download cancelled")
         work_dir.mkdir(parents=True, exist_ok=True)
         template = str(work_dir / "source.%(ext)s")
 
@@ -123,6 +125,9 @@ class MediaDownloader:
             "continuedl": True,
             "quiet": True,
             "no_warnings": True,
+            "socket_timeout": 10,
+            "retries": 2,
+            "extractor_retries": 1,
             "progress_hooks": [hook],
             "ffmpeg_location": str(bundled_binary("ffmpeg").parent),
             "js_runtimes": {"deno": {"path": str(bundled_binary("deno"))}},
@@ -135,6 +140,8 @@ class MediaDownloader:
             with yt_dlp.YoutubeDL(options) as downloader:
                 info = downloader.extract_info(track.url, download=True)
                 prepared = Path(downloader.prepare_filename(info))
+                if cancelled():
+                    raise DownloadCancelled("Download cancelled")
         except DownloadCancelled:
             raise
         except Exception as exc:
@@ -182,29 +189,61 @@ class AudioConverter:
             "3",
             str(temporary),
         ]
-        process = subprocess.Popen(
-            command, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True
-        )
-        while process.poll() is None:
+        try:
+            run_process(command, cancelled)
             if cancelled():
-                process.terminate()
-                process.wait(timeout=5)
-                temporary.unlink(missing_ok=True)
                 raise DownloadCancelled("Conversion cancelled")
-            threading.Event().wait(0.1)
-        if process.returncode:
-            detail = (process.stderr.read() if process.stderr else "").strip().splitlines()
+            progress(90)
+            write_metadata(
+                temporary,
+                source_id=track.video_id,
+                artist=track.artist,
+                title=track.title,
+                album=track.album,
+            )
+            validate_mp3(temporary)
+            if cancelled():
+                raise DownloadCancelled("Conversion cancelled")
+            temporary.replace(output)
+            progress(100)
+            return output
+        finally:
             temporary.unlink(missing_ok=True)
-            raise RuntimeError("ffmpeg failed" + (f": {detail[-1]}" if detail else ""))
-        progress(90)
-        write_metadata(
-            temporary,
-            source_id=track.video_id,
-            artist=track.artist,
-            title=track.title,
-            album=track.album,
+
+
+def run_process(
+    command: list[str], cancelled: Cancelled, *, poll: Callable[[], None] | None = None
+) -> None:
+    """Drain errors to a temporary file and always reap the child on cancellation."""
+    if cancelled():
+        raise DownloadCancelled("Conversion cancelled")
+    with tempfile.TemporaryFile() as errors:
+        process = subprocess.Popen(
+            command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=errors
         )
-        validate_mp3(temporary)
-        temporary.replace(output)
-        progress(100)
-        return output
+        try:
+            while True:
+                if cancelled():
+                    raise DownloadCancelled("Conversion cancelled")
+                try:
+                    code = process.wait(timeout=0.1)
+                    if poll is not None:
+                        poll()
+                    break
+                except subprocess.TimeoutExpired:
+                    if poll is not None:
+                        poll()
+                    continue
+            if code:
+                errors.seek(0, 2)
+                errors.seek(max(0, errors.tell() - 4096))
+                detail = errors.read().decode("utf-8", errors="replace").strip().splitlines()
+                raise RuntimeError("ffmpeg failed" + (f": {detail[-1]}" if detail else ""))
+        finally:
+            if process.poll() is None:
+                process.terminate()
+                try:
+                    process.wait(timeout=2)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()

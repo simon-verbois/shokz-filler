@@ -1,28 +1,14 @@
 from __future__ import annotations
 
-import os
 import shutil
+from collections.abc import Callable
 from pathlib import Path
 
 from .device import is_within
+from .filesystem import flush_directory, rename_no_replace, serialized
 from .naming import collision_path, sanitize_component
 
-_HIDDEN_DEVICE_NAMES = {"system volume information"}
-
-
-def _flush_directory(path: Path) -> None:
-    """Best-effort metadata flush after a rename on removable storage."""
-    flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
-    descriptor: int | None = None
-    try:
-        descriptor = os.open(path, flags)
-        os.fsync(descriptor)
-    except OSError:
-        # Directory fsync is unsupported by some Windows/removable filesystems.
-        pass
-    finally:
-        if descriptor is not None:
-            os.close(descriptor)
+_HIDDEN_DEVICE_NAMES = {"system", "system volume information"}
 
 
 class DeviceFileService:
@@ -54,6 +40,7 @@ class DeviceFileService:
             key=lambda item: (not item.is_dir(), item.name.casefold()),
         )
 
+    @serialized
     def create_folder(self, parent: Path, name: str) -> Path:
         folder = self.checked(parent)
         if folder != self.root:
@@ -62,6 +49,7 @@ class DeviceFileService:
         self.checked(target, missing=True).mkdir()
         return target
 
+    @serialized
     def ensure_folder(self, parent: Path, name: str) -> Path:
         folder = self.checked(parent)
         if folder != self.root:
@@ -77,16 +65,20 @@ class DeviceFileService:
         checked.mkdir()
         return checked
 
+    @serialized
     def rename(self, path: Path, new_name: str) -> Path:
         source = self.checked(path)
+        if source == self.root:
+            raise ValueError("The device root cannot be renamed")
         suffix = source.suffix if source.is_file() else ""
         clean = sanitize_component(new_name.removesuffix(suffix)) + suffix
         target = self.checked(source.with_name(clean), missing=True)
         if target.exists():
             raise FileExistsError(f"{target.name} already exists")
-        source.rename(target)
+        rename_no_replace(source, target)
         return target
 
+    @serialized
     def delete(self, path: Path) -> None:
         target = self.checked(path)
         if target == self.root:
@@ -96,7 +88,10 @@ class DeviceFileService:
         else:
             target.unlink()
 
-    def move(self, paths: list[Path], destination: Path) -> list[Path]:
+    @serialized
+    def move(
+        self, paths: list[Path], destination: Path, *, cancelled: Callable[[], bool] = lambda: False
+    ) -> list[Path]:
         folder = self.checked(destination)
         if not folder.is_dir():
             raise ValueError("The move destination is not a folder")
@@ -112,6 +107,8 @@ class DeviceFileService:
 
         moved: list[Path] = []
         for source in sources:
+            if cancelled():
+                raise InterruptedError("Move cancelled; completed moves were kept")
             safe_name = (
                 sanitize_component(source.stem, max_bytes=220) + ".mp3"
                 if source.is_file()
@@ -123,24 +120,14 @@ class DeviceFileService:
                 continue
             target = collision_path(target)
             previous_parent = source.parent
-            source.rename(target)
-            _flush_directory(previous_parent)
+            while True:
+                try:
+                    rename_no_replace(source, target)
+                    break
+                except FileExistsError:
+                    target = collision_path(target)
+            flush_directory(previous_parent)
             if target.parent != previous_parent:
-                _flush_directory(target.parent)
+                flush_directory(target.parent)
             moved.append(target)
         return moved
-
-    def import_mp3(self, source: Path, destination: Path) -> Path:
-        if source.suffix.casefold() != ".mp3" or not source.is_file():
-            raise ValueError(f"{source.name} is not an MP3 file")
-        folder = self.checked(destination)
-        target = collision_path(
-            self.checked(folder / sanitize_component(source.stem), missing=True).with_suffix(".mp3")
-        )
-        partial = target.with_name(target.name + ".shokz-refill.part")
-        with source.open("rb") as reader, partial.open("xb") as writer:
-            shutil.copyfileobj(reader, writer, 1024 * 1024)
-            writer.flush()
-            os.fsync(writer.fileno())
-        partial.replace(target)
-        return target

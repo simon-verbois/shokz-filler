@@ -50,11 +50,15 @@ if (-not (Test-Path "$BinDir\DENO-LICENSE.md")) {
     Invoke-WebRequest "https://raw.githubusercontent.com/denoland/deno/main/LICENSE.md" -OutFile "$BinDir\DENO-LICENSE.md"
 }
 
+& .venv\Scripts\python.exe scripts\fetch_tts_voices.py
+if ($LASTEXITCODE -ne 0) { throw "Piper voice download/verification failed" }
 & .venv\Scripts\python.exe -m PyInstaller --noconfirm --clean shokz-refill.spec
 $Artifact = "dist\Shokz-Refill-windows-x86_64.exe"
 Move-Item "dist\Shokz-Refill.exe" $Artifact -Force
 $SmokeTest = Start-Process -FilePath (Join-Path $ProjectDir $Artifact) -ArgumentList "--smoke-test" -Wait -PassThru
 if ($SmokeTest.ExitCode -ne 0) { throw "Packaged application smoke test failed ($($SmokeTest.ExitCode))" }
+$SpeechTest = Start-Process -FilePath (Join-Path $ProjectDir $Artifact) -ArgumentList "--tts-smoke-test" -Wait -PassThru
+if ($SpeechTest.ExitCode -ne 0) { throw "Packaged offline Piper speech smoke test failed ($($SpeechTest.ExitCode))" }
 $Hash = (Get-FileHash $Artifact -Algorithm SHA256).Hash.ToLowerInvariant()
 Set-Content -Path "$Artifact.sha256" -Value "$Hash  Shokz-Refill-windows-x86_64.exe"
 Write-Host "Portable Windows executable: $Artifact"

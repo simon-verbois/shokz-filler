@@ -3,8 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-from mutagen.id3 import ID3, TALB, TIT2, TPE1, TXXX
-from mutagen.mp3 import MP3
+from mutagen import MutagenError
+from mutagen.id3 import ID3, TALB, TCON, TIT2, TPE1, TPOS, TRCK, TXXX
+from mutagen.mp3 import MP3, BitrateMode
 
 SOURCE_DESC = "SHOKZ_REFILL_SOURCE_ID"
 
@@ -30,6 +31,17 @@ def write_metadata(path: Path, *, source_id: str, artist: str, title: str, album
     tags.save(path, v2_version=3)
 
 
+def write_audiobook_metadata(
+    path: Path, *, source_id: str, author: str, title: str, book_title: str, number: int, total: int
+) -> None:
+    write_metadata(path, source_id=source_id, artist=author, title=title, album=book_title)
+    tags = ID3(path)
+    tags.setall("TRCK", [TRCK(encoding=3, text=[f"{number}/{total}"])])
+    tags.setall("TPOS", [TPOS(encoding=3, text=["1/1"])])
+    tags.setall("TCON", [TCON(encoding=3, text=["Audiobook"])])
+    tags.save(path, v2_version=3)
+
+
 def read_identity(path: Path) -> Mp3Identity:
     try:
         tags = ID3(path)
@@ -45,9 +57,14 @@ def read_identity(path: Path) -> Mp3Identity:
 def validate_mp3(path: Path) -> None:
     if not path.is_file() or path.stat().st_size == 0:
         raise ValueError("The converted MP3 is empty")
-    audio = MP3(path)
+    try:
+        audio = MP3(path)
+    except MutagenError:
+        raise ValueError("The converted file is not valid MP3 audio") from None
     if audio.info is None:
         raise ValueError("The converted file has no MP3 audio stream")
+    if audio.info.bitrate_mode != BitrateMode.CBR or not 190_000 <= audio.info.bitrate <= 194_000:
+        raise ValueError("The converted MP3 is not CBR 192 kbps")
     if audio.info.sample_rate != 44_100:
         raise ValueError("The converted MP3 is not 44.1 kHz")
     if audio.info.channels != 2:

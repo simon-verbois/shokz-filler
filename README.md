@@ -1,179 +1,135 @@
 # Shokz Refill
 
-Shokz Refill is a small desktop utility for finding music through YouTube Music and safely
-loading compatible MP3 files onto Shokz headphones with onboard storage, including OpenSwim
-Pro. It also imports existing local MP3 files and provides a focused browser for the selected
-device.
+**Your music and audiobooks, ready to take along on your Shokz.**
 
-The application searches songs and playlists, opens playlist tracks, loads account-library
-playlists, downloads up to three tracks concurrently, and transfers them sequentially. Output is
-always broadly compatible MP3: **CBR 192 kbps, 44.1 kHz, stereo, ID3v2.3**.
+A desktop app for searching YouTube Music, preparing compatible MP3 files and managing your Shokz USB storage. It includes Audiobookshelf and local spoken introductions for audiobooks.
 
-## Use
+[Website and usage guide](https://simon-verbois.github.io/shokz-filler/) · [Downloads](https://github.com/simon-verbois/shokz-filler/releases/latest) · [Report an issue](https://github.com/simon-verbois/shokz-filler/issues)
 
-1. Connect or manually select the mounted Shokz volume. Automatically detected media is clearly
-   labelled; manual selection is available for devices whose USB metadata cannot be recognized.
-2. Browse the device files as needed. Standalone search downloads ask for their own destination.
-3. Search YouTube Music, or connect an account and select **My playlists**. Open a playlist,
-   use the **<** and **>** buttons to navigate, then select tracks and choose
-   **Download / transfer selected**.
-4. To transfer an entire playlist, choose **Download whole playlist** (or use the playlist's
-   right-click menu). Shokz Refill creates or reuses a folder that keeps the playlist's original
-   capitalization and spaces, such as `My Running Mix`, directly at the device root.
-5. Watch download, conversion, and transfer progress in the queue. Failed items can be retried and
-   active or queued items can be cancelled.
+Website languages: [English](https://simon-verbois.github.io/shokz-filler/) · [Français](https://simon-verbois.github.io/shokz-filler/fr/) · [Nederlands](https://simon-verbois.github.io/shokz-filler/nl/) · [Deutsch](https://simon-verbois.github.io/shokz-filler/de/) · [Español](https://simon-verbois.github.io/shokz-filler/es/)
 
-Downloads, conversions, and device transfers use independent bounded worker pools. A conversion
-therefore does not prevent the next track from downloading, while writes to removable storage stay
-strictly sequential.
+![Shokz Refill: music search and the download and transfer queue](docs/screenshots/music.png)
 
-For songs selected outside a playlist, Shokz Refill always asks for a destination using its in-app
-folder tree. The device root is hidden: choose an existing folder or create a new top-level folder
-in the dialog. Downloading directly to the device root is intentionally disabled.
+_Real application screenshots with fictional demonstration data. The desktop interface is in English._
 
-Click a YouTube Music result-column header to sort ascending; click it again for descending order.
-Before the first click, search relevance order is preserved.
+> **Feature availability.** This README and the website describe the current application. The older `2026.41.1` release predates Audiobookshelf, audiobook merging and Piper speech synthesis; use a newer release for these features.
 
-Click the magnifying glass in a column header to filter by text (case-insensitive).
-Filters are available for result titles/artists, device names/types, and queue tracks/statuses;
-multiple column filters combine. Clear the text or right-click the magnifying glass to clear
-one or all filters. Hidden rows are deselected before any operation on selected items.
+## What it does
 
-The device browser can create, rename, move, and recursively delete folders; rename, move, or delete MP3s;
-and add local MP3 files. `System Volume Information` is hidden. Moves support multi-selection:
-drag selected items onto a visible folder, or use **Move selected…** to choose a destination from
-the in-app folder tree. Folders remain flat at the device root and cannot be nested; MP3 files can
-be moved into a folder. Moves remain inside the selected device. Recursive deletes require explicit
-confirmation and do not follow symbolic links outside the device. Name
-collisions get a deterministic numbered name and never overwrite an existing file. Interrupted
-transfers remain visibly marked as `.part` and resume only when the cached source fingerprint still
-matches.
+- **YouTube Music**: search tracks and playlists, select multiple songs, download an entire playlist and access playlists from your account.
+- **Audiobookshelf**: connect to your server, search and choose books to take along. Each book gets **one folder and one MP3**, with its tracks in the order supplied by the server.
+- **Offline spoken introductions**: French male voice Tom or English male voice John through Piper, **95%** default speed, normalised volume and **3 seconds of silence**. Customise the text with `$book_name` and `$author_name`.
+- **Device management**: check free space, create and organise folders, import local MP3 files and confirm deletions. `SYSTEM` and `System Volume Information` are hidden from the browser and folder pickers.
+- **Verified transfers**: recognise duplicates, preserve files on name conflicts, validate partial files and verify SHA-256 integrity before publishing the final file.
 
-The device tab keeps the current or last file operation visible. During a move or local MP3 copy it
-explicitly warns not to disconnect the Shokz, then reports completion or failure.
+Conversions produce **MP3 CBR 192 kb/s · 44.1 kHz · stereo · ID3v2.3**. Importing local MP3 files copies the originals without re-encoding. Portable builds include Python, Qt, FFmpeg and their dependencies; current builds also include Piper and its voice models.
 
-Names created by Shokz Refill keep readable Unicode letters, numbers, spaces, hyphens and
-underscores. Other punctuation, emoji, control characters and filesystem-reserved characters are
-removed consistently from MP3 and folder names.
+## Install
 
-Right-click menus expose the relevant actions for YouTube results, Shokz files/folders, and queue
-items without duplicating unrelated file-manager features.
+Download the file for your operating system from the [GitHub releases](https://github.com/simon-verbois/shokz-filler/releases/latest).
 
-Tables are read-only. Double-clicking a playlist opens it; double-clicking a song downloads it.
-Songs opened from a playlist use that playlist's automatic destination folder. In the Shokz file
-browser, **<** and **>** move backward and forward through visited folders.
+| System         | File                              |
+| -------------- | --------------------------------- |
+| Linux x86_64   | `Shokz-Refill-linux-x86_64`       |
+| Windows x86_64 | `Shokz-Refill-windows-x86_64.exe` |
 
-## YouTube Music authentication
-
-Public search does not require a login. To show your library playlists, click **Connect YouTube
-Music** and follow the in-app steps: while signed in at `music.youtube.com`, copy the request
-headers from an authenticated `/browse` POST request in the browser developer tools and paste them
-into the dialog. This is the current browser-header flow supported by ytmusicapi and needs no
-Shokz Refill server.
-
-A saved session is labelled as unverified until an account request succeeds. If **My playlists**
-rejects an old or malformed session, the application displays a reconnect message and stays open.
-Use **Connect YouTube Music** to replace it with fresh headers. Temporary network/server failures
-report an error without invalidating the saved session.
-
-The resulting browser session data remains in your per-user configuration directory with owner-only
-permissions (`~/.config/shokz-refill` on Linux or `%APPDATA%\shokz-refill` on Windows). For
-downloads, cookies are scoped to YouTube through a short-lived cookie file instead of being sent as
-a global HTTP header. Credentials are never logged. **Disconnect** removes the stored session
-locally. Logging out of YouTube can invalidate it.
-
-Shokz Refill does not bypass DRM. Downloads work only where yt-dlp can legitimately access the
-source. You are responsible for having the rights or authorization to download and transfer media.
-
-## Linux / Fedora
-
-The portable build is one executable. Make it executable if needed, then launch it:
+On Linux, make the file executable and launch it:
 
 ```bash
 chmod +x Shokz-Refill-linux-x86_64
 ./Shokz-Refill-linux-x86_64
 ```
 
-It bundles Python, PySide6, yt-dlp, Deno, ffmpeg and the other runtime dependencies. Device
-discovery uses `lsblk`; manual folder selection works on any mounted volume.
+On Windows, launch the `.exe`. No separate Python or FFmpeg installation is needed to use a portable build.
 
-For development:
+## First use
+
+1. Connect your Shokz by USB and open their storage on your computer.
+2. In **Shokz device / files**, select the device. If necessary, use **Select device folder** to select its mounted volume.
+3. For music, open **YouTube Music**, search for songs or a playlist and select tracks using `Ctrl` / `Shift`.
+4. Click **Download / transfer selected** and choose a folder. For a complete playlist, open it and click **Download whole playlist**: its folder is created automatically.
+5. Follow the queue. **Retry selected** restarts failed or cancelled items; **Cancel selected** requests cancellation.
+6. Wait for transfers to finish and eject the headset through your operating system before unplugging it.
+
+Public search does not require a YouTube account. To use **My playlists**, click **Connect YouTube Music** and follow the connection dialog.
+
+The [illustrated usage guide](https://simon-verbois.github.io/shokz-filler/#guide) covers each workflow, voice settings and interrupted transfers in all five website languages.
+
+## Take an Audiobookshelf book along
+
+![Audiobookshelf book selection with a demonstration server and fictional titles](docs/screenshots/audiobooks.png)
+
+To export a book:
+
+1. Select your headset in the device tab first.
+2. In **Audiobookshelf**, enter **Server**, **Username** and **Password**, then click **Connect**. The address must include `https://` or `http://`.
+3. Choose a library and select books, then click **Download / transfer selected books**.
+4. For each book, keep or disable the announcement and choose **Queue book**. **Skip book** leaves that book out.
+5. The app downloads the sources, converts and merges them, and copies the MP3 into the book’s own folder.
+
+The announcement is enabled by default. **Settings** lets you choose the voice, speed and text, for example:
+
+```text
+You are listening to $book_name.
+A book by $author_name.
+```
+
+Choose **John** for an English announcement or **Tom** for French. Speech synthesis is entirely local. Downloading books requires access to your server and an account with download permission. The password is remembered only if you tick the corresponding option.
+
+<details>
+<summary>View the voice settings</summary>
+
+![Piper settings: French male voice Tom, 95% speed and a customisable announcement template](docs/screenshots/settings.png)
+
+</details>
+
+## Things to know
+
+- The conversion target is fixed. Audiobookshelf sources can include M4B, M4A, MP3, FLAC, Ogg/Opus and WAV, depending on the formats FFmpeg can decode.
+- Merging preserves track order **within a book**. The app cannot guarantee the headset firmware’s playback order for separate files.
+- Audiobookshelf exports exceeding the conservative **4 GiB per-file** limit are refused. Allow space on your computer for the conversion cache too.
+- Duplicate detection uses identifiers embedded in MP3 files. Matching titles or authors alone are not conclusive evidence of a duplicate.
+- Downloads require access to the media and the appropriate rights. The app does not bypass DRM.
+- This is an independent project, not affiliated with Shokz, YouTube or Audiobookshelf.
+
+## Develop and build
+
+The app uses Python 3.11+ and PySide6. These commands apply to the development checkout shown here; the GitHub mirror receives application code at release time. From that checkout, on Linux:
 
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -e '.[dev]'
-.venv/bin/python -m shokz_refill
+.venv/bin/python scripts/fetch_tts_voices.py
+scripts/fetch_ffmpeg_linux.sh
+./start-shokzfiller.sh
 ```
 
-Build and verify:
+The two voice models are fetched from a pinned revision and verified by SHA-256. Portable executables include them afterwards; speech synthesis does not contact a service.
 
 ```bash
-.venv/bin/python -m pytest
+QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest
 .venv/bin/python -m ruff check .
+.venv/bin/python -m ruff format --check .
 .venv/bin/python -m mypy
+python3 scripts/build_site.py --check
 scripts/build_linux.sh
 ```
 
-The resulting single binary is `dist/Shokz-Refill-linux-x86_64` with its SHA-256 checksum beside
-it.
+Windows builds run natively using `scripts/build_windows.ps1`. Forgejo CI publishes releases and the GitHub mirror when a release tag is pushed.
 
-## Windows
+[Full technical guide](docs/development.md) · [Third-party notices](THIRD_PARTY_NOTICES.md) · [Source code licence](LICENSE)
 
-Install 64-bit Python 3.12 and PowerShell 7.3 or newer only on the build machine, then run:
+## Multilingual GitHub Pages site
 
-```powershell
-pwsh -ExecutionPolicy Bypass -File scripts\build_windows.ps1
-```
+The static website lives in `docs/`. It follows the Inkora and Komga Meta Manager approach: a dependency-free Python build and a manually triggered Pages workflow. English is the default; French, Dutch, German and Spanish have their own static pages. Switching languages preserves the current tutorial section. No browser-side translation service is used.
 
-The resulting `dist\Shokz-Refill-windows-x86_64.exe` includes Python, PySide6, yt-dlp with its EJS
-scripts, Deno, dependencies, ffmpeg and ffprobe. Its SHA-256 checksum is written beside it.
-Windows must be built natively; the Linux build cannot cross-compile it.
-
-## Forgejo CI and releases
-
-The Forgejo workflow runs only when a release tag matching `YYYY.*.*` is pushed. It runs quality
-checks followed by native Linux and Windows builds, then publishes the release. Both builds are collected
-only after all required jobs succeed, then the cleaned source mirror, tag, and release assets are
-pushed to <https://github.com/simon-verbois/shokz-filler>.
-
-The Forgejo installation must provide runners labelled `ubuntu-latest` and `windows-11`.
-The Windows host job uses PowerShell 7, checks out the exact commit over the LAN, and downloads
-portable Python (via uv) and Node into its fresh checkout without administrator rights. Node runs
-the official v3 artifact upload script directly; no JavaScript Actions or cache are needed on that
-runner. Branch pushes and pull requests do not trigger the workflow.
-Configure `GITHUBPAT_TOKEN` preferably as an Actions secret (an existing Actions variable with the
-same name is also supported) with write access to the public GitHub repository. From a clean `main`
-branch, create a release with:
+Edit `docs/site-template.html` and the complete catalogues in `docs/locales/`, then regenerate and validate the committed pages:
 
 ```bash
-scripts/release.sh
+python3 scripts/build_site.py --generate
+python3 scripts/build_site.py --check
+python3 scripts/build_site.py
+python3 -m http.server 8000 --directory build/site
 ```
 
-The script generates the ISO year/week release number, commits `VERSION`, tags it, and pushes the
-branch and tag atomically to Forgejo. The tag starts the release workflow. Forgejo uses v3 artifact
-actions for compatibility and publishes the GitHub release through GitHub CLI.
-
-## ffmpeg distribution
-
-Build scripts bundle an ffmpeg build that includes `libmp3lame`, so end users do not need a system
-installation. The Linux fetch script uses the GPLv3 static builds published by John Van Sickle; the
-Windows script uses Gyan's GPL essentials build. ffmpeg is a separate bundled executable and is
-redistributed under its applicable GPL terms. Distributors should retain the build's license/source
-notices and provide the corresponding source offer/link; see <https://ffmpeg.org/legal.html> and the
-binary distributor's accompanying documentation. Shokz Refill's own source is MIT licensed.
-
-## Known limitations
-
-- Automatic detection intentionally ignores unrecognized removable drives; use manual selection for
-  Shokz volumes with unusual labels or USB metadata.
-- Recursive folder deletion requires an explicit confirmation.
-- YouTube and YouTube Music can change access behavior; authentication may need to be reconnected,
-  and some content is unavailable to yt-dlp.
-- A portable build is native to its operating system and CPU architecture.
-- The one-file build extracts its bundled libraries to the operating system's temporary directory
-  while running, so startup is slower and Linux systems with a `noexec` temporary directory need to
-  point `TMPDIR` to an executable filesystem.
-
-## Screenshot
-
-No screenshot is included in this source release.
+The build rejects missing translations, stale generated pages and broken local links. It publishes only explicitly allowlisted public assets. Regenerate screenshots with fictional data using `.venv/bin/python scripts/capture_screenshots.py`. In GitHub Actions, run **Shokz Refill presentation site** on the default branch to publish.

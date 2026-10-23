@@ -8,13 +8,16 @@ import requests
 import ytmusicapi
 from ytmusicapi import YTMusic
 
+from .cancellation import check_cancelled
 from .models import Playlist, Track
 
 
 class TimeoutSession(requests.Session):
     def request(self, method: str, url: str, **kwargs: Any) -> requests.Response:  # type: ignore[override]
+        check_cancelled()
         kwargs.setdefault("timeout", 15)
         response = super().request(method, url, **kwargs)
+        check_cancelled()
         response.raise_for_status()
         return response
 
@@ -112,6 +115,8 @@ class YouTubeMusicService:
                     YTMusicClient,
                     YTMusic(str(self.auth_path), requests_session=TimeoutSession()),
                 )
+            except InterruptedError:
+                raise
             except Exception:
                 raise self._invalid_session() from None
         return self._auth_client
@@ -126,12 +131,16 @@ class YouTubeMusicService:
             os.chmod(temporary, 0o600)
             client = YTMusic(str(temporary), requests_session=TimeoutSession())
             info = client.get_account_info()
+            check_cancelled()
             temporary.replace(self.auth_path)
             self._auth_client = cast(YTMusicClient, client)
             self._auth_invalid = False
             self._auth_verified = True
             name = str(info.get("accountName") or info.get("channelHandle") or "Connected")
             return name
+        except InterruptedError:
+            temporary.unlink(missing_ok=True)
+            raise
         except Exception:
             temporary.unlink(missing_ok=True)
             raise ValueError("The YouTube Music headers are invalid or expired") from None
@@ -174,6 +183,8 @@ class YouTubeMusicService:
             raise RuntimeError(
                 "YouTube Music is temporarily unavailable. Try again later."
             ) from None
+        except InterruptedError:
+            raise
         except Exception:
             raise self._invalid_session() from None
         self._auth_verified = True
@@ -183,6 +194,8 @@ class YouTubeMusicService:
         client = self._authenticated() if self.authenticated else self._public()
         try:
             data = client.get_playlist(playlist_id, limit=None)
+        except InterruptedError:
+            raise
         except Exception:
             message = "Could not load this playlist from YouTube Music"
             if self.authenticated:

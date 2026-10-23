@@ -15,3 +15,7 @@ browser.json
 auth.json
 *.part
 src/shokz_refill/bin/
+.creds
+
+# Downloaded neural speech models (pinned by scripts/tts-voices.json)
+src/shokz_refill/voices/*.onnx

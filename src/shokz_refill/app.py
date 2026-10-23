@@ -34,5 +34,5 @@ def main() -> int:
         bundled_binary("ffmpeg")
         bundled_binary("deno")
         import_module("yt_dlp_ejs")
-        QTimer.singleShot(500, app.quit)
+        QTimer.singleShot(500, window.close)
     return app.exec()

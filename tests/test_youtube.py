@@ -152,3 +152,40 @@ def test_timeout_session_preserves_http_status(monkeypatch: pytest.MonkeyPatch) 
         youtube.TimeoutSession().request("POST", "https://example.invalid/browse")
     assert observed == [15]
     assert error.value.response is not None and error.value.response.status_code == 403
+
+
+def test_cancelled_network_task_never_starts_another_request(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import threading
+
+    from shokz_refill.cancellation import current_cancellation
+    from shokz_refill.youtube import TimeoutSession
+
+    event = threading.Event()
+    event.set()
+    token = current_cancellation.set(event)
+    called: list[bool] = []
+    monkeypatch.setattr(requests.Session, "request", lambda *a, **k: called.append(True))
+    try:
+        with pytest.raises(InterruptedError):
+            TimeoutSession().get("https://unused.invalid")
+        assert not called
+    finally:
+        current_cancellation.reset(token)
+
+
+def test_cancelled_auth_initialization_keeps_saved_session(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    auth = tmp_path / "auth.json"
+    auth.write_text("{}")
+    service = YouTubeMusicService(auth)
+
+    def interrupted(*args, **kwargs):  # type: ignore[no-untyped-def]
+        raise InterruptedError("Cancelled")
+
+    monkeypatch.setattr(youtube, "YTMusic", interrupted)
+    with pytest.raises(InterruptedError):
+        service.library_playlists()
+    assert service.authenticated and auth.exists()
