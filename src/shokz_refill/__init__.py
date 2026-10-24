@@ -1,3 +1,3 @@
 """Shokz Refill application package."""
 
-__version__ = "2026.43.3"
+__version__ = "2026.43.4"
