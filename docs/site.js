@@ -1,5 +1,57 @@
 "use strict";
 
+// Keep every screen readable without JavaScript; enhance the overview into keyboard tabs.
+document.querySelectorAll("[data-gallery]").forEach((gallery) => {
+  const tablist = gallery.querySelector(".screen-tabs");
+  const tabs = [...gallery.querySelectorAll("[data-screen]")];
+  const panels = [...gallery.querySelectorAll("[data-panel]")];
+  if (!tablist || tabs.length !== panels.length) return;
+  tablist.setAttribute("role", "tablist");
+  const select = (selected) => {
+    tabs.forEach((tab, index) => {
+      const active = index === selected;
+      tab.setAttribute("aria-selected", String(active));
+      tab.tabIndex = active ? 0 : -1;
+      panels[index].hidden = !active;
+    });
+  };
+  tabs.forEach((tab, index) => {
+    tab.id = `tab-${panels[index].id}`;
+    tab.setAttribute("role", "tab");
+    tab.setAttribute("aria-controls", panels[index].id);
+    panels[index].setAttribute("role", "tabpanel");
+    panels[index].setAttribute("aria-labelledby", tab.id);
+    panels[index].tabIndex = 0;
+    tab.addEventListener("click", (event) => {
+      if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)
+        return;
+      event.preventDefault();
+      select(index);
+      history.replaceState(null, "", tab.hash);
+      window.dispatchEvent(new Event("hashchange"));
+    });
+    tab.addEventListener("keydown", (event) => {
+      let next;
+      if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
+      else if (event.key === "ArrowLeft")
+        next = (index + tabs.length - 1) % tabs.length;
+      else if (event.key === "Home") next = 0;
+      else if (event.key === "End") next = tabs.length - 1;
+      else return;
+      event.preventDefault();
+      tabs[next].click();
+      tabs[next].focus();
+    });
+  });
+  const fromHash = () => {
+    const current = tabs.findIndex((tab) => tab.hash === location.hash);
+    if (current >= 0) select(current);
+  };
+  select(0);
+  fromHash();
+  window.addEventListener("hashchange", fromHash);
+});
+
 const viewer = document.querySelector(".lightbox");
 if (viewer && typeof viewer.showModal === "function") {
   const image = viewer.querySelector("img");

@@ -1,24 +1,26 @@
 <!doctype html>
-
-<html lang="fr">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#f6f7f2" />
+    <meta name="theme-color" content="#f3f7f8" />
+    <title data-i18n="copy-title">
+      Shokz Refill — Your audio, ready to go.
+    </title>
     <meta
       name="description"
-      content="Préparez la musique et les livres audio de vos Shokz. YouTube Music, Audiobookshelf, MP3 compatibles et transferts vérifiés, dans une application de bureau pour Linux et Windows."
-      data-i18n-content="meta-000"
+      content="Music and audiobooks for your Shokz."
+      data-i18n-content="meta-description"
     />
     <meta
       property="og:title"
-      content="Shokz Refill — Votre audio, prêt à plonger."
-      data-i18n-content="meta-001"
+      content="Shokz Refill — Your audio, ready to go."
+      data-i18n-content="copy-title"
     />
     <meta
       property="og:description"
-      content="Musique, livres audio et transferts MP3. Découvrez l’application et son guide de prise en main."
-      data-i18n-content="meta-002"
+      content="Music and audiobooks for your Shokz."
+      data-i18n-content="meta-description"
     />
     <meta property="og:type" content="website" />
     <meta
@@ -36,496 +38,414 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles.css" />
     <script src="site.js" defer></script>
-    <title data-i18n="copy-003">
-      Shokz Refill — Votre audio, prêt à plonger.
-    </title>
   </head>
   <body>
-    <a class="skip" href="#contenu" data-i18n="copy-004">Aller au contenu</a>
+    <a class="skip" href="#contenu" data-i18n="copy-skip">Skip to content</a>
     <header class="header wrap">
       <a
         class="brand"
         href="./"
-        aria-label="Shokz Refill, accueil"
-        data-i18n-aria-label="attr-005"
-        ><img src="favicon.svg" width="38" height="38" alt="" /><span
+        aria-label="Shokz Refill home"
+        data-i18n-aria-label="attr-home"
+        ><img src="favicon.svg" width="36" height="36" alt="" /><span
           >shokz<span class="brand-light">refill</span></span
         ></a
       >
-      <nav aria-label="Navigation principale" data-i18n-aria-label="attr-006">
-        <a href="#decouvrir" data-i18n="copy-007">L’application</a
-        ><a href="#guide" data-i18n="copy-008">Mode d’emploi</a
-        ><a href="#questions" data-i18n="copy-009">Questions</a>
+      <nav aria-label="Main navigation" data-i18n-aria-label="attr-nav">
+        <a href="#decouvrir" data-i18n="copy-nav-app">The app</a>
+        <a href="#guide" data-i18n="copy-nav-guide">Getting started</a>
+        <a href="#telecharger" data-i18n="copy-nav-download">Download</a>
       </nav>
       <a
         class="button button-small button-outline"
         href="https://github.com/simon-verbois/shokz-filler"
-        data-i18n="copy-010"
         >GitHub <span aria-hidden="true">↗</span></a
       >
     </header>
     <main id="contenu">
       <section class="hero wrap" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow" data-i18n="copy-011">
-            <span class="dot" aria-hidden="true"></span> Votre compagnon audio,
-            avant la prochaine séance
+          <p class="eyebrow" data-i18n="copy-hero-kicker">
+            For Shokz with USB MP3 storage
           </p>
-          <h1 id="hero-title" data-i18n="copy-012">
-            Votre audio.<br />Prêt à <em>plonger.</em>
+          <h1 id="hero-title" data-i18n="copy-hero-title">
+            Your audio.<br />Ready to go.
           </h1>
-          <p class="lead" data-i18n="copy-013">
-            Un peu de musique. Un livre à terminer.<br />Préparez vos Shokz,
-            puis laissez l’écran au vestiaire.
+          <p class="lead" data-i18n="copy-hero-body">
+            Your next playlist. Your next chapter. Prepare your headphones on
+            your computer, then take your audio with you.
           </p>
           <div class="actions">
             <a
               class="button button-primary"
               href="#telecharger"
-              data-i18n="copy-014"
-              >Télécharger l’app <span aria-hidden="true">↓</span></a
-            ><a class="text-link" href="#guide" data-i18n="copy-015"
-              >Prendre en main <span aria-hidden="true">↗</span></a
+              data-i18n="copy-download-action"
+              >Download the app</a
+            >
+            <a class="text-link" href="#guide" data-i18n="copy-guide-action"
+              >Show me how</a
             >
           </div>
-          <p class="small muted" data-i18n="copy-016">
-            Application de bureau · Linux &amp; Windows · Code source ouvert
+          <p class="small muted" data-i18n="copy-portable-line">
+            Linux &amp; Windows · Portable · Open source
           </p>
-        </div>
-        <div class="hero-art" aria-hidden="true">
-          <span class="art-label" data-i18n="copy-017"
-            >LE BON RYTHME.<br />LA BONNE HISTOIRE.</span
-          >
-          <svg viewbox="0 0 420 340" fill="none">
-            <path
-              class="water water-back"
-              d="M-10 138C45 75 103 75 160 138S275 201 332 138S430 75 470 138M-10 181C45 118 103 118 160 181S275 244 332 181S430 118 470 181M-10 224C45 161 103 161 160 224S275 287 332 224S430 161 470 224"
-            ></path>
-            <path
-              class="water water-front"
-              d="M-10 118C45 55 103 55 160 118S275 181 332 118S430 55 470 118M-10 161C45 98 103 98 160 161S275 224 332 161S430 98 470 161M-10 204C45 141 103 141 160 204S275 267 332 204S430 141 470 204"
-            ></path>
-            <circle cx="316" cy="54" r="13" fill="currentColor"></circle>
-          </svg>
-          <span class="art-bottom" data-i18n="copy-018"
-            >01 — CHOISIR   02 — TRANSFÉRER   03 — PROFITER</span
-          >
-        </div>
-      </section>
-      <div class="wrap">
-        <figure class="hero-shot">
-          <div class="window-heading">
-            <span data-i18n="copy-019"
-              ><i aria-hidden="true"></i> Shokz Refill</span
-            ><span data-i18n="copy-020"
-              >VOTRE PROCHAINE SÉANCE COMMENCE ICI</span
-            >
-          </div>
           <a
-            class="screenshot"
-            href="screenshots/music.png"
-            data-preview
-            aria-label="Agrandir la capture de YouTube Music"
-            data-i18n-aria-label="attr-021"
+            class="coffee-link"
+            href="https://buymeacoffee.com/simonverbois"
+            aria-label="Support Shokz Refill on Buy Me a Coffee"
+            data-i18n-aria-label="attr-coffee"
+            ><img
+              src="buy-me-a-coffee.svg"
+              width="162"
+              height="28"
+              alt="Buy Me a Coffee"
+          /></a>
+        </div>
+        <figure class="hero-shot">
+          <a class="screenshot" href="screenshots/music.png" data-preview
             ><img
               src="screenshots/music.png"
               width="1360"
               height="880"
-              alt="Interface réelle de Shokz Refill : résultats musicaux, sélection des titres et suivi des téléchargements et transferts"
               fetchpriority="high"
-              data-i18n-alt="attr-022"
+              alt="Music search with three songs in the send list"
+              data-i18n-alt="attr-music"
           /></a>
-          <figcaption data-i18n="copy-023">
-            <span
-              >L’interface réelle. Des données de démonstration fictives.</span
-            ><span>Aperçu de la version en développement</span>
+          <figcaption data-i18n="copy-captures">
+            The real app, with fictional demonstration data. Click a screenshot
+            to enlarge it.
           </figcaption>
         </figure>
-      </div>
-      <div
-        class="specs wrap"
-        aria-label="Caractéristiques de l’application"
-        data-i18n-aria-label="attr-024"
-      >
-        <p data-i18n="copy-025">
-          <strong>MP3</strong><span>192 kb/s · 44,1 kHz · stéréo</span>
+      </section>
+      <div class="specs wrap">
+        <p><strong>MP3</strong><span>192 kb/s · 44.1 kHz · stereo</span></p>
+        <p>
+          <strong data-i18n="copy-spec-portable">Ready to launch</strong
+          ><span data-i18n="copy-spec-portable-body"
+            >No Python or FFmpeg to install</span
+          >
         </p>
-        <p data-i18n="copy-026">
-          <strong>À votre rythme</strong
-          ><span>Progression, annulation et reprise</span>
-        </p>
-        <p data-i18n="copy-027">
-          <strong>Sur votre ordinateur</strong
-          ><span>Application native, sans serveur à installer</span>
+        <p>
+          <strong data-i18n="copy-spec-local">On your computer</strong
+          ><span data-i18n="copy-spec-local-body"
+            >No app server, no telemetry</span
+          >
         </p>
       </div>
 
-      <section
-        class="section wrap"
-        id="decouvrir"
-        aria-labelledby="discover-title"
-      >
+      <section class="section wrap" id="decouvrir" aria-labelledby="app-title">
         <div class="section-head">
-          <div>
-            <p class="eyebrow" data-i18n="copy-028">
-              01 / Un espace pour votre audio
-            </p>
-            <h2 id="discover-title" data-i18n="copy-029">
-              La musique pour avancer.<br />Les histoires pour
-              <em>s’évader.</em>
-            </h2>
-          </div>
-          <p data-i18n="copy-030">
-            Choisissez ce qui vous accompagne. L’application prépare les MP3 et
-            les transfère sur le volume Shokz sélectionné.
+          <h2 id="app-title" data-i18n="copy-overview-title">
+            One place to prepare everything you listen to.
+          </h2>
+          <p data-i18n="copy-overview-body">
+            Music, audiobooks and local MP3s share the same device, with
+            dedicated screens to keep things clear.
           </p>
         </div>
-        <div class="tour-grid">
-          <article>
-            <span class="feature-number">01</span>
-            <h3 data-i18n="copy-031">Vos morceaux, vos playlists.</h3>
-            <p data-i18n="copy-032">
-              Recherchez sur YouTube Music. Sélectionnez quelques titres ou une
-              playlist entière, puis suivez leur préparation dans une seule
-              file.
-            </p>
-            <a class="text-link" href="#guide-musique" data-i18n="copy-033"
-              >Le guide musique <span aria-hidden="true">↗</span></a
-            >
-          </article>
-          <article>
-            <span class="feature-number">02</span>
-            <h3 data-i18n="copy-034">Un livre. Un dossier. Un MP3.</h3>
-            <p data-i18n="copy-035">
-              Parcourez votre serveur Audiobookshelf et choisissez vos livres.
-              Les pistes sont fusionnées dans l’ordre fourni par le serveur.
-            </p>
-            <span class="development-label" data-i18n="copy-036"
-              >Version en développement</span
-            >
-          </article>
-          <article>
-            <span class="feature-number">03</span>
-            <h3 data-i18n="copy-037">Vos fichiers, à leur place.</h3>
-            <p data-i18n="copy-038">
-              Retrouvez l’espace disponible, créez vos dossiers et importez vos
-              MP3 locaux. Les conflits conservent les deux fichiers avec des
-              noms distincts.
-            </p>
-            <a class="text-link" href="#guide-appareil" data-i18n="copy-039"
-              >Le guide du périphérique <span aria-hidden="true">↗</span></a
-            >
-          </article>
-        </div>
-      </section>
-
-      <section class="book-section" aria-labelledby="book-title">
-        <div class="wrap book-layout">
-          <div>
-            <p class="eyebrow" data-i18n="copy-040">
-              02 / Pour les histoires au long cours
-            </p>
-            <h2 id="book-title" data-i18n="copy-041">
-              Gardez le fil.<br /><em>Jusqu’au dernier chapitre.</em>
-            </h2>
-            <p data-i18n="copy-042">
-              Un seul MP3 par livre évite que le casque réordonne ses fichiers
-              séparés. Le contenu suit l’ordre des pistes Audiobookshelf, même
-              lorsque leurs noms ne sont pas classés de A à Z.
-            </p>
-            <p data-i18n="copy-043">
-              Avant le livre, une voix masculine locale peut annoncer le titre
-              et l’auteur. Vitesse par défaut : <strong>95 %</strong>. Puis 3
-              secondes de silence, et l’histoire commence.
-            </p>
-            <div
-              class="book-sequence"
-              aria-label="Ordre du fichier final"
-              data-i18n-aria-label="attr-044"
-            >
-              <span data-i18n="copy-045">Annonce vocale</span
-              ><span aria-hidden="true">→</span
-              ><span data-i18n="copy-046">3 s de silence</span
-              ><span aria-hidden="true">→</span
-              ><strong data-i18n="copy-047">Livre complet</strong>
+        <div class="app-gallery" data-gallery>
+          <div
+            class="screen-tabs"
+            aria-label="Application screens"
+            data-i18n-aria-label="attr-screens"
+          >
+            <a href="#guide-musique" data-screen>YouTube Music</a>
+            <a href="#guide-livres" data-screen>Audiobookshelf</a>
+            <a href="#guide-appareil" data-screen>Shokz files</a>
+            <a href="#screen-transfers" data-screen>Transfers</a>
+            <a href="#guide-voix" data-screen>Settings</a>
+          </div>
+          <article class="screen-panel" id="guide-musique" data-panel>
+            <div>
+              <h3 data-i18n="copy-music-title">
+                Choose the songs. Keep their order.
+              </h3>
+              <p data-i18n="copy-music-body">
+                Search songs and playlists, then use + to build your send list.
+                It stays with you as you browse. Send to Shokz opens a review of
+                the songs and destination before anything downloads.
+              </p>
+              <details>
+                <summary data-i18n="copy-music-account-title">
+                  Use my YouTube Music playlists
+                </summary>
+                <p data-i18n="copy-music-account-body">
+                  In Settings, click Connect next to YouTube Music. Open your
+                  browser, sign in and return to the app to import the session.
+                  Then open My playlists. Public search works without an
+                  account.
+                </p>
+              </details>
             </div>
-            <p class="small" data-i18n="copy-048">
-              Piper et ses voix sont embarqués. La synthèse vocale fonctionne
-              hors ligne.
+            <figure>
+              <a class="screenshot" href="screenshots/music.png" data-preview
+                ><img
+                  src="screenshots/music.png"
+                  width="1360"
+                  height="880"
+                  loading="lazy"
+                  alt="Music search and send list"
+                  data-i18n-alt="attr-music"
+              /></a>
+            </figure>
+          </article>
+          <article class="screen-panel" id="guide-livres" data-panel>
+            <div>
+              <h3 data-i18n="copy-books-title">
+                One book. One folder. Numbered chapters.
+              </h3>
+              <p data-i18n="copy-books-body">
+                Connect your Audiobookshelf server in Settings. Select books and
+                choose Send to Shokz: each chapter becomes a numbered MP3,
+                copied in playback order. Available chapter metadata is used
+                when valid; otherwise the source-file order is preserved.
+              </p>
+              <a class="text-link" href="screenshots/chapters.png" data-preview
+                ><img
+                  class="preview-thumb"
+                  src="screenshots/chapters.png"
+                  width="1360"
+                  height="880"
+                  loading="lazy"
+                  alt="Numbered MP3 chapters in the Shokz file browser"
+                  data-i18n-alt="attr-chapters"
+                /><span data-i18n="copy-chapters-link"
+                  >See the exported chapter files</span
+                ></a
+              >
+            </div>
+            <figure>
+              <a
+                class="screenshot"
+                href="screenshots/audiobooks.png"
+                data-preview
+                ><img
+                  src="screenshots/audiobooks.png"
+                  width="1360"
+                  height="880"
+                  loading="lazy"
+                  alt="Audiobookshelf library and book selection"
+                  data-i18n-alt="attr-books"
+              /></a>
+            </figure>
+          </article>
+          <article class="screen-panel" id="guide-appareil" data-panel>
+            <div>
+              <h3 data-i18n="copy-files-title">Your files, in their place.</h3>
+              <p data-i18n="copy-files-body">
+                Choose your detected Shokz or use Browse… to select its mounted
+                folder. Create folders, rename and move files. Add MP3 imports
+                local music: compatible files copy directly, others are
+                converted to the target format without changing your originals.
+              </p>
+              <p class="tip" data-i18n="copy-files-tip">
+                Deletion asks for confirmation. Name conflicts preserve both
+                files. Recovery tools are in the overflow menu.
+              </p>
+            </div>
+            <figure>
+              <a class="screenshot" href="screenshots/device.png" data-preview
+                ><img
+                  src="screenshots/device.png"
+                  width="1360"
+                  height="880"
+                  loading="lazy"
+                  alt="Device storage, folders and local MP3 import controls"
+                  data-i18n-alt="attr-files"
+              /></a>
+            </figure>
+          </article>
+          <article class="screen-panel" id="screen-transfers" data-panel>
+            <div>
+              <h3 data-i18n="copy-transfers-title">Know what is happening.</h3>
+              <p data-i18n="copy-transfers-body">
+                Follow downloads, conversion and copies in Transfers. Use Cancel
+                selected for active or queued items, or Retry selected after a
+                failure or cancellation. The sidebar indicator stays visible on
+                every screen.
+              </p>
+              <p class="tip" data-i18n="copy-transfers-tip">
+                Interrupted copies remain distinguishable from complete MP3s.
+                Reconnect the same device before retrying or resuming.
+              </p>
+            </div>
+            <figure>
+              <a
+                class="screenshot"
+                href="screenshots/transfers.png"
+                data-preview
+                ><img
+                  src="screenshots/transfers.png"
+                  width="1360"
+                  height="880"
+                  loading="lazy"
+                  alt="Transfer queue with complete, converting, waiting and failed items"
+                  data-i18n-alt="attr-transfers"
+              /></a>
+            </figure>
+          </article>
+          <article class="screen-panel" id="guide-voix" data-panel>
+            <div>
+              <h3 data-i18n="copy-voice-title">
+                Hear which chapter comes next.
+              </h3>
+              <p data-i18n="copy-voice-body">
+                Optional Piper announcements run offline, with eight bundled
+                voices across French, English, German, Dutch and Spanish. Set
+                separate text for the first and later chapters. Default speed is
+                100%, followed by 1.5 seconds of silence.
+              </p>
+              <p data-i18n="copy-voice-template">
+                Use $book_name, $author_name, $chapter_number and
+                $chapter_title. Try Preview, then Save settings. Changes apply
+                to books queued afterwards.
+              </p>
+              <a class="text-link" href="screenshots/accounts.png" data-preview
+                ><img
+                  class="preview-thumb"
+                  src="screenshots/accounts.png"
+                  width="1360"
+                  height="880"
+                  loading="lazy"
+                  alt="Settings with YouTube Music and Audiobookshelf account controls"
+                  data-i18n-alt="attr-accounts"
+                /><span data-i18n="copy-accounts-link"
+                  >See the account settings</span
+                ></a
+              >
+            </div>
+            <figure>
+              <a class="screenshot" href="screenshots/settings.png" data-preview
+                ><img
+                  src="screenshots/settings.png"
+                  width="1360"
+                  height="880"
+                  loading="lazy"
+                  alt="First-chapter and later-chapter announcement settings with voice preview"
+                  data-i18n-alt="attr-settings"
+              /></a>
+            </figure>
+          </article>
+        </div>
+        <p class="small muted" data-i18n="copy-ui-language">
+          The desktop interface is in English. The guide keeps the actual button
+          names so you can find them easily.
+        </p>
+      </section>
+
+      <section class="guide-section" id="guide" aria-labelledby="guide-title">
+        <div class="wrap">
+          <div class="section-head">
+            <h2 id="guide-title" data-i18n="copy-guide-title">
+              From your first click to your next swim.
+            </h2>
+            <p data-i18n="copy-guide-intro">
+              For music, a send list keeps you in control of the tracks,
+              playback order and destination.
             </p>
-            <a class="text-link" href="#guide-livres" data-i18n="copy-049"
-              >Configurer mon premier livre <span aria-hidden="true">↗</span></a
-            >
           </div>
-          <figure>
-            <a
-              class="screenshot screenshot-framed"
-              href="screenshots/audiobooks.png"
-              data-preview
-              aria-label="Agrandir la capture Audiobookshelf"
-              data-i18n-aria-label="attr-050"
-              ><img
-                src="screenshots/audiobooks.png"
-                width="1360"
-                height="880"
-                loading="lazy"
-                alt="Onglet Audiobookshelf avec un serveur fictif, une bibliothèque et quatre livres dont un sélectionné"
-                data-i18n-alt="attr-051"
-            /></a>
-            <figcaption data-i18n="copy-052">
-              Audiobookshelf · Fonctionnalité en développement
-            </figcaption>
-          </figure>
+          <ol class="workflow">
+            <li>
+              <h3 data-i18n="copy-step1-title">Connect your Shokz</h3>
+              <p data-i18n="copy-step1-body">
+                Connect the headphones by USB. In Shokz files, select the
+                mounted device or use Browse…. Check the name and available
+                space in the sidebar.
+              </p>
+            </li>
+            <li>
+              <h3 data-i18n="copy-step2-title">Build your send list</h3>
+              <p data-i18n="copy-step2-body">
+                Search in YouTube Music or open My playlists. Use + beside a
+                song or playlist. Your list keeps its order across searches;
+                adding an item does not start a download.
+              </p>
+            </li>
+            <li>
+              <h3 data-i18n="copy-step3-title">Review, then send</h3>
+              <p data-i18n="copy-step3-body">
+                Choose Send to Shokz. Reorder or remove songs, then click Next.
+                Select an existing folder or create one, and click Send.
+              </p>
+            </li>
+            <li>
+              <h3 data-i18n="copy-step4-title">Follow progress and eject</h3>
+              <p data-i18n="copy-step4-body">
+                Open Transfers to watch progress or retry a failed item. Wait
+                until all operations finish, then eject the headphones through
+                your operating system before unplugging them.
+              </p>
+            </li>
+          </ol>
+          <div class="wizard-gallery">
+            <figure>
+              <a
+                class="screenshot"
+                href="screenshots/transfer-order.png"
+                data-preview
+                ><img
+                  src="screenshots/transfer-order.png"
+                  width="1360"
+                  height="880"
+                  loading="lazy"
+                  alt="Transfer assistant showing songs in playback order"
+                  data-i18n-alt="attr-order"
+              /></a>
+              <figcaption data-i18n="copy-order-caption">
+                Review the songs and their playback order.
+              </figcaption>
+            </figure>
+            <figure>
+              <a
+                class="screenshot"
+                href="screenshots/transfer-folder.png"
+                data-preview
+                ><img
+                  src="screenshots/transfer-folder.png"
+                  width="1360"
+                  height="880"
+                  loading="lazy"
+                  alt="Transfer assistant with destination folders and Send button"
+                  data-i18n-alt="attr-folder"
+              /></a>
+              <figcaption data-i18n="copy-folder-caption">
+                Choose where the music goes before starting.
+              </figcaption>
+            </figure>
+          </div>
         </div>
       </section>
 
-      <section
-        class="section wrap guide"
-        id="guide"
-        aria-labelledby="guide-title"
-      >
-        <div class="section-head">
-          <div>
-            <p class="eyebrow" data-i18n="copy-053">03 / La prise en main</p>
-            <h2 id="guide-title" data-i18n="copy-054">
-              Quelques clics avant<br />la première <em>longueur.</em>
-            </h2>
-          </div>
-          <p data-i18n="copy-055">
-            Les boutons de l’app sont en anglais. Le guide reprend leurs noms
-            pour que vous les retrouviez facilement.
+      <section class="section wrap tour-section" aria-labelledby="tour-title">
+        <div>
+          <p class="eyebrow" data-i18n="copy-tour-kicker">
+            A little help to get started
+          </p>
+          <h2 id="tour-title" data-i18n="copy-tour-title">
+            Let the app show you around.
+          </h2>
+          <p data-i18n="copy-tour-body">
+            A nine-step guided tour opens the first time the app is launched. It
+            highlights the actual controls, without needing an account or
+            connected device. Skip it at any time, or reopen Guided tour above
+            Settings in the sidebar.
+          </p>
+          <p class="small muted" data-i18n="copy-tour-context">
+            Closing the tour returns you to your previous page. Your send list
+            stays in place.
           </p>
         </div>
-        <article class="guide-block" id="guide-appareil">
-          <div class="guide-copy">
-            <p class="eyebrow" data-i18n="copy-056">
-              Étape 1 / Le point de départ
-            </p>
-            <h3 data-i18n="copy-057">Branchez vos Shokz.</h3>
-            <ol class="steps">
-              <li data-i18n="copy-058">
-                Branchez le casque en USB et ouvrez son stockage sur votre
-                ordinateur.
-              </li>
-              <li data-i18n="copy-059">
-                Dans <strong>Shokz device / files</strong>, choisissez le
-                périphérique détecté. Si besoin, utilisez
-                <strong>Select device folder</strong> pour sélectionner son
-                volume monté.
-              </li>
-              <li data-i18n="copy-060">
-                Vérifiez le nom et l’espace libre. Pour la musique, créez ou
-                choisissez un dossier de destination.
-              </li>
-            </ol>
-            <p class="tip" data-i18n="copy-061">
-              Attendez la fin des transferts, puis éjectez le périphérique
-              depuis votre système avant de le débrancher.
-            </p>
-            <details>
-              <summary data-i18n="copy-062">
-                Importer des MP3 déjà présents sur mon ordinateur
-              </summary>
-              <p data-i18n="copy-063">
-                Ouvrez le dossier souhaité dans l’onglet périphérique, puis
-                cliquez sur <strong>Add local MP3</strong> et sélectionnez vos
-                fichiers. L’app les copie sans les réencoder : leur qualité et
-                leurs métadonnées restent celles des originaux. Utilisez
-                <strong>New folder</strong> pour créer un dossier et
-                <strong>Move selected…</strong> pour ranger des fichiers déjà
-                sur le casque.
-              </p>
-            </details>
-          </div>
-          <figure>
-            <a
-              class="screenshot screenshot-framed"
-              href="screenshots/device.png"
-              data-preview
-              aria-label="Agrandir la capture du périphérique"
-              data-i18n-aria-label="attr-064"
-              ><img
-                src="screenshots/device.png"
-                width="1360"
-                height="880"
-                loading="lazy"
-                alt="Explorateur Shokz avec le volume sélectionné, son espace libre et plusieurs dossiers de musique et de livres"
-                data-i18n-alt="attr-065"
-            /></a>
-            <figcaption data-i18n="copy-066">
-              Le stockage sélectionné reste visible dans l’onglet périphérique.
-            </figcaption>
-          </figure>
-        </article>
-        <article class="guide-block" id="guide-musique">
-          <div class="guide-copy">
-            <p class="eyebrow" data-i18n="copy-067">Étape 2 / Côté musique</p>
-            <h3 data-i18n="copy-068">Trouvez votre prochain rythme.</h3>
-            <ol class="steps">
-              <li data-i18n="copy-069">
-                Dans <strong>YouTube Music</strong>, saisissez une recherche et
-                choisissez <strong>Songs</strong> ou <strong>Playlists</strong>,
-                puis <strong>Search</strong>.
-              </li>
-              <li data-i18n="copy-070">
-                Sélectionnez des titres avec <kbd>Ctrl</kbd> ou
-                <kbd>Shift</kbd>, puis
-                <strong>Download / transfer selected</strong>. Choisissez un
-                dossier si l’app le demande.
-              </li>
-              <li data-i18n="copy-071">
-                Pour une playlist, ouvrez-la par double-clic puis utilisez
-                <strong>Download whole playlist</strong>. Son dossier est créé
-                automatiquement.
-              </li>
-              <li data-i18n="copy-072">
-                Suivez les étapes dans la file. Un échec ? Sélectionnez la ligne
-                puis <strong>Retry selected</strong>.
-              </li>
-            </ol>
-            <details>
-              <summary data-i18n="copy-073">
-                Retrouver les playlists de mon compte
-              </summary>
-              <p data-i18n="copy-074">
-                Cliquez sur <strong>Connect YouTube Music</strong> et suivez le
-                dialogue pour importer les en-têtes d’une requête
-                <code>/browse</code> de votre session sur music.youtube.com.
-                Utilisez ensuite <strong>My playlists</strong>. La recherche
-                publique fonctionne sans connexion au compte.
-              </p>
-            </details>
-          </div>
-          <figure>
-            <a
-              class="screenshot screenshot-framed"
-              href="screenshots/music.png"
-              data-preview
-              aria-label="Agrandir les résultats musicaux"
-              data-i18n-aria-label="attr-075"
-              ><img
-                src="screenshots/music.png"
-                width="1360"
-                height="880"
-                loading="lazy"
-                alt="Titres musicaux fictifs et file affichant un transfert terminé, une conversion et un morceau en attente"
-                data-i18n-alt="attr-076"
-            /></a>
-            <figcaption data-i18n="copy-077">
-              Plusieurs téléchargements peuvent avancer en parallèle ; les
-              écritures sur le casque sont coordonnées.
-            </figcaption>
-          </figure>
-        </article>
-        <article class="guide-block" id="guide-livres">
-          <div class="guide-copy">
-            <p class="eyebrow" data-i18n="copy-078">
-              Étape 2 / Côté livres audio
-            </p>
-            <h3 data-i18n="copy-079">Choisissez les histoires à emporter.</h3>
-            <span class="development-label" data-i18n="copy-080"
-              >Version en développement</span
-            >
-            <ol class="steps">
-              <li data-i18n="copy-081">
-                Dans <strong>Audiobookshelf</strong>, renseignez
-                <strong>Server</strong> (l’URL complète),
-                <strong>Username</strong> et <strong>Password</strong>, puis
-                cliquez sur <strong>Connect</strong>.
-              </li>
-              <li data-i18n="copy-082">
-                Choisissez votre bibliothèque, recherchez un titre ou un auteur
-                et sélectionnez les livres à transférer avec <kbd>Ctrl</kbd> ou
-                <kbd>Shift</kbd>.
-              </li>
-              <li data-i18n="copy-083">
-                Cliquez sur <strong>Download / transfer selected books</strong>.
-                Un dialogue s’ouvre pour chaque livre : gardez ou désactivez
-                l’annonce vocale, puis <strong>Queue book</strong>.
-                <strong>Skip book</strong> ignore ce livre.
-              </li>
-              <li data-i18n="copy-084">
-                L’app télécharge, convertit, fusionne puis copie le livre dans
-                son propre dossier. Attendez le statut
-                <strong>complete</strong>.
-              </li>
-            </ol>
-            <p class="tip" data-i18n="copy-085">
-              Votre compte Audiobookshelf doit disposer de l’autorisation de
-              téléchargement. Le mot de passe n’est enregistré que si vous
-              cochez l’option correspondante.
-            </p>
-          </div>
-          <figure>
-            <a
-              class="screenshot screenshot-framed"
-              href="screenshots/book-export.png"
-              data-preview
-              aria-label="Agrandir les options d’export d’un livre"
-              data-i18n-aria-label="attr-086"
-              ><img
-                src="screenshots/book-export.png"
-                width="660"
-                height="360"
-                loading="lazy"
-                alt="Dialogue d’export avec annonce du titre et de l’auteur activée, texte lu, silence de trois secondes et boutons Queue book et Skip book"
-                data-i18n-alt="attr-087"
-            /></a>
-            <figcaption data-i18n="copy-088">
-              Chaque livre garde ses propres options d’export.
-            </figcaption>
-          </figure>
-        </article>
-        <article class="guide-block" id="guide-voix">
-          <div class="guide-copy">
-            <p class="eyebrow" data-i18n="copy-089">
-              Étape 3 / Une touche personnelle
-            </p>
-            <h3 data-i18n="copy-090">Une annonce qui vous ressemble.</h3>
-            <ol class="steps">
-              <li data-i18n="copy-091">
-                Ouvrez <strong>Settings</strong> et choisissez la voix masculine
-                <strong>Tom</strong> en français ou <strong>John</strong> en
-                anglais.
-              </li>
-              <li data-i18n="copy-092">
-                Gardez la vitesse de <strong>95 %</strong> ou ajustez-la de 60 à
-                120 %.
-              </li>
-              <li data-i18n="copy-093">
-                Adaptez le texte avec <code>$book_name</code> et
-                <code>$author_name</code>. L’aperçu montre le résultat ;
-                <code>$$</code> insère un signe dollar.
-              </li>
-              <li data-i18n="copy-094">
-                Cliquez sur <strong>Save settings</strong>. Ces choix
-                s’appliquent aux prochains livres ajoutés à la file.
-              </li>
-            </ol>
-            <p class="template-label" data-i18n="copy-095">Exemple de texte</p>
-            <pre><code data-i18n="example.template">Vous écoutez $book_name.
-Un livre de $author_name.</code></pre>
-          </div>
-          <figure>
-            <a
-              class="screenshot screenshot-framed"
-              href="screenshots/settings.png"
-              data-preview
-              aria-label="Agrandir les réglages de la voix"
-              data-i18n-aria-label="attr-096"
-              ><img
-                src="screenshots/settings.png"
-                width="1360"
-                height="880"
-                loading="lazy"
-                alt="Réglages réels de la synthèse vocale Piper, voix masculine Tom, vitesse à 95 % et aperçu du texte avec variables"
-                data-i18n-alt="attr-097"
-            /></a>
-            <figcaption data-i18n="copy-098">
-              Le volume de la voix est normalisé avant l’ajout du silence.
-            </figcaption>
-          </figure>
-        </article>
+        <figure>
+          <a class="screenshot" href="screenshots/guided-tour.png" data-preview
+            ><img
+              src="screenshots/guided-tour.png"
+              width="1360"
+              height="880"
+              loading="lazy"
+              alt="Guided tour highlighting the sidebar with Back, Next and Skip controls"
+              data-i18n-alt="attr-tour"
+          /></a>
+        </figure>
       </section>
 
       <section
@@ -535,48 +455,41 @@ Un livre de $author_name.</code></pre>
       >
         <div class="wrap download-layout">
           <div>
-            <p class="eyebrow" data-i18n="copy-099">04 / À vous de jouer</p>
-            <h2 id="download-title" data-i18n="copy-100">
-              La prochaine séance<br />se prépare <em>ici.</em>
+            <h2 id="download-title" data-i18n="copy-download-title">
+              Ready for your next session?
             </h2>
-            <p data-i18n="copy-101">
-              Choisissez l’exécutable de votre système dans les releases GitHub.
-              Les versions portables embarquent leurs dépendances.
+            <p data-i18n="copy-download-body">
+              Download the portable executable for your computer. Python, Qt,
+              FFmpeg, Piper and the voice models are included.
             </p>
-            <div class="actions">
-              <a
-                class="button button-primary"
-                href="https://github.com/simon-verbois/shokz-filler/releases/latest"
-                data-i18n="copy-102"
-                >Voir la dernière release <span aria-hidden="true">↗</span></a
-              ><a
-                class="text-link"
-                href="https://github.com/simon-verbois/shokz-filler"
-                data-i18n="copy-103"
-                >Voir le code</a
-              >
-            </div>
+            <a
+              class="button button-primary"
+              href="https://github.com/simon-verbois/shokz-filler/releases/latest"
+              data-i18n="copy-latest-release"
+              >View the latest release</a
+            >
+            <p class="small release-note" data-i18n="copy-release-note">
+              This guide follows the current app. Check the release notes for
+              the features included in the version you download.
+            </p>
           </div>
-          <div class="download-details">
-            <h3 data-i18n="copy-104">Linux x86_64</h3>
-            <p data-i18n="copy-105">
-              Téléchargez <code>Shokz-Refill-linux-x86_64</code>, rendez le
-              fichier exécutable, puis lancez-le.
-            </p>
-            <pre><code>chmod +x Shokz-Refill-linux-x86_64
+          <div class="platforms">
+            <article>
+              <h3>Linux x86_64</h3>
+              <p data-i18n="copy-linux">
+                Download Shokz-Refill-linux-x86_64, make it executable and
+                launch it.
+              </p>
+              <pre><code>chmod +x Shokz-Refill-linux-x86_64
 ./Shokz-Refill-linux-x86_64</code></pre>
-            <h3 data-i18n="copy-106">Windows x86_64</h3>
-            <p data-i18n="copy-107">
-              Téléchargez et lancez
-              <code>Shokz-Refill-windows-x86_64.exe</code>.
-            </p>
-            <p class="release-note" data-i18n="copy-108">
-              <strong>Disponibilité des fonctionnalités.</strong> Les captures
-              et le guide présentent la version en développement.
-              Audiobookshelf, la fusion des livres et Piper ne sont pas inclus
-              dans la release publique <strong>2026.41.1</strong>. Consultez les
-              notes de la release téléchargée.
-            </p>
+            </article>
+            <article>
+              <h3>Windows x86_64</h3>
+              <p data-i18n="copy-windows">
+                Download and launch Shokz-Refill-windows-x86_64.exe. No separate
+                runtime installation is needed.
+              </p>
+            </article>
           </div>
         </div>
       </section>
@@ -587,80 +500,84 @@ Un livre de $author_name.</code></pre>
         aria-labelledby="faq-title"
       >
         <div>
-          <p class="eyebrow" data-i18n="copy-109">Encore un détail ?</p>
-          <h2 id="faq-title" data-i18n="copy-110">
-            Avant de<br /><em>débrancher.</em>
-          </h2>
+          <h2 id="faq-title" data-i18n="copy-faq-title">Before you unplug.</h2>
+          <p data-i18n="copy-faq-intro">
+            A few things to know about your files, your headset and your
+            accounts.
+          </p>
         </div>
         <div class="faq-list">
           <details>
-            <summary data-i18n="copy-111">
-              Quels casques sont compatibles ?
+            <summary data-i18n="copy-faq-device-q">
+              Which headsets are compatible?
             </summary>
-            <p data-i18n="copy-112">
-              L’app vise les Shokz avec stockage MP3 USB, notamment OpenSwim
-              Pro. Pour un volume dont le nom n’est pas reconnu, sélectionnez
-              manuellement son dossier. Le comportement de lecture dépend du
-              modèle et du firmware.
+            <p data-i18n="copy-faq-device-a">
+              Shokz models with USB MP3 storage, including OpenSwim Pro. Unknown
+              volume names can be selected manually. Numbered filenames and
+              sequential copies help preserve playback order; behaviour depends
+              on the model and firmware.
             </p>
           </details>
           <details>
-            <summary data-i18n="copy-113">
-              Les chapitres restent-ils dans le bon ordre ?
+            <summary data-i18n="copy-faq-duplicate-q">
+              What happens if I send something twice?
             </summary>
-            <p data-i18n="copy-114">
-              Pour les exports Audiobookshelf, les pistes sont fusionnées dans
-              l’ordre fourni par le serveur. Le casque ne peut donc pas
-              réordonner les chapitres à l’intérieur de ce MP3 unique. L’app ne
-              garantit pas l’ordre de lecture de plusieurs morceaux ou livres
-              séparés.
+            <p data-i18n="copy-faq-duplicate-a">
+              Recognised identical tracks and exports are skipped. Unidentified
+              files and filename conflicts are preserved. A book with different
+              sources or announcement settings gets a separate export folder.
             </p>
           </details>
           <details>
-            <summary data-i18n="copy-115">
-              Et si je transfère deux fois le même contenu ?
+            <summary data-i18n="copy-faq-offline-q">
+              What needs Internet access?
             </summary>
-            <p data-i18n="copy-116">
-              Les exports identiques reconnus sont ignorés. Les fichiers non
-              identifiés et les conflits de noms sont préservés. Une nouvelle
-              version d’un livre, par exemple avec une autre annonce, reçoit un
-              nouveau dossier numéroté.
+            <p data-i18n="copy-faq-offline-a">
+              YouTube Music and Audiobookshelf need access to their services.
+              Local MP3 import and Piper announcements work offline. Account
+              sessions are stored locally; Disconnect or Disconnect / forget
+              removes the saved app credentials.
             </p>
           </details>
           <details>
-            <summary data-i18n="copy-117">
-              Comment reprendre après une déconnexion ?
+            <summary data-i18n="copy-faq-limit-q">
+              Can I transfer a long audiobook?
             </summary>
-            <p data-i18n="copy-118">
-              Reconnectez et sélectionnez le même périphérique. Utilisez
-              <strong>Retry selected</strong> pour un élément de la file, ou
-              <strong>Resume interrupted copies</strong> pour les copies
-              interrompues. L’app valide les partiels avant la reprise et
-              vérifie l’intégrité avant de finaliser le fichier.
-            </p>
-          </details>
-          <details>
-            <summary data-i18n="copy-119">
-              La voix nécessite-t-elle Internet ?
-            </summary>
-            <p data-i18n="copy-120">
-              Non. Piper et les modèles des voix sont inclus dans la version en
-              développement. L’annonce est générée localement. Le téléchargement
-              des médias nécessite l’accès à YouTube Music ou à votre serveur
-              Audiobookshelf.
-            </p>
-          </details>
-          <details>
-            <summary data-i18n="copy-121">
-              Y a-t-il une limite pour les livres longs ?
-            </summary>
-            <p data-i18n="copy-122">
-              L’export refuse les livres dont le MP3 dépasserait la limite
-              prudente de 4 Gio par fichier. Prévoyez aussi de l’espace sur
-              l’ordinateur pour les sources et les fichiers intermédiaires.
+            <p data-i18n="copy-faq-limit-a">
+              Books are split into numbered chapter MP3s, with a conservative 4
+              GiB limit per output file. Keep enough free space on your computer
+              for the sources and conversion cache, and on the headphones for
+              the result.
             </p>
           </details>
         </div>
+      </section>
+
+      <section
+        class="support wrap"
+        id="soutenir"
+        aria-labelledby="support-title"
+      >
+        <div>
+          <h2 id="support-title" data-i18n="copy-support-title">
+            Help the next version along.
+          </h2>
+          <p data-i18n="copy-support-body">
+            If Shokz Refill is useful to you, you can buy me a coffee. Sharing
+            the app, reporting bugs and starring the repository help too.
+          </p>
+        </div>
+        <a
+          class="coffee-link"
+          href="https://buymeacoffee.com/simonverbois"
+          aria-label="Support Shokz Refill on Buy Me a Coffee"
+          data-i18n-aria-label="attr-coffee"
+          ><img
+            src="buy-me-a-coffee.svg"
+            width="162"
+            height="28"
+            alt="Buy Me a Coffee"
+        /></a>
       </section>
     </main>
     <footer class="footer wrap">
@@ -669,39 +586,37 @@ Un livre de $author_name.</code></pre>
           >shokz<span class="brand-light">refill</span></span
         ></a
       >
-      <p data-i18n="copy-123">
-        Un projet indépendant de Simon Verbois.<br />Sans affiliation avec
-        Shokz, YouTube ou Audiobookshelf.
+      <p data-i18n="copy-footer">
+        An independent project by Simon Verbois.<br />Not affiliated with Shokz,
+        YouTube or Audiobookshelf.
       </p>
       <div>
         <a
           href="https://github.com/simon-verbois/shokz-filler"
-          data-i18n="copy-124"
-          >Code source</a
+          data-i18n="copy-source"
+          >Source code</a
         ><a
           href="https://github.com/simon-verbois/shokz-filler/issues"
-          data-i18n="copy-125"
-          >Signaler un problème</a
+          data-i18n="copy-issues"
+          >Report an issue</a
         ><a
           href="https://github.com/simon-verbois/shokz-filler/blob/main/THIRD_PARTY_NOTICES.md"
-          data-i18n="copy-126"
+          data-i18n="copy-licences"
           >Licences</a
-        >
+        ><a href="#questions" data-i18n="copy-questions">Questions</a>
       </div>
     </footer>
     <dialog
       class="lightbox"
-      aria-label="Capture d’écran agrandie"
-      data-i18n-aria-label="attr-127"
+      aria-label="Enlarged screenshot"
+      data-i18n-aria-label="attr-lightbox"
     >
       <form method="dialog">
         <button
-          class="button button-small"
-          aria-label="Fermer la capture agrandie"
-          data-i18n-aria-label="attr-128"
-          data-i18n="copy-129"
+          class="button button-small button-primary"
+          data-i18n="copy-close"
         >
-          Fermer <span aria-hidden="true">×</span>
+          Close
         </button>
       </form>
       <img src="screenshots/music.png" width="1360" height="880" alt="" />

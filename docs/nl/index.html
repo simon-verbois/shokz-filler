@@ -1,14 +1,14 @@
 <!doctype html>
 
-
 <html lang="nl">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#f6f7f2">
-    <meta name="description" content="Bereid muziek en luisterboeken voor je Shokz voor. YouTube Music, Audiobookshelf, compatibele MP3-bestanden en gecontroleerde overdrachten in een desktopapp voor Linux en Windows.">
-    <meta property="og:title" content="Shokz Refill — Je audio, klaar om te duiken.">
-    <meta property="og:description" content="Muziek, luisterboeken en MP3-overdrachten. Ontdek de app en de geïllustreerde handleiding.">
+    <meta name="theme-color" content="#f3f7f8">
+    <title>Shokz Refill — Je audio, klaar voor vertrek.</title>
+    <meta name="description" content="Bereid muziek, Audiobookshelf-hoofdstukken en lokale MP3’s voor je Shokz voor. Een draagbare app voor Linux en Windows met gecontroleerde overdrachten, offline stemmen en een rondleiding.">
+    <meta property="og:title" content="Shokz Refill — Je audio, klaar voor vertrek.">
+    <meta property="og:description" content="Bereid muziek, Audiobookshelf-hoofdstukken en lokale MP3’s voor je Shokz voor. Een draagbare app voor Linux en Windows met gecontroleerde overdrachten, offline stemmen en een rondleiding.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://simon-verbois.github.io/shokz-filler/nl/">
     <meta property="og:image" content="https://simon-verbois.github.io/shokz-filler/screenshots/music.png">
@@ -16,7 +16,6 @@
     <link rel="icon" href="../favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="../styles.css">
     <script src="../site.js" defer></script>
-    <title>Shokz Refill — Je audio, klaar om te duiken.</title>
   <link rel="alternate" hreflang="en" href="https://simon-verbois.github.io/shokz-filler/">
 <link rel="alternate" hreflang="fr" href="https://simon-verbois.github.io/shokz-filler/fr/">
 <link rel="alternate" hreflang="nl" href="https://simon-verbois.github.io/shokz-filler/nl/">
@@ -27,250 +26,228 @@
   <body>
     <a class="skip" href="#contenu">Naar de inhoud</a>
     <header class="header wrap">
-      <a class="brand" href="./" aria-label="Shokz Refill, startpagina"><img src="../favicon.svg" width="38" height="38" alt=""><span>shokz<span class="brand-light">refill</span></span></a>
+      <a class="brand" href="./" aria-label="Shokz Refill, startpagina"><img src="../favicon.svg" width="36" height="36" alt=""><span>shokz<span class="brand-light">refill</span></span></a>
       <nav aria-label="Hoofdnavigatie">
-        <a href="#decouvrir">De app</a><a href="#guide">Handleiding</a><a href="#questions">Vragen</a>
+        <a href="#decouvrir">De app</a>
+        <a href="#guide">Aan de slag</a>
+        <a href="#telecharger">Downloaden</a>
       </nav><div class="header-actions"><details class="language-picker"><summary aria-label="Taal van de website: Nederlands"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><ellipse cx="12" cy="12" rx="4" ry="9"></ellipse><path d="M3 12h18"></path></svg><span>Nederlands</span><span aria-hidden="true">⌄</span></summary><ul><li><a href="../" lang="en" hreflang="en">English</a></li><li><a href="../fr/" lang="fr" hreflang="fr">Français</a></li><li><a href="../nl/" lang="nl" hreflang="nl" aria-current="page">Nederlands</a></li><li><a href="../de/" lang="de" hreflang="de">Deutsch</a></li><li><a href="../es/" lang="es" hreflang="es">Español</a></li></ul></details>
       <a class="button button-small button-outline" href="https://github.com/simon-verbois/shokz-filler">GitHub <span aria-hidden="true">↗</span></a>
     </div></header>
     <main id="contenu">
       <section class="hero wrap" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow"><span class="dot" aria-hidden="true"></span> Je audiopartner, vóór je volgende sessie</p>
-          <h1 id="hero-title">Je audio.<br>Klaar om te <em>duiken.</em></h1>
-          <p class="lead">Een beetje muziek. Een boek om uit te lezen.<br>Maak je Shokz klaar en laat het scherm in je kluisje.</p>
+          <p class="eyebrow">Voor Shokz met USB-opslag voor MP3</p>
+          <h1 id="hero-title">Je audio.<br>Klaar voor vertrek.</h1>
+          <p class="lead">Je volgende playlist. Je volgende hoofdstuk. Bereid je hoofdtelefoon op je computer voor en neem je audio mee.</p>
           <div class="actions">
-            <a class="button button-primary" href="#telecharger">Download de app <span aria-hidden="true">↓</span></a><a class="text-link" href="#guide">Aan de slag <span aria-hidden="true">↗</span></a>
+            <a class="button button-primary" href="#telecharger">De app downloaden</a>
+            <a class="text-link" href="#guide">Zo werkt het</a>
           </div>
-          <p class="small muted">Desktopapp · Linux &amp; Windows · Open source</p>
+          <p class="small muted">Linux &amp; Windows · Draagbaar · Open source</p>
+          <a class="coffee-link" href="https://buymeacoffee.com/simonverbois" aria-label="Steun Shokz Refill via Buy Me a Coffee"><img src="../buy-me-a-coffee.svg" width="162" height="28" alt="Buy Me a Coffee"></a>
         </div>
-        <div class="hero-art" aria-hidden="true">
-          <span class="art-label">HET JUISTE RITME.<br>HET JUISTE VERHAAL.</span>
-          <svg viewbox="0 0 420 340" fill="none">
-            <path class="water water-back" d="M-10 138C45 75 103 75 160 138S275 201 332 138S430 75 470 138M-10 181C45 118 103 118 160 181S275 244 332 181S430 118 470 181M-10 224C45 161 103 161 160 224S275 287 332 224S430 161 470 224"></path>
-            <path class="water water-front" d="M-10 118C45 55 103 55 160 118S275 181 332 118S430 55 470 118M-10 161C45 98 103 98 160 161S275 224 332 161S430 98 470 161M-10 204C45 141 103 141 160 204S275 267 332 204S430 141 470 204"></path>
-            <circle cx="316" cy="54" r="13" fill="currentColor"></circle>
-          </svg>
-          <span class="art-bottom">01 — KIEZEN 02 — OVERZETTEN 03 — GENIETEN</span>
-        </div>
-      </section>
-      <div class="wrap">
         <figure class="hero-shot">
-          <div class="window-heading">
-            <span><i aria-hidden="true"></i> Shokz Refill</span><span>JE VOLGENDE SESSIE BEGINT HIER</span>
-          </div>
-          <a class="screenshot" href="../screenshots/music.png" data-preview aria-label="Schermafbeelding van YouTube Music vergroten"><img src="../screenshots/music.png" width="1360" height="880" alt="De echte Shokz Refill-interface met muziekresultaten, nummerselectie en voortgang van downloads en overdrachten" fetchpriority="high"></a>
-          <figcaption><span>De echte interface. Fictieve demonstratiegegevens.</span><span>Overzicht van de app</span></figcaption>
+          <a class="screenshot" href="../screenshots/music.png" data-preview><img src="../screenshots/music.png" width="1360" height="880" fetchpriority="high" alt="Muziek zoeken met drie nummers in de verzendlijst"></a>
+          <figcaption>De echte app, met fictieve demonstratiegegevens. Klik op een schermafbeelding om ze te vergroten.</figcaption>
         </figure>
-      </div>
-      <div class="specs wrap" aria-label="Functies van de app">
-        <p><strong>MP3</strong><span>192 kb/s · 44,1 kHz · stereo</span></p>
-        <p><strong>Op jouw tempo</strong><span>Voortgang, annuleren en hervatten</span></p>
-        <p><strong>Op je computer</strong><span>Een native app, zonder aparte server</span></p>
-      </div>
-
-      <section class="section wrap" id="decouvrir" aria-labelledby="discover-title">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">01 / Een plek voor je audio</p>
-            <h2 id="discover-title">Muziek om door te gaan.<br>Verhalen om bij <em>weg te dromen.</em></h2>
-          </div>
-          <p>Kies wat je vergezelt. De app bereidt MP3-bestanden voor en zet ze over naar het geselecteerde Shokz-volume.</p>
-        </div>
-        <div class="tour-grid">
-          <article>
-            <span class="feature-number">01</span>
-            <h3>Jouw nummers, jouw afspeellijsten.</h3>
-            <p>Zoek op YouTube Music. Kies een paar nummers of een volledige afspeellijst en volg de voorbereiding in één wachtrij.</p>
-            <a class="text-link" href="#guide-musique">De muziekhandleiding <span aria-hidden="true">↗</span></a>
-          </article>
-          <article>
-            <span class="feature-number">02</span>
-            <h3>Eén boek. Eén map. Eén MP3.</h3>
-            <p>Blader door je Audiobookshelf-server en kies je boeken. De tracks worden samengevoegd in de volgorde die de server aangeeft.</p>
-            <span class="development-label">Audiobookshelf</span>
-          </article>
-          <article>
-            <span class="feature-number">03</span>
-            <h3>Je bestanden, op hun plek.</h3>
-            <p>Bekijk de vrije ruimte, maak mappen en importeer lokale MP3-bestanden. Bij naamconflicten blijven beide bestanden met verschillende namen bewaard.</p>
-            <a class="text-link" href="#guide-appareil">De apparaathandleiding <span aria-hidden="true">↗</span></a>
-          </article>
-        </div>
       </section>
+      <div class="specs wrap">
+        <p><strong>MP3</strong><span>192 kb/s · 44.1 kHz · stereo</span></p>
+        <p>
+          <strong>Klaar om te starten</strong><span>Geen Python of FFmpeg installeren</span>
+        </p>
+        <p>
+          <strong>Op je computer</strong><span>Geen appserver of telemetrie</span>
+        </p>
+      </div>
 
-      <section class="book-section" aria-labelledby="book-title">
-        <div class="wrap book-layout">
-          <div>
-            <p class="eyebrow">02 / Voor verhalen die je verder brengen</p>
-            <h2 id="book-title">Houd de draad vast.<br><em>Tot het laatste hoofdstuk.</em></h2>
-            <p>Eén MP3 per boek voorkomt dat de headset afzonderlijke bestanden anders ordent. De inhoud volgt de trackvolgorde van Audiobookshelf, ook wanneer bestandsnamen niet alfabetisch staan.</p>
-            <p>Vóór het boek kan een lokale mannenstem de titel en auteur uitspreken. Standaardsnelheid: <strong>95%</strong>. Daarna volgen 3 seconden stilte en begint het verhaal.</p>
-            <div class="book-sequence" aria-label="Volgorde in het uiteindelijke bestand">
-              <span>Gesproken aankondiging</span><span aria-hidden="true">→</span><span>3 s stilte</span><span aria-hidden="true">→</span><strong>Volledig boek</strong>
+      <section class="section wrap" id="decouvrir" aria-labelledby="app-title">
+        <div class="section-head">
+          <h2 id="app-title">Eén plek voor alles waar je naar luistert.</h2>
+          <p>Muziek, luisterboeken en lokale MP3’s gaan naar hetzelfde apparaat, met aparte schermen voor een duidelijk overzicht.</p>
+        </div>
+        <div class="app-gallery" data-gallery>
+          <div class="screen-tabs" aria-label="Schermen van de app">
+            <a href="#guide-musique" data-screen>YouTube Music</a>
+            <a href="#guide-livres" data-screen>Audiobookshelf</a>
+            <a href="#guide-appareil" data-screen>Shokz files</a>
+            <a href="#screen-transfers" data-screen>Transfers</a>
+            <a href="#guide-voix" data-screen>Settings</a>
+          </div>
+          <article class="screen-panel" id="guide-musique" data-panel>
+            <div>
+              <h3>Kies je nummers. Behoud hun volgorde.</h3>
+              <p>Zoek nummers en playlists en stel met + je verzendlijst samen. Die blijft bewaard terwijl je bladert. Met Send to Shokz controleer je de nummers en bestemming voordat het downloaden begint.</p>
+              <details>
+                <summary>Mijn YouTube Music-playlists gebruiken</summary>
+                <p>Klik in Settings op Connect bij YouTube Music. Open je browser, meld je aan en ga terug naar de app om de sessie te importeren. Open daarna My playlists. Openbaar zoeken werkt zonder account.</p>
+              </details>
             </div>
-            <p class="small">Piper en de stemmen zijn inbegrepen. Spraaksynthese werkt offline.</p>
-            <a class="text-link" href="#guide-livres">Mijn eerste boek instellen <span aria-hidden="true">↗</span></a>
+            <figure>
+              <a class="screenshot" href="../screenshots/music.png" data-preview><img src="../screenshots/music.png" width="1360" height="880" loading="lazy" alt="Muziek zoeken met drie nummers in de verzendlijst"></a>
+            </figure>
+          </article>
+          <article class="screen-panel" id="guide-livres" data-panel>
+            <div>
+              <h3>Eén boek. Eén map. Genummerde hoofdstukken.</h3>
+              <p>Verbind je Audiobookshelf-server in Settings. Selecteer boeken en kies Send to Shokz: elk hoofdstuk wordt een genummerde MP3, gekopieerd in afspeelvolgorde. Geldige hoofdstukgegevens worden gebruikt; anders blijft de volgorde van de bronbestanden behouden.</p>
+              <a class="text-link" href="../screenshots/chapters.png" data-preview><img class="preview-thumb" src="../screenshots/chapters.png" width="1360" height="880" loading="lazy" alt="Genummerde MP3-hoofdstukken in de Shokz-bestandsbrowser"><span>De geëxporteerde hoofdstukken bekijken</span></a>
+            </div>
+            <figure>
+              <a class="screenshot" href="../screenshots/audiobooks.png" data-preview><img src="../screenshots/audiobooks.png" width="1360" height="880" loading="lazy" alt="Audiobookshelf-bibliotheek en boekselectie"></a>
+            </figure>
+          </article>
+          <article class="screen-panel" id="guide-appareil" data-panel>
+            <div>
+              <h3>Je bestanden, op hun plek.</h3>
+              <p>Kies je gedetecteerde Shokz of selecteer met Browse… de gekoppelde map. Maak mappen, hernoem en verplaats bestanden. Met Add MP3 importeer je lokale muziek: geschikte bestanden worden direct gekopieerd, andere worden naar het doelformaat omgezet zonder de originelen te wijzigen.</p>
+              <p class="tip">Verwijderen vraagt om bevestiging. Bij naamconflicten blijven beide bestanden behouden. Herstelopties staan in het menu met de drie puntjes.</p>
+            </div>
+            <figure>
+              <a class="screenshot" href="../screenshots/device.png" data-preview><img src="../screenshots/device.png" width="1360" height="880" loading="lazy" alt="Apparaatopslag, mappen en bediening voor lokale MP3-import"></a>
+            </figure>
+          </article>
+          <article class="screen-panel" id="screen-transfers" data-panel>
+            <div>
+              <h3>Weet wat er gebeurt.</h3>
+              <p>Volg downloads, conversies en kopieën in Transfers. Gebruik Cancel selected voor actieve of wachtende items en Retry selected na een fout of annulering. De indicator in de zijbalk blijft op elk scherm zichtbaar.</p>
+              <p class="tip">Onderbroken kopieën blijven herkenbaar als onvoltooide bestanden. Sluit hetzelfde apparaat opnieuw aan voordat je opnieuw probeert of hervat.</p>
+            </div>
+            <figure>
+              <a class="screenshot" href="../screenshots/transfers.png" data-preview><img src="../screenshots/transfers.png" width="1360" height="880" loading="lazy" alt="Overdrachtswachtrij met voltooide, converterende, wachtende en mislukte items"></a>
+            </figure>
+          </article>
+          <article class="screen-panel" id="guide-voix" data-panel>
+            <div>
+              <h3>Hoor welk hoofdstuk begint.</h3>
+              <p>Optionele Piper-aankondigingen werken offline, met acht meegeleverde stemmen in het Frans, Engels, Duits, Nederlands en Spaans. Stel aparte teksten in voor het eerste en de volgende hoofdstukken. De standaardsnelheid is 100%, gevolgd door 1,5 seconde stilte.</p>
+              <p>Gebruik $book_name, $author_name, $chapter_number en $chapter_title. Probeer Preview en daarna Save settings. Wijzigingen gelden voor boeken die je daarna aan de wachtrij toevoegt.</p>
+              <a class="text-link" href="../screenshots/accounts.png" data-preview><img class="preview-thumb" src="../screenshots/accounts.png" width="1360" height="880" loading="lazy" alt="Instellingen voor YouTube Music- en Audiobookshelf-accounts"><span>Accountinstellingen bekijken</span></a>
+            </div>
+            <figure>
+              <a class="screenshot" href="../screenshots/settings.png" data-preview><img src="../screenshots/settings.png" width="1360" height="880" loading="lazy" alt="Instellingen voor aankondigingen van het eerste en volgende hoofdstukken, met stemvoorbeeld"></a>
+            </figure>
+          </article>
+        </div>
+        <p class="small muted">De desktopinterface is in het Engels. De handleiding behoudt de echte knopnamen, zodat je ze makkelijk terugvindt.</p>
+      </section>
+
+      <section class="guide-section" id="guide" aria-labelledby="guide-title">
+        <div class="wrap">
+          <div class="section-head">
+            <h2 id="guide-title">Van je eerste klik tot je volgende zwembeurt.</h2>
+            <p>Voor muziek bepaal je met de verzendlijst de nummers, hun afspeelvolgorde en de bestemming.</p>
           </div>
-          <figure>
-            <a class="screenshot screenshot-framed" href="../screenshots/audiobooks.png" data-preview aria-label="Schermafbeelding van Audiobookshelf vergroten"><img src="../screenshots/audiobooks.png" width="1360" height="880" loading="lazy" alt="Audiobookshelf-tabblad met een fictieve server, een bibliotheek en vier boeken waarvan één geselecteerd"></a>
-            <figcaption>Audiobookshelf · Eén boek, één MP3</figcaption>
-          </figure>
+          <ol class="workflow">
+            <li>
+              <h3>Sluit je Shokz aan</h3>
+              <p>Sluit de hoofdtelefoon via USB aan. Selecteer in Shokz files het gekoppelde apparaat of gebruik Browse…. Controleer de naam en vrije ruimte in de zijbalk.</p>
+            </li>
+            <li>
+              <h3>Stel je verzendlijst samen</h3>
+              <p>Zoek in YouTube Music of open My playlists. Gebruik + naast een nummer of playlist. De lijst behoudt zijn volgorde tussen zoekopdrachten; toevoegen start geen download.</p>
+            </li>
+            <li>
+              <h3>Controleer en verstuur</h3>
+              <p>Kies Send to Shokz. Wijzig de volgorde of verwijder nummers en klik op Next. Selecteer een bestaande map of maak er een en klik op Send.</p>
+            </li>
+            <li>
+              <h3>Volg de voortgang en werp uit</h3>
+              <p>Open Transfers om de voortgang te volgen of een mislukt item opnieuw te proberen. Wacht tot alle bewerkingen klaar zijn en werp de hoofdtelefoon via je besturingssysteem uit voordat je hem loskoppelt.</p>
+            </li>
+          </ol>
+          <div class="wizard-gallery">
+            <figure>
+              <a class="screenshot" href="../screenshots/transfer-order.png" data-preview><img src="../screenshots/transfer-order.png" width="1360" height="880" loading="lazy" alt="Overdrachtsassistent met nummers in afspeelvolgorde"></a>
+              <figcaption>Controleer de nummers en hun afspeelvolgorde.</figcaption>
+            </figure>
+            <figure>
+              <a class="screenshot" href="../screenshots/transfer-folder.png" data-preview><img src="../screenshots/transfer-folder.png" width="1360" height="880" loading="lazy" alt="Overdrachtsassistent met doelmappen en de knop Send"></a>
+              <figcaption>Kies de bestemming voordat je het versturen start.</figcaption>
+            </figure>
+          </div>
         </div>
       </section>
 
-      <section class="section wrap guide" id="guide" aria-labelledby="guide-title">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">03 / Aan de slag</p>
-            <h2 id="guide-title">Een paar klikken vóór<br>je eerste <em>baantje.</em></h2>
-          </div>
-          <p>De knoppen in de app zijn in het Engels. De handleiding gebruikt hun exacte namen, zodat je ze makkelijk terugvindt.</p>
+      <section class="section wrap tour-section" aria-labelledby="tour-title">
+        <div>
+          <p class="eyebrow">Een beetje hulp om te beginnen</p>
+          <h2 id="tour-title">Laat de app je rondleiden.</h2>
+          <p>Bij de eerste start opent een rondleiding van negen stappen. Ze markeert de echte bediening, zonder account of aangesloten apparaat. Je kunt op elk moment overslaan of Guided tour boven Settings in de zijbalk opnieuw openen.</p>
+          <p class="small muted">Na het sluiten keer je terug naar je vorige pagina. Je verzendlijst blijft behouden.</p>
         </div>
-        <article class="guide-block" id="guide-appareil">
-          <div class="guide-copy">
-            <p class="eyebrow">Stap 1 / Het vertrekpunt</p>
-            <h3>Sluit je Shokz aan.</h3>
-            <ol class="steps">
-              <li>Sluit de headset via USB aan en open de opslag op je computer.</li>
-              <li>Kies het gedetecteerde apparaat in <strong>Shokz files</strong>. Gebruik zo nodig <strong>Select device folder</strong> om het aangekoppelde volume te selecteren.</li>
-              <li>Controleer de naam en de vrije ruimte. Maak of kies voor muziek een doelmap.</li>
-            </ol>
-            <p class="tip">Wacht tot de overdrachten klaar zijn en werp het apparaat uit via je besturingssysteem voordat je het loskoppelt.</p>
-            <details>
-              <summary>MP3-bestanden op mijn computer importeren</summary>
-              <p>Open de gewenste map op het apparaattabblad, klik op <strong>Add local MP3</strong> en selecteer je bestanden. De app kopieert ze zonder opnieuw te coderen: kwaliteit en metadata blijven gelijk aan de originelen. Met <strong>New folder</strong> maak je een map en met <strong>Move selected…</strong> orden je bestanden die al op de headset staan.</p>
-            </details>
-          </div>
-          <figure>
-            <a class="screenshot screenshot-framed" href="../screenshots/device.png" data-preview aria-label="Schermafbeelding van het apparaat vergroten"><img src="../screenshots/device.png" width="1360" height="880" loading="lazy" alt="Shokz-bestandsbrowser met het geselecteerde volume, de vrije ruimte en meerdere mappen voor muziek en luisterboeken"></a>
-            <figcaption>De geselecteerde opslag blijft zichtbaar op het apparaattabblad.</figcaption>
-          </figure>
-        </article>
-        <article class="guide-block" id="guide-musique">
-          <div class="guide-copy">
-            <p class="eyebrow">Stap 2 / Muziek</p>
-            <h3>Vind je volgende ritme.</h3>
-            <ol class="steps">
-              <li>Voer in <strong>YouTube Music</strong> een zoekopdracht in, kies <strong>Songs</strong> of <strong>Playlists</strong> en klik op <strong>Search</strong>.</li>
-              <li>Selecteer nummers met <kbd>Ctrl</kbd> of <kbd>Shift</kbd> en klik op <strong>Send selection to Shokz</strong>. Kies een map als daarom wordt gevraagd.</li>
-              <li>Open een afspeellijst met een dubbelklik en gebruik <strong>Download whole playlist</strong>. De map wordt automatisch aangemaakt.</li>
-              <li>Volg de stappen in de wachtrij. Iets mislukt? Selecteer de regel en gebruik <strong>Retry selected</strong>.</li>
-            </ol>
-            <details>
-              <summary>Afspeellijsten van mijn account ophalen</summary>
-              <p>Klik op <strong>Connect YouTube Music</strong> en volg het dialoogvenster om headers van een <code>/browse</code>-verzoek uit je sessie op music.youtube.com te importeren. Gebruik daarna <strong>My playlists</strong>. Openbaar zoeken werkt zonder in te loggen.</p>
-            </details>
-          </div>
-          <figure>
-            <a class="screenshot screenshot-framed" href="../screenshots/music.png" data-preview aria-label="Muziekresultaten vergroten"><img src="../screenshots/music.png" width="1360" height="880" loading="lazy" alt="Fictieve muzieknummers en een wachtrij met een voltooide overdracht, een conversie en een wachtend nummer"></a>
-            <figcaption>Meerdere downloads kunnen tegelijk lopen; het schrijven naar de headset wordt gecoördineerd.</figcaption>
-          </figure>
-        </article>
-        <article class="guide-block" id="guide-livres">
-          <div class="guide-copy">
-            <p class="eyebrow">Stap 2 / Luisterboeken</p>
-            <h3>Kies de verhalen die je meeneemt.</h3>
-            <span class="development-label">Audiobookshelf</span>
-            <ol class="steps">
-              <li>Vul in <strong>Audiobookshelf</strong> de velden <strong>Server</strong> (de volledige URL), <strong>Username</strong> en <strong>Password</strong> in en klik op <strong>Connect</strong>.</li>
-              <li>Kies je bibliotheek, zoek een titel of auteur en selecteer de boeken om over te zetten met <kbd>Ctrl</kbd> of <kbd>Shift</kbd>.</li>
-              <li>Klik op <strong>Send selected books to Shokz</strong>. Voor elk boek opent een dialoogvenster: behoud of schakel de gesproken aankondiging uit en kies <strong>Queue book</strong>. Met <strong>Skip book</strong> sla je dat boek over.</li>
-              <li>De app downloadt, converteert, voegt samen en kopieert het boek naar zijn eigen map. Wacht op de status <strong>complete</strong>.</li>
-            </ol>
-            <p class="tip">Je Audiobookshelf-account moet mogen downloaden. Het wachtwoord wordt alleen bewaard als je de bijbehorende optie aanvinkt.</p>
-          </div>
-          <figure>
-            <a class="screenshot screenshot-framed" href="../screenshots/book-export.png" data-preview aria-label="Exportopties van een boek vergroten"><img src="../screenshots/book-export.png" width="660" height="360" loading="lazy" alt="Exportdialoog met aankondiging van titel en auteur ingeschakeld, de gesproken tekst, drie seconden stilte en de knoppen Queue book en Skip book"></a>
-            <figcaption>Elk boek behoudt zijn eigen exportkeuzes.</figcaption>
-          </figure>
-        </article>
-        <article class="guide-block" id="guide-voix">
-          <div class="guide-copy">
-            <p class="eyebrow">Stap 3 / Een persoonlijke toets</p>
-            <h3>Een aankondiging in je eigen woorden.</h3>
-            <ol class="steps">
-              <li>Open <strong>Settings</strong> en kies de mannenstem <strong>Tom</strong> voor Frans of <strong>John</strong> voor Engels.</li>
-              <li>Behoud de snelheid van <strong>95%</strong> of pas deze aan tussen 60 en 120%.</li>
-              <li>Pas de tekst aan met <code>$book_name</code> en <code>$author_name</code>. Het voorbeeld toont het resultaat; <code>$$</code> voegt een dollarteken in.</li>
-              <li>Klik op <strong>Save settings</strong>. Deze keuzes gelden voor boeken die je daarna aan de wachtrij toevoegt.</li>
-            </ol>
-            <p class="template-label">Voorbeeldtekst voor de Engelse stem</p>
-            <pre><code>You are listening to $book_name.
-A book by $author_name.</code></pre>
-          </div>
-          <figure>
-            <a class="screenshot screenshot-framed" href="../screenshots/settings.png" data-preview aria-label="Steminstellingen vergroten"><img src="../screenshots/settings.png" width="1360" height="880" loading="lazy" alt="Echte Piper-spraakinstellingen met de Franse mannenstem Tom, een snelheid van 95% en een voorbeeld van de tekst met variabelen"></a>
-            <figcaption>Het stemvolume wordt genormaliseerd voordat de stilte wordt toegevoegd.</figcaption>
-          </figure>
-        </article>
+        <figure>
+          <a class="screenshot" href="../screenshots/guided-tour.png" data-preview><img src="../screenshots/guided-tour.png" width="1360" height="880" loading="lazy" alt="Rondleiding met gemarkeerde zijbalk en de knoppen Back, Next en Skip"></a>
+        </figure>
       </section>
 
       <section class="download-section" id="telecharger" aria-labelledby="download-title">
         <div class="wrap download-layout">
           <div>
-            <p class="eyebrow">04 / Nu jij</p>
-            <h2 id="download-title">Je volgende sessie<br>begint <em>hier.</em></h2>
-            <p>Kies het uitvoerbare bestand voor je besturingssysteem in de GitHub-releases. De draagbare versies bevatten hun afhankelijkheden.</p>
-            <div class="actions">
-              <a class="button button-primary" href="https://github.com/simon-verbois/shokz-filler/releases/latest">Bekijk de nieuwste release <span aria-hidden="true">↗</span></a><a class="text-link" href="https://github.com/simon-verbois/shokz-filler">Bekijk de code</a>
-            </div>
+            <h2 id="download-title">Klaar voor je volgende zwembeurt?</h2>
+            <p>Download het draagbare uitvoerbare bestand voor je computer. Python, Qt, FFmpeg, Piper en de stemmodellen zijn inbegrepen.</p>
+            <a class="button button-primary" href="https://github.com/simon-verbois/shokz-filler/releases/latest">De nieuwste versie bekijken</a>
+            <p class="small release-note">Deze handleiding volgt de huidige app. Bekijk de release-opmerkingen voor de functies in de versie die je downloadt.</p>
           </div>
-          <div class="download-details">
-            <h3>Linux x86_64</h3>
-            <p>Download <code>Shokz-Refill-linux-x86_64</code>, maak het uitvoerbaar en start het.</p>
-            <pre><code>chmod +x Shokz-Refill-linux-x86_64
+          <div class="platforms">
+            <article>
+              <h3>Linux x86_64</h3>
+              <p>Download Shokz-Refill-linux-x86_64, maak het uitvoerbaar en start het.</p>
+              <pre><code>chmod +x Shokz-Refill-linux-x86_64
 ./Shokz-Refill-linux-x86_64</code></pre>
-            <h3>Windows x86_64</h3>
-            <p>Download en start <code>Shokz-Refill-windows-x86_64.exe</code>.</p>
-            <p class="release-note"><strong>Beschikbaarheid van functies.</strong> De schermafbeeldingen en handleiding tonen de huidige app. De oudere release <strong>2026.41.1</strong> dateert van vóór Audiobookshelf, het samenvoegen van boeken en Piper. Gebruik een nieuwere release voor deze functies en lees de releaseopmerkingen.</p>
+            </article>
+            <article>
+              <h3>Windows x86_64</h3>
+              <p>Download en start Shokz-Refill-windows-x86_64.exe. Je hoeft geen aparte runtime te installeren.</p>
+            </article>
           </div>
         </div>
       </section>
 
       <section class="section wrap faq" id="questions" aria-labelledby="faq-title">
         <div>
-          <p class="eyebrow">Nog een vraag?</p>
-          <h2 id="faq-title">Voordat je<br><em>loskoppelt.</em></h2>
+          <h2 id="faq-title">Voor je loskoppelt.</h2>
+          <p>Een paar dingen over je bestanden, hoofdtelefoon en accounts.</p>
         </div>
         <div class="faq-list">
           <details>
-            <summary>Welke headsets zijn compatibel?</summary>
-            <p>De app is bedoeld voor Shokz-headsets met USB-opslag voor MP3, waaronder OpenSwim Pro. Selecteer de map handmatig als de naam van een volume niet wordt herkend. Het afspeelgedrag hangt af van het model en de firmware.</p>
+            <summary>Welke hoofdtelefoons zijn geschikt?</summary>
+            <p>Shokz-modellen met USB-opslag voor MP3, waaronder OpenSwim Pro. Onbekende volumenamen kun je handmatig selecteren. Genummerde namen en opeenvolgende kopieën helpen de afspeelvolgorde te behouden; het gedrag hangt af van het model en de firmware.</p>
           </details>
           <details>
-            <summary>Blijven hoofdstukken in de juiste volgorde?</summary>
-            <p>Bij Audiobookshelf-exports worden tracks samengevoegd in de volgorde van de server. De headset kan hoofdstukken binnen die ene MP3 dus niet anders ordenen. De app garandeert geen afspeelvolgorde voor losse nummers of boeken.</p>
+            <summary>Wat als ik iets twee keer verstuur?</summary>
+            <p>Herkende identieke nummers en exports worden overgeslagen. Onbekende bestanden en naamconflicten blijven behouden. Een boek met andere bronnen of aankondigingsinstellingen krijgt een aparte exportmap.</p>
           </details>
           <details>
-            <summary>Wat als ik dezelfde inhoud twee keer overzet?</summary>
-            <p>Herkende identieke exports worden overgeslagen. Niet-geïdentificeerde bestanden en naamconflicten blijven behouden. Een nieuwe versie van een boek, bijvoorbeeld met een andere aankondiging, krijgt een nieuwe genummerde map.</p>
+            <summary>Wat heeft internet nodig?</summary>
+            <p>YouTube Music en Audiobookshelf hebben toegang tot hun diensten nodig. Lokale MP3-import en Piper-aankondigingen werken offline. Accountsessies worden lokaal opgeslagen; Disconnect of Disconnect / forget verwijdert de opgeslagen appgegevens.</p>
           </details>
           <details>
-            <summary>Hoe hervat ik na een verbroken verbinding?</summary>
-            <p>Sluit opnieuw aan en selecteer hetzelfde apparaat. Gebruik <strong>Retry selected</strong> voor een item in de wachtrij of <strong>Resume interrupted copies</strong> voor onderbroken kopieën. De app controleert gedeeltelijke bestanden vóór het hervatten en verifieert de integriteit vóór het afronden.</p>
-          </details>
-          <details>
-            <summary>Heeft de stem internet nodig?</summary>
-            <p>Nee. Piper en de stemmodellen zijn inbegrepen in de huidige draagbare versies. De aankondiging wordt lokaal gegenereerd. Voor het downloaden van media is toegang nodig tot YouTube Music of je Audiobookshelf-server.</p>
-          </details>
-          <details>
-            <summary>Is er een limiet voor lange boeken?</summary>
-            <p>Exports die de voorzichtige MP3-limiet van 4 GiB per bestand zouden overschrijden, worden geweigerd. Zorg ook voor ruimte op je computer voor bronbestanden en tussenbestanden.</p>
+            <summary>Kan ik een lang luisterboek overzetten?</summary>
+            <p>Boeken worden opgesplitst in genummerde MP3-hoofdstukken, met een voorzichtige limiet van 4 GiB per uitvoerbestand. Houd voldoende ruimte op je computer voor bronnen en de conversiecache, en op je hoofdtelefoon voor het resultaat.</p>
           </details>
         </div>
+      </section>
+
+      <section class="support wrap" id="soutenir" aria-labelledby="support-title">
+        <div>
+          <h2 id="support-title">Help de volgende versie op weg.</h2>
+          <p>Als Shokz Refill je helpt, kun je me een kop koffie geven. De app delen, bugs melden en een ster aan de repository geven helpen ook.</p>
+        </div>
+        <a class="coffee-link" href="https://buymeacoffee.com/simonverbois" aria-label="Steun Shokz Refill via Buy Me a Coffee"><img src="../buy-me-a-coffee.svg" width="162" height="28" alt="Buy Me a Coffee"></a>
       </section>
     </main>
     <footer class="footer wrap">
       <a class="brand" href="./"><img src="../favicon.svg" width="30" height="30" alt=""><span>shokz<span class="brand-light">refill</span></span></a>
       <p>Een onafhankelijk project van Simon Verbois.<br>Niet verbonden aan Shokz, YouTube of Audiobookshelf.</p>
       <div>
-        <a href="https://github.com/simon-verbois/shokz-filler">Broncode</a><a href="https://github.com/simon-verbois/shokz-filler/issues">Een probleem melden</a><a href="https://github.com/simon-verbois/shokz-filler/blob/main/THIRD_PARTY_NOTICES.md">Licenties</a>
+        <a href="https://github.com/simon-verbois/shokz-filler">Broncode</a><a href="https://github.com/simon-verbois/shokz-filler/issues">Een probleem melden</a><a href="https://github.com/simon-verbois/shokz-filler/blob/main/THIRD_PARTY_NOTICES.md">Licenties</a><a href="#questions">Vragen</a>
       </div>
     </footer>
     <dialog class="lightbox" aria-label="Vergrote schermafbeelding">
       <form method="dialog">
-        <button class="button button-small" aria-label="Vergrote schermafbeelding sluiten">Sluiten <span aria-hidden="true">×</span></button>
+        <button class="button button-small button-primary">Sluiten</button>
       </form>
       <img src="../screenshots/music.png" width="1360" height="880" alt="">
       <p class="lightbox-caption"></p>

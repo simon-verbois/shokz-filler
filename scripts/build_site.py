@@ -24,10 +24,22 @@ ASSETS = (
     "styles.css",
     "site.js",
     "favicon.svg",
+    "buy-me-a-coffee.svg",
     ".nojekyll",
     *(
         f"screenshots/{name}.png"
-        for name in ("music", "audiobooks", "device", "settings", "book-export")
+        for name in (
+            "music",
+            "audiobooks",
+            "device",
+            "transfers",
+            "settings",
+            "accounts",
+            "chapters",
+            "transfer-order",
+            "transfer-folder",
+            "guided-tour",
+        )
     ),
 )
 FILES = (*PAGES, *ASSETS)

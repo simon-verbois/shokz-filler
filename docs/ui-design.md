@@ -54,8 +54,8 @@ dependencies or files distributed with the portable executable.
 
 ## Reproducible previews
 
-Run `.venv/bin/python scripts/capture_screenshots.py` to capture all four real application
-screens and the audiobook export dialog using isolated, fictional data. No real account,
+Run `.venv/bin/python scripts/capture_screenshots.py` to capture ten current application
+views, including both transfer-assistant steps and the guided tour, using isolated, fictional data. No real account,
 server, password or removable device is used. `tests/test_ui_design.py` exercises navigation,
 keyboard shortcuts, sorted row actions, hidden selections, queue updates while collapsed,
 connection controls and compact layouts using real Qt widgets and deterministic fakes.

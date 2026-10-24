@@ -88,7 +88,11 @@ def test_five_languages_have_local_assets_canonical_urls_and_accessible_copy(web
         assert 'aria-current="page"' in page
         assert "data-i18n" not in page
         assert "$book_name" in page and "$author_name" in page
-        assert "<strong>Send selected books to Shokz</strong>" in page
+        assert "Send to Shokz" in page
+        assert 'href="https://buymeacoffee.com/simonverbois"' in page
+        assert "Guided tour" in page
+        assert "data-panel" in page
+        assert 'src="https://' not in page
         if language != "en":
             assert 'src="../screenshots/music.png"' in page
             assert 'href="../styles.css"' in page
@@ -105,7 +109,7 @@ def test_missing_translation_fails_without_writing_any_pages(website: Path) -> N
     original = {name: (source / name).read_bytes() for name in build_site.PAGES}
     path = source / "locales" / "de.json"
     catalogue = json.loads(path.read_text(encoding="utf-8"))
-    del catalogue["copy-083"]
+    del catalogue["copy-step3-body"]
     path.write_text(json.dumps(catalogue), encoding="utf-8")
     with pytest.raises(ValueError, match="Incomplete or stale de"):
         build_site.generate(source)
@@ -122,7 +126,7 @@ def test_stale_translated_page_cannot_be_published(website: Path) -> None:
 def test_translations_cannot_inject_scripts_or_links(website: Path) -> None:
     path = website / "docs" / "locales" / "nl.json"
     catalogue = json.loads(path.read_text(encoding="utf-8"))
-    catalogue["copy-012"] = "<script>alert(1)</script>"
+    catalogue["copy-hero-title"] = "<script>alert(1)</script>"
     path.write_text(json.dumps(catalogue), encoding="utf-8")
     with pytest.raises(ValueError, match="Unsupported translation markup"):
         build_site.render_pages(website / "docs")
@@ -131,7 +135,7 @@ def test_translations_cannot_inject_scripts_or_links(website: Path) -> None:
 def test_unbalanced_inline_translation_is_rejected(website: Path) -> None:
     path = website / "docs" / "locales" / "es.json"
     catalogue = json.loads(path.read_text(encoding="utf-8"))
-    catalogue["copy-012"] = "<em>Unclosed"
+    catalogue["copy-hero-title"] = "<em>Unclosed"
     path.write_text(json.dumps(catalogue), encoding="utf-8")
     with pytest.raises(ValueError, match="Unbalanced es translation"):
         build_site.render_pages(website / "docs")

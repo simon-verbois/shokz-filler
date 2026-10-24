@@ -318,6 +318,11 @@ The [presentation site](https://simon-verbois.github.io/shokz-filler/) includes 
 captures and a five-language usage guide. Captures use isolated, fictional data; regenerate them with
 `.venv/bin/python scripts/capture_screenshots.py`.
 
+The script captures ten real Qt views: music, audiobooks, device files, transfers, accounts,
+speech settings, numbered chapter files, both transfer-assistant steps and the guided tour.
+Dialog captures compose the actual Qt widgets over the real window. No account, network access,
+or physical device is used, and the temporary demo storage is removed on exit.
+
 ## Presentation site
 
 The static five-language site is in `docs/`, following the Inkora and Komga Meta Manager pattern.
@@ -341,8 +346,10 @@ the current section when JavaScript is available. All pages include their own `l
 URL and alternate-language metadata. Screenshots show the actual English desktop interface.
 
 Edit `docs/site-template.html` and the five complete `docs/locales/*.json` catalogues. Keep the
-English button names unchanged because they are labels from the desktop app. Announcement examples
-use French or English, the languages supported by the bundled voices. Run:
+English button names unchanged because they are labels from the desktop app. Explain the current
+send list and transfer assistant, numbered audiobook chapters, eight offline voices, local MP3
+normalisation, and first-launch tour. Regenerate screenshots after desktop interface changes.
+Run:
 
 ```bash
 python3 scripts/build_site.py --generate
@@ -352,3 +359,13 @@ python3 scripts/build_site.py --check
 Generated pages are committed for direct inspection. The build rejects incomplete catalogues,
 invalid inline translation markup and stale generated pages. Only the final HTML and explicitly
 allowlisted assets enter the Pages artifact; templates and catalogues remain source files.
+
+The overview progressively enhances ordinary anchor links into five keyboard-accessible tabs.
+Without JavaScript, all five panels remain readable. Language switching preserves the selected
+screen or guide section. Screenshot links open a native dialog and return focus to the opener.
+Verify these interactions at desktop and narrow mobile widths before publishing.
+
+Buy Me a Coffee links appear in the introduction and support section. Their compact badge is a
+local SVG (`docs/buy-me-a-coffee.svg`), included in the public asset allowlist; loading the site
+does not request a donation widget or third-party image. The donation destination is
+`https://buymeacoffee.com/simonverbois`; `.github/FUNDING.yml` configures GitHub's Sponsor button.

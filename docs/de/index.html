@@ -1,14 +1,14 @@
 <!doctype html>
 
-
 <html lang="de">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#f6f7f2">
-    <meta name="description" content="Bereite Musik und Hörbücher für deine Shokz vor. YouTube Music, Audiobookshelf, kompatible MP3-Dateien und geprüfte Übertragungen in einer Desktop-App für Linux und Windows.">
-    <meta property="og:title" content="Shokz Refill — Dein Audio, bereit zum Eintauchen.">
-    <meta property="og:description" content="Musik, Hörbücher und MP3-Übertragungen. Entdecke die App und die bebilderte Anleitung.">
+    <meta name="theme-color" content="#f3f7f8">
+    <title>Shokz Refill — Dein Audio, bereit zum Mitnehmen.</title>
+    <meta name="description" content="Bereite Musik, Audiobookshelf-Kapitel und lokale MP3s für deine Shokz vor. Eine portable App für Linux und Windows mit geprüften Übertragungen, Offline-Stimmen und einer Einführung.">
+    <meta property="og:title" content="Shokz Refill — Dein Audio, bereit zum Mitnehmen.">
+    <meta property="og:description" content="Bereite Musik, Audiobookshelf-Kapitel und lokale MP3s für deine Shokz vor. Eine portable App für Linux und Windows mit geprüften Übertragungen, Offline-Stimmen und einer Einführung.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://simon-verbois.github.io/shokz-filler/de/">
     <meta property="og:image" content="https://simon-verbois.github.io/shokz-filler/screenshots/music.png">
@@ -16,7 +16,6 @@
     <link rel="icon" href="../favicon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="../styles.css">
     <script src="../site.js" defer></script>
-    <title>Shokz Refill — Dein Audio, bereit zum Eintauchen.</title>
   <link rel="alternate" hreflang="en" href="https://simon-verbois.github.io/shokz-filler/">
 <link rel="alternate" hreflang="fr" href="https://simon-verbois.github.io/shokz-filler/fr/">
 <link rel="alternate" hreflang="nl" href="https://simon-verbois.github.io/shokz-filler/nl/">
@@ -27,250 +26,228 @@
   <body>
     <a class="skip" href="#contenu">Zum Inhalt springen</a>
     <header class="header wrap">
-      <a class="brand" href="./" aria-label="Shokz Refill, Startseite"><img src="../favicon.svg" width="38" height="38" alt=""><span>shokz<span class="brand-light">refill</span></span></a>
+      <a class="brand" href="./" aria-label="Shokz Refill, Startseite"><img src="../favicon.svg" width="36" height="36" alt=""><span>shokz<span class="brand-light">refill</span></span></a>
       <nav aria-label="Hauptnavigation">
-        <a href="#decouvrir">Die App</a><a href="#guide">Anleitung</a><a href="#questions">Fragen</a>
+        <a href="#decouvrir">Die App</a>
+        <a href="#guide">Erste Schritte</a>
+        <a href="#telecharger">Herunterladen</a>
       </nav><div class="header-actions"><details class="language-picker"><summary aria-label="Sprache der Website: Deutsch"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><ellipse cx="12" cy="12" rx="4" ry="9"></ellipse><path d="M3 12h18"></path></svg><span>Deutsch</span><span aria-hidden="true">⌄</span></summary><ul><li><a href="../" lang="en" hreflang="en">English</a></li><li><a href="../fr/" lang="fr" hreflang="fr">Français</a></li><li><a href="../nl/" lang="nl" hreflang="nl">Nederlands</a></li><li><a href="../de/" lang="de" hreflang="de" aria-current="page">Deutsch</a></li><li><a href="../es/" lang="es" hreflang="es">Español</a></li></ul></details>
       <a class="button button-small button-outline" href="https://github.com/simon-verbois/shokz-filler">GitHub <span aria-hidden="true">↗</span></a>
     </div></header>
     <main id="contenu">
       <section class="hero wrap" aria-labelledby="hero-title">
         <div class="hero-copy">
-          <p class="eyebrow"><span class="dot" aria-hidden="true"></span> Dein Audiobegleiter, vor dem nächsten Training</p>
-          <h1 id="hero-title">Dein Audio.<br>Bereit zum <em>Eintauchen.</em></h1>
-          <p class="lead">Etwas Musik. Ein Buch zum Fertighören.<br>Mach deine Shokz bereit und lass den Bildschirm im Spind.</p>
+          <p class="eyebrow">Für Shokz mit USB-MP3-Speicher</p>
+          <h1 id="hero-title">Dein Audio.<br>Bereit zum Mitnehmen.</h1>
+          <p class="lead">Deine nächste Playlist. Dein nächstes Kapitel. Bereite deine Kopfhörer am Computer vor und nimm dein Audio mit.</p>
           <div class="actions">
-            <a class="button button-primary" href="#telecharger">App herunterladen <span aria-hidden="true">↓</span></a><a class="text-link" href="#guide">Erste Schritte <span aria-hidden="true">↗</span></a>
+            <a class="button button-primary" href="#telecharger">App herunterladen</a>
+            <a class="text-link" href="#guide">So funktioniert’s</a>
           </div>
-          <p class="small muted">Desktop-App · Linux &amp; Windows · Open Source</p>
+          <p class="small muted">Linux &amp; Windows · Portabel · Open Source</p>
+          <a class="coffee-link" href="https://buymeacoffee.com/simonverbois" aria-label="Shokz Refill auf Buy Me a Coffee unterstützen"><img src="../buy-me-a-coffee.svg" width="162" height="28" alt="Buy Me a Coffee"></a>
         </div>
-        <div class="hero-art" aria-hidden="true">
-          <span class="art-label">DER RICHTIGE RHYTHMUS.<br>DIE RICHTIGE GESCHICHTE.</span>
-          <svg viewbox="0 0 420 340" fill="none">
-            <path class="water water-back" d="M-10 138C45 75 103 75 160 138S275 201 332 138S430 75 470 138M-10 181C45 118 103 118 160 181S275 244 332 181S430 118 470 181M-10 224C45 161 103 161 160 224S275 287 332 224S430 161 470 224"></path>
-            <path class="water water-front" d="M-10 118C45 55 103 55 160 118S275 181 332 118S430 55 470 118M-10 161C45 98 103 98 160 161S275 224 332 161S430 98 470 161M-10 204C45 141 103 141 160 204S275 267 332 204S430 141 470 204"></path>
-            <circle cx="316" cy="54" r="13" fill="currentColor"></circle>
-          </svg>
-          <span class="art-bottom">01 — AUSWÄHLEN 02 — ÜBERTRAGEN 03 — GENIESSEN</span>
-        </div>
-      </section>
-      <div class="wrap">
         <figure class="hero-shot">
-          <div class="window-heading">
-            <span><i aria-hidden="true"></i> Shokz Refill</span><span>DEIN NÄCHSTES TRAINING BEGINNT HIER</span>
-          </div>
-          <a class="screenshot" href="../screenshots/music.png" data-preview aria-label="YouTube-Music-Screenshot vergrößern"><img src="../screenshots/music.png" width="1360" height="880" alt="Die echte Shokz-Refill-Oberfläche mit Musikergebnissen, Titelauswahl sowie Download- und Übertragungsfortschritt" fetchpriority="high"></a>
-          <figcaption><span>Die echte Oberfläche. Fiktive Beispieldaten.</span><span>Überblick über die App</span></figcaption>
+          <a class="screenshot" href="../screenshots/music.png" data-preview><img src="../screenshots/music.png" width="1360" height="880" fetchpriority="high" alt="Musiksuche mit drei Titeln in der Sendeliste"></a>
+          <figcaption>Die echte App mit fiktiven Beispieldaten. Klicke auf ein Bildschirmfoto, um es zu vergrößern.</figcaption>
         </figure>
-      </div>
-      <div class="specs wrap" aria-label="Funktionen der Anwendung">
-        <p><strong>MP3</strong><span>192 kbit/s · 44,1 kHz · Stereo</span></p>
-        <p><strong>In deinem Tempo</strong><span>Fortschritt, Abbruch und Fortsetzen</span></p>
-        <p><strong>Auf deinem Rechner</strong><span>Eine native App, ohne eigenen Server</span></p>
-      </div>
-
-      <section class="section wrap" id="decouvrir" aria-labelledby="discover-title">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">01 / Ein Zuhause für dein Audio</p>
-            <h2 id="discover-title">Musik, die dich antreibt.<br>Geschichten zum <em>Abtauchen.</em></h2>
-          </div>
-          <p>Wähle deine Begleitung. Die App erstellt MP3-Dateien und überträgt sie auf das ausgewählte Shokz-Laufwerk.</p>
-        </div>
-        <div class="tour-grid">
-          <article>
-            <span class="feature-number">01</span>
-            <h3>Deine Titel, deine Playlists.</h3>
-            <p>Suche auf YouTube Music. Wähle einzelne Titel oder eine ganze Playlist und verfolge die Vorbereitung in einer gemeinsamen Warteschlange.</p>
-            <a class="text-link" href="#guide-musique">Zur Musikanleitung <span aria-hidden="true">↗</span></a>
-          </article>
-          <article>
-            <span class="feature-number">02</span>
-            <h3>Ein Buch. Ein Ordner. Eine MP3.</h3>
-            <p>Durchsuche deinen Audiobookshelf-Server und wähle deine Bücher. Die Audiodateien werden in der vom Server vorgegebenen Reihenfolge zusammengefügt.</p>
-            <span class="development-label">Audiobookshelf</span>
-          </article>
-          <article>
-            <span class="feature-number">03</span>
-            <h3>Deine Dateien, am richtigen Platz.</h3>
-            <p>Prüfe den freien Speicher, erstelle Ordner und importiere lokale MP3-Dateien. Bei Namenskonflikten bleiben beide Dateien unter verschiedenen Namen erhalten.</p>
-            <a class="text-link" href="#guide-appareil">Zur Geräteanleitung <span aria-hidden="true">↗</span></a>
-          </article>
-        </div>
       </section>
+      <div class="specs wrap">
+        <p><strong>MP3</strong><span>192 kb/s · 44.1 kHz · stereo</span></p>
+        <p>
+          <strong>Sofort startbereit</strong><span>Kein Python oder FFmpeg installieren</span>
+        </p>
+        <p>
+          <strong>Auf deinem Computer</strong><span>Ohne App-Server und Telemetrie</span>
+        </p>
+      </div>
 
-      <section class="book-section" aria-labelledby="book-title">
-        <div class="wrap book-layout">
-          <div>
-            <p class="eyebrow">02 / Für Geschichten auf langen Strecken</p>
-            <h2 id="book-title">Behalte den Faden.<br><em>Bis zum letzten Kapitel.</em></h2>
-            <p>Eine MP3 pro Buch verhindert, dass der Kopfhörer einzelne Dateien umsortiert. Der Inhalt folgt der Titelreihenfolge von Audiobookshelf, auch wenn die Dateinamen nicht alphabetisch sortiert sind.</p>
-            <p>Vor dem Buch kann eine lokale Männerstimme Titel und Autor ansagen. Standardgeschwindigkeit: <strong>95 %</strong>. Dann folgen 3 Sekunden Stille und die Geschichte beginnt.</p>
-            <div class="book-sequence" aria-label="Reihenfolge in der fertigen Datei">
-              <span>Gesprochene Einleitung</span><span aria-hidden="true">→</span><span>3 s Stille</span><span aria-hidden="true">→</span><strong>Vollständiges Buch</strong>
+      <section class="section wrap" id="decouvrir" aria-labelledby="app-title">
+        <div class="section-head">
+          <h2 id="app-title">Ein Ort für alles, was du hörst.</h2>
+          <p>Musik, Hörbücher und lokale MP3s nutzen dasselbe Gerät. Eigene Ansichten sorgen für Übersicht.</p>
+        </div>
+        <div class="app-gallery" data-gallery>
+          <div class="screen-tabs" aria-label="Ansichten der App">
+            <a href="#guide-musique" data-screen>YouTube Music</a>
+            <a href="#guide-livres" data-screen>Audiobookshelf</a>
+            <a href="#guide-appareil" data-screen>Shokz files</a>
+            <a href="#screen-transfers" data-screen>Transfers</a>
+            <a href="#guide-voix" data-screen>Settings</a>
+          </div>
+          <article class="screen-panel" id="guide-musique" data-panel>
+            <div>
+              <h3>Wähle die Titel. Behalte ihre Reihenfolge.</h3>
+              <p>Suche Titel und Playlists und stelle mit + deine Sendeliste zusammen. Sie bleibt beim Navigieren erhalten. Mit Send to Shokz prüfst du Titel und Zielordner, bevor etwas heruntergeladen wird.</p>
+              <details>
+                <summary>Meine YouTube-Music-Playlists nutzen</summary>
+                <p>Klicke in Settings neben YouTube Music auf Connect. Öffne deinen Browser, melde dich an und kehre zur App zurück, um die Sitzung zu importieren. Öffne danach My playlists. Die öffentliche Suche funktioniert ohne Konto.</p>
+              </details>
             </div>
-            <p class="small">Piper und seine Stimmen sind enthalten. Die Sprachausgabe funktioniert offline.</p>
-            <a class="text-link" href="#guide-livres">Mein erstes Buch vorbereiten <span aria-hidden="true">↗</span></a>
+            <figure>
+              <a class="screenshot" href="../screenshots/music.png" data-preview><img src="../screenshots/music.png" width="1360" height="880" loading="lazy" alt="Musiksuche mit drei Titeln in der Sendeliste"></a>
+            </figure>
+          </article>
+          <article class="screen-panel" id="guide-livres" data-panel>
+            <div>
+              <h3>Ein Buch. Ein Ordner. Nummerierte Kapitel.</h3>
+              <p>Verbinde deinen Audiobookshelf-Server in Settings. Wähle Bücher und dann Send to Shokz: Jedes Kapitel wird zu einer nummerierten MP3, die in Wiedergabereihenfolge kopiert wird. Gültige Kapitelmetadaten werden verwendet, andernfalls bleibt die Reihenfolge der Quelldateien erhalten.</p>
+              <a class="text-link" href="../screenshots/chapters.png" data-preview><img class="preview-thumb" src="../screenshots/chapters.png" width="1360" height="880" loading="lazy" alt="Nummerierte MP3-Kapitel im Shokz-Dateibrowser"><span>Exportierte Kapiteldateien ansehen</span></a>
+            </div>
+            <figure>
+              <a class="screenshot" href="../screenshots/audiobooks.png" data-preview><img src="../screenshots/audiobooks.png" width="1360" height="880" loading="lazy" alt="Audiobookshelf-Bibliothek und Buchauswahl"></a>
+            </figure>
+          </article>
+          <article class="screen-panel" id="guide-appareil" data-panel>
+            <div>
+              <h3>Deine Dateien, an ihrem Platz.</h3>
+              <p>Wähle deine erkannten Shokz oder mit Browse… den eingebundenen Ordner. Erstelle Ordner und benenne oder verschiebe Dateien. Add MP3 importiert lokale Musik: Kompatible Dateien werden direkt kopiert, andere ins Zielformat umgewandelt, ohne die Originale zu ändern.</p>
+              <p class="tip">Löschen erfordert eine Bestätigung. Bei Namenskonflikten bleiben beide Dateien erhalten. Wiederherstellungswerkzeuge findest du im Dreipunktmenü.</p>
+            </div>
+            <figure>
+              <a class="screenshot" href="../screenshots/device.png" data-preview><img src="../screenshots/device.png" width="1360" height="880" loading="lazy" alt="Gerätespeicher, Ordner und Bedienelemente für den lokalen MP3-Import"></a>
+            </figure>
+          </article>
+          <article class="screen-panel" id="screen-transfers" data-panel>
+            <div>
+              <h3>Behalte den Fortschritt im Blick.</h3>
+              <p>Verfolge Downloads, Konvertierungen und Kopiervorgänge in Transfers. Nutze Cancel selected für aktive oder wartende Einträge und Retry selected nach einem Fehler oder Abbruch. Die Anzeige in der Seitenleiste bleibt überall sichtbar.</p>
+              <p class="tip">Unterbrochene Kopien bleiben von fertigen MP3s unterscheidbar. Verbinde dasselbe Gerät erneut, bevor du einen Vorgang wiederholst oder fortsetzt.</p>
+            </div>
+            <figure>
+              <a class="screenshot" href="../screenshots/transfers.png" data-preview><img src="../screenshots/transfers.png" width="1360" height="880" loading="lazy" alt="Übertragungswarteschlange mit fertigen, konvertierenden, wartenden und fehlgeschlagenen Einträgen"></a>
+            </figure>
+          </article>
+          <article class="screen-panel" id="guide-voix" data-panel>
+            <div>
+              <h3>Höre, welches Kapitel beginnt.</h3>
+              <p>Optionale Piper-Ansagen funktionieren offline, mit acht enthaltenen Stimmen auf Französisch, Englisch, Deutsch, Niederländisch und Spanisch. Lege getrennte Texte für das erste und die weiteren Kapitel fest. Das Standardtempo beträgt 100 %, gefolgt von 1,5 Sekunden Stille.</p>
+              <p>Nutze $book_name, $author_name, $chapter_number und $chapter_title. Teste mit Preview und dann Save settings. Änderungen gelten für danach eingereihte Bücher.</p>
+              <a class="text-link" href="../screenshots/accounts.png" data-preview><img class="preview-thumb" src="../screenshots/accounts.png" width="1360" height="880" loading="lazy" alt="Einstellungen für YouTube-Music- und Audiobookshelf-Konten"><span>Kontoeinstellungen ansehen</span></a>
+            </div>
+            <figure>
+              <a class="screenshot" href="../screenshots/settings.png" data-preview><img src="../screenshots/settings.png" width="1360" height="880" loading="lazy" alt="Ansageeinstellungen für das erste und die weiteren Kapitel mit Stimmvorschau"></a>
+            </figure>
+          </article>
+        </div>
+        <p class="small muted">Die Desktopoberfläche ist auf Englisch. Die Anleitung verwendet die tatsächlichen Schaltflächennamen, damit du sie leicht findest.</p>
+      </section>
+
+      <section class="guide-section" id="guide" aria-labelledby="guide-title">
+        <div class="wrap">
+          <div class="section-head">
+            <h2 id="guide-title">Vom ersten Klick bis zum nächsten Schwimmen.</h2>
+            <p>Bei Musik bestimmst du mit der Sendeliste die Titel, ihre Wiedergabereihenfolge und den Zielordner.</p>
           </div>
-          <figure>
-            <a class="screenshot screenshot-framed" href="../screenshots/audiobooks.png" data-preview aria-label="Audiobookshelf-Screenshot vergrößern"><img src="../screenshots/audiobooks.png" width="1360" height="880" loading="lazy" alt="Audiobookshelf-Registerkarte mit einem fiktiven Server, einer Bibliothek und vier Büchern, davon eines ausgewählt"></a>
-            <figcaption>Audiobookshelf · Ein Buch, eine MP3</figcaption>
-          </figure>
+          <ol class="workflow">
+            <li>
+              <h3>Verbinde deine Shokz</h3>
+              <p>Schließe die Kopfhörer per USB an. Wähle in Shokz files das eingebundene Gerät oder nutze Browse…. Prüfe Namen und freien Speicher in der Seitenleiste.</p>
+            </li>
+            <li>
+              <h3>Stelle deine Sendeliste zusammen</h3>
+              <p>Suche in YouTube Music oder öffne My playlists. Nutze + neben einem Titel oder einer Playlist. Die Liste behält ihre Reihenfolge über Suchvorgänge hinweg; das Hinzufügen startet keinen Download.</p>
+            </li>
+            <li>
+              <h3>Prüfen und senden</h3>
+              <p>Wähle Send to Shokz. Ordne Titel neu oder entferne sie und klicke auf Next. Wähle einen vorhandenen Ordner oder erstelle einen neuen und klicke auf Send.</p>
+            </li>
+            <li>
+              <h3>Fortschritt prüfen und auswerfen</h3>
+              <p>Öffne Transfers, um den Fortschritt zu prüfen oder einen Fehler erneut zu versuchen. Warte auf das Ende aller Vorgänge und wirf die Kopfhörer über dein Betriebssystem aus, bevor du sie abziehst.</p>
+            </li>
+          </ol>
+          <div class="wizard-gallery">
+            <figure>
+              <a class="screenshot" href="../screenshots/transfer-order.png" data-preview><img src="../screenshots/transfer-order.png" width="1360" height="880" loading="lazy" alt="Übertragungsassistent mit Titeln in Wiedergabereihenfolge"></a>
+              <figcaption>Prüfe die Titel und ihre Wiedergabereihenfolge.</figcaption>
+            </figure>
+            <figure>
+              <a class="screenshot" href="../screenshots/transfer-folder.png" data-preview><img src="../screenshots/transfer-folder.png" width="1360" height="880" loading="lazy" alt="Übertragungsassistent mit Zielordnern und der Schaltfläche Send"></a>
+              <figcaption>Wähle das Ziel, bevor du die Übertragung startest.</figcaption>
+            </figure>
+          </div>
         </div>
       </section>
 
-      <section class="section wrap guide" id="guide" aria-labelledby="guide-title">
-        <div class="section-head">
-          <div>
-            <p class="eyebrow">03 / Erste Schritte</p>
-            <h2 id="guide-title">Ein paar Klicks vor<br>der ersten <em>Bahn.</em></h2>
-          </div>
-          <p>Die Schaltflächen der App sind auf Englisch. Diese Anleitung verwendet ihre genauen Namen, damit du sie leicht findest.</p>
+      <section class="section wrap tour-section" aria-labelledby="tour-title">
+        <div>
+          <p class="eyebrow">Eine kleine Starthilfe</p>
+          <h2 id="tour-title">Lass dir die App zeigen.</h2>
+          <p>Beim ersten Start öffnet sich eine Einführung mit neun Schritten. Sie hebt die echten Bedienelemente hervor, ohne Konto oder angeschlossenes Gerät. Überspringe sie jederzeit oder öffne Guided tour über Settings in der Seitenleiste erneut.</p>
+          <p class="small muted">Beim Schließen kehrst du zur vorherigen Seite zurück. Deine Sendeliste bleibt erhalten.</p>
         </div>
-        <article class="guide-block" id="guide-appareil">
-          <div class="guide-copy">
-            <p class="eyebrow">Schritt 1 / Der Ausgangspunkt</p>
-            <h3>Schließe deine Shokz an.</h3>
-            <ol class="steps">
-              <li>Verbinde den Kopfhörer per USB und öffne seinen Speicher auf deinem Rechner.</li>
-              <li>Wähle unter <strong>Shokz files</strong> das erkannte Gerät. Wähle bei Bedarf mit <strong>Select device folder</strong> das eingehängte Laufwerk aus.</li>
-              <li>Prüfe Namen und freien Speicher. Erstelle oder wähle für Musik einen Zielordner.</li>
-            </ol>
-            <p class="tip">Warte, bis die Übertragungen abgeschlossen sind, und wirf das Gerät über das Betriebssystem aus, bevor du es abziehst.</p>
-            <details>
-              <summary>MP3-Dateien vom Rechner importieren</summary>
-              <p>Öffne den gewünschten Ordner in der Geräteansicht, klicke auf <strong>Add local MP3</strong> und wähle deine Dateien. Die App kopiert sie ohne erneute Kodierung: Qualität und Metadaten bleiben unverändert. Mit <strong>New folder</strong> erstellst du einen Ordner und mit <strong>Move selected…</strong> ordnest du Dateien, die bereits auf dem Kopfhörer liegen.</p>
-            </details>
-          </div>
-          <figure>
-            <a class="screenshot screenshot-framed" href="../screenshots/device.png" data-preview aria-label="Geräte-Screenshot vergrößern"><img src="../screenshots/device.png" width="1360" height="880" loading="lazy" alt="Shokz-Dateibrowser mit ausgewähltem Laufwerk, freiem Speicher und mehreren Musik- und Hörbuchordnern"></a>
-            <figcaption>Der ausgewählte Speicher bleibt in der Geräteansicht sichtbar.</figcaption>
-          </figure>
-        </article>
-        <article class="guide-block" id="guide-musique">
-          <div class="guide-copy">
-            <p class="eyebrow">Schritt 2 / Musik</p>
-            <h3>Finde deinen nächsten Rhythmus.</h3>
-            <ol class="steps">
-              <li>Gib unter <strong>YouTube Music</strong> einen Suchbegriff ein, wähle <strong>Songs</strong> oder <strong>Playlists</strong> und dann <strong>Search</strong>.</li>
-              <li>Wähle Titel mit <kbd>Ctrl</kbd> oder <kbd>Shift</kbd> aus und klicke auf <strong>Send selection to Shokz</strong>. Wähle einen Ordner, wenn du dazu aufgefordert wirst.</li>
-              <li>Öffne eine Playlist per Doppelklick und verwende <strong>Download whole playlist</strong>. Der Ordner wird automatisch erstellt.</li>
-              <li>Verfolge die Schritte in der Warteschlange. Etwas fehlgeschlagen? Wähle die Zeile und nutze <strong>Retry selected</strong>.</li>
-            </ol>
-            <details>
-              <summary>Playlists meines Kontos finden</summary>
-              <p>Klicke auf <strong>Connect YouTube Music</strong> und folge dem Dialog, um die Header einer <code>/browse</code>-Anfrage aus deiner Sitzung auf music.youtube.com zu importieren. Nutze danach <strong>My playlists</strong>. Die öffentliche Suche funktioniert ohne Anmeldung.</p>
-            </details>
-          </div>
-          <figure>
-            <a class="screenshot screenshot-framed" href="../screenshots/music.png" data-preview aria-label="Musikergebnisse vergrößern"><img src="../screenshots/music.png" width="1360" height="880" loading="lazy" alt="Fiktive Musiktitel und eine Warteschlange mit abgeschlossener Übertragung, laufender Konvertierung und wartendem Titel"></a>
-            <figcaption>Mehrere Downloads können gleichzeitig laufen; Schreibzugriffe auf den Kopfhörer werden koordiniert.</figcaption>
-          </figure>
-        </article>
-        <article class="guide-block" id="guide-livres">
-          <div class="guide-copy">
-            <p class="eyebrow">Schritt 2 / Hörbücher</p>
-            <h3>Wähle deine Geschichten für unterwegs.</h3>
-            <span class="development-label">Audiobookshelf</span>
-            <ol class="steps">
-              <li>Gib unter <strong>Audiobookshelf</strong> <strong>Server</strong> (die vollständige URL), <strong>Username</strong> und <strong>Password</strong> ein und klicke auf <strong>Connect</strong>.</li>
-              <li>Wähle deine Bibliothek, suche nach Titel oder Autor und markiere die gewünschten Bücher mit <kbd>Ctrl</kbd> oder <kbd>Shift</kbd>.</li>
-              <li>Klicke auf <strong>Send selected books to Shokz</strong>. Für jedes Buch öffnet sich ein Dialog: Behalte die gesprochene Einleitung bei oder deaktiviere sie und wähle <strong>Queue book</strong>. Mit <strong>Skip book</strong> lässt du dieses Buch aus.</li>
-              <li>Die App lädt das Buch herunter, konvertiert es, fügt es zusammen und kopiert es in einen eigenen Ordner. Warte auf den Status <strong>complete</strong>.</li>
-            </ol>
-            <p class="tip">Dein Audiobookshelf-Konto benötigt die Downloadberechtigung. Das Passwort wird nur gespeichert, wenn du die entsprechende Option aktivierst.</p>
-          </div>
-          <figure>
-            <a class="screenshot screenshot-framed" href="../screenshots/book-export.png" data-preview aria-label="Buchexport-Optionen vergrößern"><img src="../screenshots/book-export.png" width="660" height="360" loading="lazy" alt="Exportdialog mit aktivierter Ansage von Titel und Autor, gesprochenem Text, drei Sekunden Stille und den Schaltflächen Queue book und Skip book"></a>
-            <figcaption>Jedes Buch behält seine eigenen Exporteinstellungen.</figcaption>
-          </figure>
-        </article>
-        <article class="guide-block" id="guide-voix">
-          <div class="guide-copy">
-            <p class="eyebrow">Schritt 3 / Deine persönliche Note</p>
-            <h3>Eine Einleitung nach deinem Geschmack.</h3>
-            <ol class="steps">
-              <li>Öffne <strong>Settings</strong> und wähle die Männerstimme <strong>Tom</strong> für Französisch oder <strong>John</strong> für Englisch.</li>
-              <li>Behalte die Geschwindigkeit von <strong>95 %</strong> bei oder stelle sie zwischen 60 und 120 % ein.</li>
-              <li>Passe den Text mit <code>$book_name</code> und <code>$author_name</code> an. Die Vorschau zeigt das Ergebnis; <code>$$</code> fügt ein Dollarzeichen ein.</li>
-              <li>Klicke auf <strong>Save settings</strong>. Diese Einstellungen gelten für danach zur Warteschlange hinzugefügte Bücher.</li>
-            </ol>
-            <p class="template-label">Beispieltext für die englische Stimme</p>
-            <pre><code>You are listening to $book_name.
-A book by $author_name.</code></pre>
-          </div>
-          <figure>
-            <a class="screenshot screenshot-framed" href="../screenshots/settings.png" data-preview aria-label="Spracheinstellungen vergrößern"><img src="../screenshots/settings.png" width="1360" height="880" loading="lazy" alt="Echte Piper-Spracheinstellungen mit der französischen Männerstimme Tom, 95 % Geschwindigkeit und Textvorschau mit Variablen"></a>
-            <figcaption>Die Lautstärke der Stimme wird normalisiert, bevor die Stille angefügt wird.</figcaption>
-          </figure>
-        </article>
+        <figure>
+          <a class="screenshot" href="../screenshots/guided-tour.png" data-preview><img src="../screenshots/guided-tour.png" width="1360" height="880" loading="lazy" alt="Einführung mit hervorgehobener Seitenleiste und den Schaltflächen Back, Next und Skip"></a>
+        </figure>
       </section>
 
       <section class="download-section" id="telecharger" aria-labelledby="download-title">
         <div class="wrap download-layout">
           <div>
-            <p class="eyebrow">04 / Jetzt bist du dran</p>
-            <h2 id="download-title">Dein nächstes Training<br>beginnt <em>hier.</em></h2>
-            <p>Wähle die ausführbare Datei für dein Betriebssystem in den GitHub-Releases. Portable Versionen enthalten ihre Abhängigkeiten.</p>
-            <div class="actions">
-              <a class="button button-primary" href="https://github.com/simon-verbois/shokz-filler/releases/latest">Zur neuesten Version <span aria-hidden="true">↗</span></a><a class="text-link" href="https://github.com/simon-verbois/shokz-filler">Code ansehen</a>
-            </div>
+            <h2 id="download-title">Bereit für die nächste Runde?</h2>
+            <p>Lade die portable ausführbare Datei für deinen Computer herunter. Python, Qt, FFmpeg, Piper und die Stimmmodelle sind enthalten.</p>
+            <a class="button button-primary" href="https://github.com/simon-verbois/shokz-filler/releases/latest">Neueste Version ansehen</a>
+            <p class="small release-note">Diese Anleitung beschreibt die aktuelle App. In den Versionshinweisen findest du die Funktionen der heruntergeladenen Version.</p>
           </div>
-          <div class="download-details">
-            <h3>Linux x86_64</h3>
-            <p>Lade <code>Shokz-Refill-linux-x86_64</code> herunter, mache die Datei ausführbar und starte sie.</p>
-            <pre><code>chmod +x Shokz-Refill-linux-x86_64
+          <div class="platforms">
+            <article>
+              <h3>Linux x86_64</h3>
+              <p>Lade Shokz-Refill-linux-x86_64 herunter, mache die Datei ausführbar und starte sie.</p>
+              <pre><code>chmod +x Shokz-Refill-linux-x86_64
 ./Shokz-Refill-linux-x86_64</code></pre>
-            <h3>Windows x86_64</h3>
-            <p>Lade <code>Shokz-Refill-windows-x86_64.exe</code> herunter und starte die Datei.</p>
-            <p class="release-note"><strong>Verfügbarkeit der Funktionen.</strong> Screenshots und Anleitung zeigen die aktuelle App. Die ältere Version <strong>2026.41.1</strong> erschien vor Audiobookshelf, dem Zusammenfügen von Büchern und Piper. Nutze für diese Funktionen eine neuere Version und beachte deren Versionshinweise.</p>
+            </article>
+            <article>
+              <h3>Windows x86_64</h3>
+              <p>Lade Shokz-Refill-windows-x86_64.exe herunter und starte die Datei. Eine separate Laufzeitumgebung ist nicht nötig.</p>
+            </article>
           </div>
         </div>
       </section>
 
       <section class="section wrap faq" id="questions" aria-labelledby="faq-title">
         <div>
-          <p class="eyebrow">Noch eine Frage?</p>
-          <h2 id="faq-title">Bevor du<br><em>abziehst.</em></h2>
+          <h2 id="faq-title">Vor dem Abziehen.</h2>
+          <p>Ein paar Hinweise zu Dateien, Kopfhörern und Konten.</p>
         </div>
         <div class="faq-list">
           <details>
             <summary>Welche Kopfhörer sind kompatibel?</summary>
-            <p>Die App richtet sich an Shokz-Kopfhörer mit USB-MP3-Speicher, darunter OpenSwim Pro. Wird ein Laufwerksname nicht erkannt, wähle den Ordner manuell aus. Das Wiedergabeverhalten hängt von Modell und Firmware ab.</p>
+            <p>Shokz-Modelle mit USB-MP3-Speicher, einschließlich OpenSwim Pro. Unbekannte Volumenamen lassen sich manuell auswählen. Nummerierte Dateinamen und sequenzielles Kopieren helfen, die Wiedergabereihenfolge zu erhalten; das Verhalten hängt von Modell und Firmware ab.</p>
           </details>
           <details>
-            <summary>Bleiben die Kapitel in der richtigen Reihenfolge?</summary>
-            <p>Bei Audiobookshelf-Exporten werden die Titel in der vom Server vorgegebenen Reihenfolge zusammengefügt. Der Kopfhörer kann Kapitel innerhalb dieser einen MP3 daher nicht umsortieren. Die App garantiert keine Wiedergabereihenfolge für getrennte Titel oder Bücher.</p>
+            <summary>Was passiert beim erneuten Senden?</summary>
+            <p>Erkannte identische Titel und Exporte werden übersprungen. Unbekannte Dateien und Namenskonflikte bleiben erhalten. Ein Buch mit anderen Quellen oder Ansageeinstellungen erhält einen eigenen Exportordner.</p>
           </details>
           <details>
-            <summary>Was passiert bei einer doppelten Übertragung?</summary>
-            <p>Erkannte identische Exporte werden übersprungen. Nicht identifizierte Dateien und Namenskonflikte bleiben erhalten. Eine neue Buchversion, etwa mit anderer Einleitung, erhält einen neuen nummerierten Ordner.</p>
+            <summary>Wofür wird Internet benötigt?</summary>
+            <p>YouTube Music und Audiobookshelf benötigen Zugriff auf ihre Dienste. Lokaler MP3-Import und Piper-Ansagen funktionieren offline. Kontositzungen werden lokal gespeichert; Disconnect oder Disconnect / forget entfernt die gespeicherten App-Zugangsdaten.</p>
           </details>
           <details>
-            <summary>Wie setze ich nach einer Trennung fort?</summary>
-            <p>Verbinde dasselbe Gerät erneut und wähle es aus. Nutze <strong>Retry selected</strong> für einen Warteschlangeneintrag oder <strong>Resume interrupted copies</strong> für unterbrochene Kopiervorgänge. Die App prüft Teildateien vor dem Fortsetzen und die Integrität vor dem Fertigstellen.</p>
-          </details>
-          <details>
-            <summary>Benötigt die Stimme Internet?</summary>
-            <p>Nein. Piper und die Stimmmodelle sind in den aktuellen portablen Versionen enthalten. Die Ansage wird lokal erzeugt. Für Mediendownloads ist Zugriff auf YouTube Music oder deinen Audiobookshelf-Server nötig.</p>
-          </details>
-          <details>
-            <summary>Gibt es eine Grenze für lange Bücher?</summary>
-            <p>Exporte, die die vorsichtige MP3-Grenze von 4 GiB pro Datei überschreiten würden, werden abgelehnt. Plane auch Platz auf deinem Rechner für Quell- und Zwischendateien ein.</p>
+            <summary>Kann ich ein langes Hörbuch übertragen?</summary>
+            <p>Bücher werden in nummerierte Kapitel-MP3s aufgeteilt, mit einer vorsichtigen Grenze von 4 GiB pro Ausgabedatei. Halte genügend Platz am Computer für Quellen und Konvertierungscache sowie auf den Kopfhörern für das Ergebnis frei.</p>
           </details>
         </div>
+      </section>
+
+      <section class="support wrap" id="soutenir" aria-labelledby="support-title">
+        <div>
+          <h2 id="support-title">Hilf der nächsten Version auf die Sprünge.</h2>
+          <p>Wenn Shokz Refill dir hilft, kannst du mir einen Kaffee spendieren. Auch das Teilen der App, Fehlermeldungen und ein Stern im Repository helfen.</p>
+        </div>
+        <a class="coffee-link" href="https://buymeacoffee.com/simonverbois" aria-label="Shokz Refill auf Buy Me a Coffee unterstützen"><img src="../buy-me-a-coffee.svg" width="162" height="28" alt="Buy Me a Coffee"></a>
       </section>
     </main>
     <footer class="footer wrap">
       <a class="brand" href="./"><img src="../favicon.svg" width="30" height="30" alt=""><span>shokz<span class="brand-light">refill</span></span></a>
-      <p>Ein unabhängiges Projekt von Simon Verbois.<br>Keine Verbindung zu Shokz, YouTube oder Audiobookshelf.</p>
+      <p>Ein unabhängiges Projekt von Simon Verbois.<br>Nicht mit Shokz, YouTube oder Audiobookshelf verbunden.</p>
       <div>
-        <a href="https://github.com/simon-verbois/shokz-filler">Quellcode</a><a href="https://github.com/simon-verbois/shokz-filler/issues">Problem melden</a><a href="https://github.com/simon-verbois/shokz-filler/blob/main/THIRD_PARTY_NOTICES.md">Lizenzen</a>
+        <a href="https://github.com/simon-verbois/shokz-filler">Quellcode</a><a href="https://github.com/simon-verbois/shokz-filler/issues">Problem melden</a><a href="https://github.com/simon-verbois/shokz-filler/blob/main/THIRD_PARTY_NOTICES.md">Lizenzen</a><a href="#questions">Fragen</a>
       </div>
     </footer>
-    <dialog class="lightbox" aria-label="Vergrößerter Screenshot">
+    <dialog class="lightbox" aria-label="Vergrößertes Bildschirmfoto">
       <form method="dialog">
-        <button class="button button-small" aria-label="Vergrößerten Screenshot schließen">Schließen <span aria-hidden="true">×</span></button>
+        <button class="button button-small button-primary">Schließen</button>
       </form>
       <img src="../screenshots/music.png" width="1360" height="880" alt="">
       <p class="lightbox-caption"></p>

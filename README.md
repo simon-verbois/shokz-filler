@@ -1,10 +1,19 @@
 # Shokz Refill
 
+[![GitHub stars](https://img.shields.io/github/stars/simon-verbois/shokz-filler?style=for-the-badge&logo=github&labelColor=191e27&color=32d4cf)](https://github.com/simon-verbois/shokz-filler/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/simon-verbois/shokz-filler?style=for-the-badge&logo=github&labelColor=191e27&color=32d4cf)](https://github.com/simon-verbois/shokz-filler/forks)
+[![GitHub release downloads](https://img.shields.io/github/downloads/simon-verbois/shokz-filler/total?style=for-the-badge&labelColor=191e27&color=32d4cf)](https://github.com/simon-verbois/shokz-filler/releases)
+[![Latest GitHub release](https://img.shields.io/github/v/release/simon-verbois/shokz-filler?style=for-the-badge&labelColor=191e27&color=32d4cf)](https://github.com/simon-verbois/shokz-filler/releases/latest)
+[![Open GitHub issues](https://img.shields.io/github/issues/simon-verbois/shokz-filler?style=for-the-badge&labelColor=191e27&color=32d4cf)](https://github.com/simon-verbois/shokz-filler/issues)
+[![GitHub licence](https://img.shields.io/github/license/simon-verbois/shokz-filler?style=for-the-badge&labelColor=191e27&color=32d4cf)](https://github.com/simon-verbois/shokz-filler/blob/main/LICENSE)
+
 **Your music and audiobooks, ready to take along on your Shokz.**
 
 A desktop app for searching YouTube Music, preparing compatible MP3 files and managing your Shokz USB storage. It includes Audiobookshelf and local spoken introductions for audiobooks.
 
 [Website and usage guide](https://simon-verbois.github.io/shokz-filler/) · [Downloads](https://github.com/simon-verbois/shokz-filler/releases/latest) · [Report an issue](https://github.com/simon-verbois/shokz-filler/issues)
+
+[![Buy me a coffee to support Shokz Refill](https://img.shields.io/badge/Buy_Me_a_Coffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=000000)](https://buymeacoffee.com/simonverbois)
 
 Website languages: [English](https://simon-verbois.github.io/shokz-filler/) · [Français](https://simon-verbois.github.io/shokz-filler/fr/) · [Nederlands](https://simon-verbois.github.io/shokz-filler/nl/) · [Deutsch](https://simon-verbois.github.io/shokz-filler/de/) · [Español](https://simon-verbois.github.io/shokz-filler/es/)
 
@@ -18,11 +27,11 @@ _Real application screenshots with fictional demonstration data. The desktop int
 
 - **YouTube Music**: search tracks and playlists, select multiple songs, download an entire playlist and access playlists from your account.
 - **Audiobookshelf**: connect to your server, search and choose books to take along. Each book gets **one folder** with **one numbered MP3 per chapter** (`01 - Title.mp3`, `02 - …`), so you always know where you are in the book.
-- **Offline spoken introductions**: French male voice Tom or English male voice John through Piper, **100%** default speed, normalised volume and **1.5 seconds of silence**. Two customisable texts: one before the first chapter and one before the others, with `$book_name`, `$author_name`, `$chapter_number` and `$chapter_title`.
+- **Offline spoken introductions**: eight bundled Piper voices across French, English, German, Dutch and Spanish, **100%** default speed, normalised volume and **1.5 seconds of silence**. Two customisable texts: one before the first chapter and one before the others, with `$book_name`, `$author_name`, `$chapter_number` and `$chapter_title`.
 - **Device management**: check free space, create and organise folders, import local MP3 files and confirm deletions. `SYSTEM` and `System Volume Information` are hidden from the browser and folder pickers.
 - **Verified transfers**: recognise duplicates, preserve files on name conflicts, validate partial files and verify SHA-256 integrity before publishing the final file.
 
-Conversions produce **MP3 CBR 192 kb/s · 44.1 kHz · stereo · ID3v2.3**. Importing local MP3 files copies the originals without re-encoding. Portable builds include Python, Qt, FFmpeg and their dependencies; current builds also include Piper and its voice models.
+Conversions produce **MP3 CBR 192 kb/s · 44.1 kHz · stereo · ID3v2.3**. Local MP3s that already match the target format are copied directly; others are normalised without changing the originals. Portable builds include Python, Qt, FFmpeg, Piper and their dependencies and voice models.
 
 ## Install
 
@@ -43,6 +52,8 @@ chmod +x Shokz-Refill-linux-x86_64
 On Windows, launch the `.exe`. No separate Python or FFmpeg installation is needed to use a portable build.
 
 ## First use
+
+A nine-step **Guided tour** opens on first launch. Skip it at any time, or reopen it from the sidebar above **Settings**. It works without an account or connected device.
 
 1. Connect your Shokz by USB and open their storage on your computer.
 2. In **Shokz files**, select the device. If necessary, use **Browse…** to select its mounted volume.
@@ -88,7 +99,7 @@ Choose **John** for an English announcement or **Tom** for French. Speech synthe
 <details>
 <summary>View the voice settings</summary>
 
-![Piper settings: French male voice Tom, 95% speed and a customisable announcement template](docs/screenshots/settings.png)
+![Piper settings: first and later chapter announcements, French voice Tom and 100% speed](docs/screenshots/settings.png)
 
 </details>
 
@@ -102,6 +113,12 @@ Choose **John** for an English announcement or **Tom** for French. Speech synthe
 - Downloads require access to the media and the appropriate rights. The app does not bypass DRM.
 - This is an independent project, not affiliated with Shokz, YouTube or Audiobookshelf.
 
+## Support the project
+
+If Shokz Refill is useful to you, you can support its development by [buying me a coffee](https://buymeacoffee.com/simonverbois).
+
+You can also help by starring the [public GitHub repository](https://github.com/simon-verbois/shokz-filler), reporting bugs or sharing the app.
+
 ## Develop and build
 
 The app uses Python 3.11+ and PySide6. These commands apply to the development checkout shown here; the GitHub mirror receives application code at release time. From that checkout, on Linux:
@@ -114,7 +131,7 @@ scripts/fetch_ffmpeg_linux.sh
 ./start-shokz-refill.sh
 ```
 
-The two voice models are fetched from a pinned revision and verified by SHA-256. Portable executables include them afterwards; speech synthesis does not contact a service.
+The voice models are fetched from pinned revisions and verified by SHA-256. Portable executables include them afterwards; speech synthesis does not contact a service.
 
 ```bash
 QT_QPA_PLATFORM=offscreen .venv/bin/python -m pytest
