@@ -365,7 +365,9 @@ Without JavaScript, all five panels remain readable. Language switching preserve
 screen or guide section. Screenshot links open a native dialog and return focus to the opener.
 Verify these interactions at desktop and narrow mobile widths before publishing.
 
-Buy Me a Coffee links appear in the introduction and support section. Their compact badge is a
-local SVG (`docs/buy-me-a-coffee.svg`), included in the public asset allowlist; loading the site
+Buy Me a Coffee links appear in the introduction and support section. Their official button is a
+local SVG containing the unmodified official PNG (`docs/buy-me-a-coffee.svg`), displayed at
+178 × 50 pixels in both the site and Markdown README. It is included in the public asset
+allowlist; loading the site
 does not request a donation widget or third-party image. The donation destination is
 `https://buymeacoffee.com/simonverbois`; `.github/FUNDING.yml` configures GitHub's Sponsor button.

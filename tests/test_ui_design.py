@@ -236,6 +236,8 @@ def test_compact_layout_keeps_navigation_and_actions_inside_the_window(
     for page in range(5):
         window.sidebar.buttons[page].click()
         qt_application.processEvents()
+        # Native resize/layout events can arrive on the next event-loop turn on Windows.
+        QTest.qWait(50)
         assert window.size().toTuple() == size
         for control in window.findChildren(QWidget):
             if isinstance(control, (QPushButton, QLineEdit, QComboBox)) and control.isVisible():
@@ -243,8 +245,12 @@ def test_compact_layout_keeps_navigation_and_actions_inside_the_window(
                 if window.speech_settings.isAncestorOf(control):
                     continue
                 position = control.mapTo(window, QPoint())
-                assert position.x() + control.width() <= window.width()
-                assert position.y() + control.height() <= window.height()
+                label = (
+                    control.text() if isinstance(control, QPushButton) else control.accessibleName()
+                )
+                details = f"page {page}, {type(control).__name__} {label!r}: {control.geometry()}"
+                assert position.x() + control.width() <= window.width(), details
+                assert position.y() + control.height() <= window.height(), details
 
 
 def test_saved_accounts_connect_at_launch_and_open_my_playlists(

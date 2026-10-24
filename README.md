@@ -13,7 +13,7 @@ A desktop app for searching YouTube Music, preparing compatible MP3 files and ma
 
 [Website and usage guide](https://simon-verbois.github.io/shokz-filler/) · [Downloads](https://github.com/simon-verbois/shokz-filler/releases/latest) · [Report an issue](https://github.com/simon-verbois/shokz-filler/issues)
 
-[![Buy me a coffee to support Shokz Refill](https://img.shields.io/badge/Buy_Me_a_Coffee-FFDD00?style=for-the-badge&logo=buymeacoffee&logoColor=000000)](https://buymeacoffee.com/simonverbois)
+[![Buy me a coffee to support Shokz Refill](docs/buy-me-a-coffee.svg)](https://buymeacoffee.com/simonverbois)
 
 Website languages: [English](https://simon-verbois.github.io/shokz-filler/) · [Français](https://simon-verbois.github.io/shokz-filler/fr/) · [Nederlands](https://simon-verbois.github.io/shokz-filler/nl/) · [Deutsch](https://simon-verbois.github.io/shokz-filler/de/) · [Español](https://simon-verbois.github.io/shokz-filler/es/)
 
