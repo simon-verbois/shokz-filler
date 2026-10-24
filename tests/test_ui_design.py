@@ -236,8 +236,6 @@ def test_compact_layout_keeps_navigation_and_actions_inside_the_window(
     for page in range(5):
         window.sidebar.buttons[page].click()
         qt_application.processEvents()
-        # Native resize/layout events can arrive on the next event-loop turn on Windows.
-        QTest.qWait(50)
         assert window.size().toTuple() == size
         for control in window.findChildren(QWidget):
             if isinstance(control, (QPushButton, QLineEdit, QComboBox)) and control.isVisible():
@@ -251,6 +249,22 @@ def test_compact_layout_keeps_navigation_and_actions_inside_the_window(
                 details = f"page {page}, {type(control).__name__} {label!r}: {control.geometry()}"
                 assert position.x() + control.width() <= window.width(), details
                 assert position.y() + control.height() <= window.height(), details
+
+
+def test_long_voice_labels_do_not_push_account_controls_outside_settings(
+    window: MainWindow, qt_application: QApplication
+) -> None:
+    voice = window.speech_settings.voice
+    label = "A descriptive voice name with a language, region and speaker variant " * 3
+    voice.setItemText(0, label)
+    window.resize(1040, 720)
+    window.tabs.setCurrentIndex(4)
+    qt_application.processEvents()
+    assert window.settings_page.scroll_area.horizontalScrollBar().maximum() == 0
+    for control in (window.connect_button, window.disconnect_button, voice):
+        position = control.mapTo(window, QPoint())
+        assert position.x() + control.width() <= window.width()
+    assert voice.itemText(0) == label
 
 
 def test_saved_accounts_connect_at_launch_and_open_my_playlists(

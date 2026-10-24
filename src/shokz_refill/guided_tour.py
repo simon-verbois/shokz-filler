@@ -58,8 +58,8 @@ def application_tour_steps(window: MainWindow) -> tuple[TourStep, ...]:
             window.settings_page,
             "Connect your accounts",
             "Connect YouTube Music to access My playlists. For Audiobookshelf, enter your "
-            "server address and credentials here. This is also where you configure offline "
-            "voice announcements for audiobook chapters.",
+            "server address and credentials here. You can also choose and preview offline "
+            "voice announcements for audiobook chapters before saving your settings.",
         ),
         TourStep(
             0,

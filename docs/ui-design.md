@@ -36,6 +36,10 @@ and queue headers are hidden. Filtering deselects entire hidden rows through the
 selection model, including hidden columns. Visible row actions resolve the current item
 after sorting and never use the original result-list index.
 
+The voice selector can shrink independently of its longest menu label. This keeps account
+controls inside the Settings viewport at the minimum window size, including Windows font
+metrics. The dropdown retains the complete voice names.
+
 All screens retain visible keyboard focus. Status icons accompany status text; percentages
 remain visible for active transfers. The redesign adds no decorative animation. Network,
 conversion, transfer and cancellation services remain outside the presentation layer.

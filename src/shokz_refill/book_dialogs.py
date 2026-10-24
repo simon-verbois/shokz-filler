@@ -65,6 +65,11 @@ class SpeechSettingsPanel(QWidget):
         form.setVerticalSpacing(12)
         form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
         self.voice = RoundedComboBox()
+        # Long voice names must not set the minimum width of the entire Settings page.
+        self.voice.setMinimumContentsLength(16)
+        self.voice.setSizeAdjustPolicy(
+            RoundedComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon
+        )
         for code, label in VOICES.items():
             self.voice.addItem(label, code)
         self.voice.setCurrentIndex(self.voice.findData(settings.voice))
