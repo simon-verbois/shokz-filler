@@ -7,12 +7,12 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtCore import Qt  # noqa: E402
 from PySide6.QtWidgets import (  # noqa: E402
     QApplication,
-    QInputDialog,
     QTableWidget,
     QTableWidgetItem,
 )
 
 from shokz_refill.table_filters import ColumnFilters  # noqa: E402
+from shokz_refill.themed_dialog import InputDialog  # noqa: E402
 
 
 def test_filters_combine_ignore_case_and_clear_hidden_selection() -> None:
@@ -30,6 +30,7 @@ def test_filters_combine_ignore_case_and_clear_hidden_selection() -> None:
     filters.set_filter(1, "ALICE")
     assert [table.isRowHidden(row) for row in range(3)] == [False, True, True]
     assert not table.selectedItems()
+    assert not table.selectionModel().selectedRows()
     assert filters.buttons[0].isChecked()
     assert set(filters.buttons) == {0, 1}
     filters.clear()
@@ -68,14 +69,14 @@ def test_filter_button_edits_and_cancel_preserves_filter(monkeypatch: pytest.Mon
     table = QTableWidget(0, 1)
     table.setHorizontalHeaderLabels(["Title"])
     filters = ColumnFilters(table, (0,))
-    monkeypatch.setattr(QInputDialog, "getText", lambda *args, **kwargs: ("Ocean", True))
+    monkeypatch.setattr(InputDialog, "getText", lambda *args, **kwargs: ("Ocean", True))
     filters.buttons[0].click()
     assert filters.filters == {0: "Ocean"}
-    monkeypatch.setattr(QInputDialog, "getText", lambda *args, **kwargs: ("River", False))
+    monkeypatch.setattr(InputDialog, "getText", lambda *args, **kwargs: ("River", False))
     filters.buttons[0].click()
     assert filters.filters == {0: "Ocean"}
     assert filters.buttons[0].isChecked()
-    monkeypatch.setattr(QInputDialog, "getText", lambda *args, **kwargs: ("", True))
+    monkeypatch.setattr(InputDialog, "getText", lambda *args, **kwargs: ("", True))
     filters.buttons[0].click()
     assert not filters.filters
     table.close()

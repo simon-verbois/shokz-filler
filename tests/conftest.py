@@ -14,6 +14,7 @@ from PySide6.QtCore import QCoreApplication, QEvent  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from shokz_refill.background import TaskRunner  # noqa: E402
+from shokz_refill.theme import apply_theme  # noqa: E402
 from shokz_refill.ui import MainWindow  # noqa: E402
 
 
@@ -21,6 +22,7 @@ from shokz_refill.ui import MainWindow  # noqa: E402
 def qt_application() -> QApplication:
     app = QApplication.instance() or QApplication([])
     assert isinstance(app, QApplication)
+    apply_theme(app)
     app.setQuitOnLastWindowClosed(False)
     return app
 

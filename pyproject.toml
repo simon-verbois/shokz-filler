@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "shokz-refill"
-version = "1.0.0"
+version = "2026.43.2"
 description = "Load compatible MP3 music and audiobooks from YouTube Music, Audiobookshelf or local files"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -14,8 +14,8 @@ dependencies = [
   "mutagen>=1.47,<2",
   "requests>=2.32,<3",
   "piper-tts==1.8.0",
-  "yt-dlp[default]>=2025.1.15",
-  "ytmusicapi>=1.10,<2",
+  "yt-dlp[default]>=2026.8.19,<2027",
+  "ytmusicapi>=1.12,<2",
 ]
 
 [project.optional-dependencies]

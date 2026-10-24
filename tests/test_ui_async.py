@@ -7,11 +7,12 @@ import pytest
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtCore import QThread  # noqa: E402
-from PySide6.QtWidgets import QApplication, QDialog, QHeaderView, QInputDialog  # noqa: E402
+from PySide6.QtWidgets import QApplication, QDialog, QHeaderView  # noqa: E402
 
 from shokz_refill.config import ConfigStore  # noqa: E402
 from shokz_refill.device import manual_device  # noqa: E402
 from shokz_refill.models import Playlist, Track  # noqa: E402
+from shokz_refill.themed_dialog import InputDialog  # noqa: E402
 from shokz_refill.ui import DeviceFolderDialog, MainWindow  # noqa: E402
 
 
@@ -59,7 +60,7 @@ def test_expired_library_error_runs_on_ui_thread(
     assert calls and calls[0][1] == app.thread()
     assert request_threads and request_threads[0] != app.thread()
     assert "paste fresh request headers" in calls[0][0]
-    assert window.auth_label.text() == "YouTube Music: not connected"
+    assert window.auth_label.text() == "Not connected"
     assert window.isVisible()
     assert store.auth_path.is_file()
     window.pool.waitForDone(3_000)
@@ -97,7 +98,6 @@ def test_playlist_navigation_has_back_history(tmp_path: Path) -> None:
     window._enter_playlist(playlist, [Track("video-id", "Song", ("Artist",))])
     assert window.browser_page.playlist == playlist
     assert window.browser_back.isEnabled()
-    assert not window.download_playlist_button.isEnabled()
     assert window.browser_title.text().startswith("My Playlist")
     window._browser_go_back()
     assert window.browser_page.items == [playlist]
@@ -110,97 +110,93 @@ def test_playlist_navigation_has_back_history(tmp_path: Path) -> None:
     app.processEvents()
 
 
-def test_whole_playlist_creates_automatic_folder(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    app = QApplication.instance() or QApplication([])
+class FakeWizard:
+    """Stands in for the modal assistant: accepts with a chosen folder."""
+
+    instances: list["FakeWizard"] = []
+
+    def __init__(self, tracks, device, parent=None, *, suggested="", last=None):  # type: ignore[no-untyped-def]
+        self.tracks = list(tracks)
+        self.suggested = suggested
+        self.last = last
+        self.destination: Path | None = device.root / (suggested or "Singles")
+        FakeWizard.instances.append(self)
+
+    def exec(self) -> QDialog.DialogCode:
+        return QDialog.DialogCode.Accepted
+
+
+def _window_with_wizard(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):  # type: ignore[no-untyped-def]
     root = tmp_path / "device"
     root.mkdir()
+    FakeWizard.instances.clear()
+    monkeypatch.setattr("shokz_refill.ui.TransferWizard", FakeWizard)
     window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
     window.device = manual_device(root)
-    search_destination = root / "Search results"
-    search_destination.mkdir()
-    window.destination = search_destination
-    queued: list[Path] = []
+    queued: list[tuple[list[Track], Path, int | None]] = []
 
-    def enqueue(_tracks: object, destination: Path, _root: Path) -> list[object]:
-        queued.append(destination)
+    def enqueue(tracks: list[Track], destination: Path, _root: Path, **options: object):  # type: ignore[no-untyped-def]
+        start = options.get("start")
+        queued.append((tracks, destination, start if isinstance(start, int) else None))
         return []
 
     monkeypatch.setattr(window.queue, "enqueue", enqueue)
-    window._prepare_playlist_download(
-        Playlist("playlist-id", "Ma Playlist ÉTÉ / 2026"),
-        [Track("video-id", "Song", ("Artist",))],
-    )
-    deadline = time.monotonic() + 3
-    while not queued and time.monotonic() < deadline:
-        app.processEvents()
-        time.sleep(0.01)
-    window.pool.waitForDone(3_000)
-    window.close()
-    assert queued == [root / "Ma Playlist ÉTÉ 2026"]
-    assert queued[0].is_dir()
+    return window, root, queued
 
 
-def test_double_click_track_in_playlist_uses_playlist_folder(
+def test_send_opens_assistant_and_playlist_songs_suggest_their_folder(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     app = QApplication.instance() or QApplication([])
-    root = tmp_path / "device"
-    root.mkdir()
-    window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
-    window.device = manual_device(root)
-    window.destination = root
+    window, root, queued = _window_with_wizard(tmp_path, monkeypatch)
     playlist = Playlist("playlist-id", "Road Trip")
     track = Track("video-id", "Song", ("Artist",))
     window._set_browser_page(window.browser_page.__class__(playlist.title, [track], playlist))
-    queued: list[Path] = []
-
-    def enqueue(_tracks: object, destination: Path, _root: Path) -> list[object]:
-        queued.append(destination)
-        return []
-
-    monkeypatch.setattr(window.queue, "enqueue", enqueue)
     window._result_double_clicked(0, 0)
-    deadline = time.monotonic() + 3
-    while not queued and time.monotonic() < deadline:
-        app.processEvents()
-        time.sleep(0.01)
+    assert window.browser.pending == [track] and queued == []
+    window._download_selected()
+    pump_until(app, lambda: bool(queued))
+    assert FakeWizard.instances[0].suggested == "Road Trip"
+    assert queued[0][:2] == ([track], root / "Road Trip")
+    assert queued[0][2] == 1
+    assert (root / "Road Trip").is_dir()  # A suggested folder is created when missing.
+    assert window.browser.pending == []
+    assert window.destination == root / "Road Trip"
     window.pool.waitForDone(3_000)
     window.close()
-    assert queued == [root / "Road Trip"]
+    app.processEvents()
 
 
-def test_loose_tracks_require_non_root_folder_dialog(
+def test_loose_songs_reuse_last_folder_as_suggestion_without_auto_folder(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     app = QApplication.instance() or QApplication([])
-    root = tmp_path / "device"
-    destination = root / "Singles"
-    destination.mkdir(parents=True)
-    window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
-    window.device = manual_device(root)
-    queued: list[Path] = []
-
-    class FakeFolderDialog:
-        def __init__(self, *_args: object, **kwargs: object) -> None:
-            assert kwargs["allow_root"] is False
-            assert kwargs["allow_create"] is True
-            self.destination = destination
-
-        def exec(self) -> QDialog.DialogCode:
-            return QDialog.DialogCode.Accepted
-
-    def enqueue(_tracks: object, folder: Path, _root: Path) -> list[object]:
-        queued.append(folder)
-        return []
-
-    monkeypatch.setattr("shokz_refill.ui.DeviceFolderDialog", FakeFolderDialog)
-    monkeypatch.setattr(window.queue, "enqueue", enqueue)
-    window._download_tracks([Track("video-id", "Song", ("Artist",))])
-
-    assert queued == [destination]
+    window, root, queued = _window_with_wizard(tmp_path, monkeypatch)
+    (root / "Singles").mkdir()
+    (root / "Singles" / "07 - Old.mp3").write_bytes(b"x")
+    window.browser.add_pending([Track("a", "A"), Track("b", "B")])
+    window._download_selected()
+    pump_until(app, lambda: bool(queued))
+    assert FakeWizard.instances[0].suggested == ""
+    assert queued[0][1] == root / "Singles"
+    assert queued[0][2] == 8  # Numbering continues after the highest existing position.
     window.pool.waitForDone(3_000)
+    window.close()
+    app.processEvents()
+
+
+def test_send_without_list_or_device_reports_an_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    app = QApplication.instance() or QApplication([])
+    window, _root, queued = _window_with_wizard(tmp_path, monkeypatch)
+    errors: list[str] = []
+    monkeypatch.setattr(window, "_show_error", errors.append)
+    window._download_selected()
+    window.browser.add_pending([Track("a", "A")])
+    window.device = None
+    window._download_selected()
+    assert len(errors) == 2 and queued == [] and not FakeWizard.instances
     window.close()
     app.processEvents()
 
@@ -217,9 +213,12 @@ def test_device_folder_back_and_forward_history(tmp_path: Path) -> None:
     window._reset_folder_history(root)
 
     window._navigate_folder(first)
+    assert window.path_edit.text() == str(first)
     window._navigate_folder(second)
+    assert window.path_edit.text() == str(second)
     window._folder_go_back()
     assert window.current_folder == first
+    assert window.path_edit.text() == str(first)
     assert window.folder_forward.isEnabled()
     window._folder_go_back()
     assert window.current_folder == root
@@ -279,7 +278,7 @@ def test_download_folder_dialog_blocks_root_and_creates_folder(
     assert dialog.ok_button.isEnabled()
     dialog.tree.setCurrentItem(None)
     monkeypatch.setattr(
-        QInputDialog,
+        InputDialog,
         "getText",
         staticmethod(lambda *_args, **_kwargs: ("My New Folder!", True)),
     )
@@ -463,31 +462,6 @@ def test_stale_folder_listing_cannot_replace_current_folder(
         release.set()
         window.close()
         pump_until(app, lambda: window.tasks.idle)
-
-
-def test_selected_destination_is_used_without_second_dialog(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    app = QApplication.instance() or QApplication([])
-    monkeypatch.setattr(MainWindow, "_poll_devices", lambda _self: None)
-    root = tmp_path / "device"
-    folder = root / "Singles"
-    folder.mkdir(parents=True)
-    window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
-    window.device = manual_device(root)
-    window._set_destination(folder)
-    queued: list[Path] = []
-    monkeypatch.setattr(window.queue, "enqueue", lambda tracks, dest, root: queued.append(dest))
-
-    def no_dialog(*args, **kwargs):  # type: ignore[no-untyped-def]
-        raise AssertionError("The chosen download folder must be reused")
-
-    monkeypatch.setattr("shokz_refill.ui.DeviceFolderDialog", no_dialog)
-    window._download_tracks([Track("id", "Song")])
-    assert queued == [folder]
-    assert "Singles" in window.destination_label.text()
-    window.close()
-    pump_until(app, lambda: window.tasks.idle)
 
 
 def test_close_cancels_work_and_waits_without_blocking_qt(

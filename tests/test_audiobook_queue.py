@@ -88,14 +88,17 @@ def test_books_get_separate_folders_and_parts_are_transferred_in_order(tmp_path:
         wait(queue)
         assert first.status == second.status == JobStatus.COMPLETE
         assert first.destination != second.destination
-        assert transfer.names == ["Book.mp3", "Book.mp3"]
+        assert transfer.names == ["01 - First.mp3", "02 - Second.mp3"] * 2
         assert client.downloads == [
             1,
             2,
             1,
             2,
         ]  # Each source downloaded once per book, not once per chapter.
-        assert len(list(first.destination.glob("*.mp3"))) == 1
+        assert sorted(path.name for path in first.destination.glob("*.mp3")) == [
+            "01 - First.mp3",
+            "02 - Second.mp3",
+        ]
         assert all(
             read_identity(path).source_id.startswith("audiobookshelf:")
             for path in first.destination.glob("*.mp3")
@@ -118,7 +121,7 @@ def test_cancelled_transfer_retries_from_cache_and_skips_completed_parts(tmp_pat
 
     def update(job):  # type: ignore[no-untyped-def]
         nonlocal stop
-        if stop and job.status == JobStatus.TRANSFERRING and job.progress > 90:
+        if stop and job.status == JobStatus.TRANSFERRING and "Chapter 2" in job.error:
             stop = False
             queue.cancel([job.job_id])
 
@@ -132,12 +135,13 @@ def test_cancelled_transfer_retries_from_cache_and_skips_completed_parts(tmp_pat
         job = queue.enqueue([Audiobook("one", "Book", "Author")], root, client)[0]
         wait(queue)
         assert job.status == JobStatus.CANCELLED
-        assert list(job.destination.glob("*.part"))
+        assert [path.name for path in job.destination.glob("*.mp3")] == ["01 - First.mp3"]
         queue.retry([job.job_id], root, client)
         wait(queue)
         assert job.status == JobStatus.COMPLETE
         assert client.downloads == [1, 2]
-        assert len(commands) == 4
+        assert len(commands) == 7
+        assert len(list(job.destination.glob("*.mp3"))) == 2
         assert not list(job.destination.glob("*.part"))
     finally:
         queue.shutdown()
@@ -208,15 +212,17 @@ def test_changed_announcement_preserves_old_export_in_separate_folder(tmp_path: 
     )
     try:
         book = Audiobook("one", "Book", "Author")
-        first = queue.enqueue([book], root, client, options=BookExportOptions(announce=False))[0]
+        first = queue.enqueue(
+            [book], root, client, options=BookExportOptions(announce=False, announce_chapters=False)
+        )[0]
         wait(queue)
-        original = next(first.destination.glob("*.mp3")).read_bytes()
+        original = (first.destination / "01 - First.mp3").read_bytes()
         second = queue.enqueue([book], root, client, options=BookExportOptions())[0]
         wait(queue)
         assert first.status == second.status == JobStatus.COMPLETE
         assert second.destination != first.destination
-        assert next(first.destination.glob("*.mp3")).read_bytes() == original
-        assert len(list(second.destination.glob("*.mp3"))) == 1
+        assert (first.destination / "01 - First.mp3").read_bytes() == original
+        assert len(list(second.destination.glob("*.mp3"))) == 2
         repeated = queue.enqueue([book], root, client)[0]
         wait(queue)
         assert repeated.status == JobStatus.SKIPPED
@@ -225,7 +231,7 @@ def test_changed_announcement_preserves_old_export_in_separate_folder(tmp_path: 
         queue.shutdown()
 
 
-def test_legacy_chapter_files_are_preserved_when_creating_merged_export(tmp_path: Path) -> None:
+def test_legacy_chapter_files_are_preserved_when_creating_ordered_export(tmp_path: Path) -> None:
     root = tmp_path / "device"
     root.mkdir()
     client = Client()
@@ -242,6 +248,6 @@ def test_legacy_chapter_files_are_preserved_when_creating_merged_export(tmp_path
         assert job.status == JobStatus.COMPLETE
         assert job.destination != old
         assert (old / "00001 chapter.mp3").read_bytes() == b"legacy audio"
-        assert len(list(job.destination.glob("*.mp3"))) == 1
+        assert len(list(job.destination.glob("*.mp3"))) == 2
     finally:
         queue.shutdown()

@@ -4,11 +4,8 @@ from pathlib import Path
 
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
-    QDialog,
     QDialogButtonBox,
-    QInputDialog,
     QLabel,
-    QTextEdit,
     QTreeWidget,
     QTreeWidgetItem,
     QVBoxLayout,
@@ -19,9 +16,10 @@ from .background import TaskRunner
 from .device import is_within
 from .files import DeviceFileService
 from .models import Device
+from .themed_dialog import InputDialog, ThemedDialog
 
 
-class DeviceFolderDialog(QDialog):
+class DeviceFolderDialog(ThemedDialog):
     _LOADED_ROLE = int(Qt.ItemDataRole.UserRole) + 1
 
     def __init__(
@@ -34,7 +32,7 @@ class DeviceFolderDialog(QDialog):
         allow_root: bool = True,
         allow_create: bool = False,
     ) -> None:
-        super().__init__(parent)
+        super().__init__(parent, title)
         self.device = device
         self.allow_root = allow_root
         self.destination: Path | None = None
@@ -43,7 +41,8 @@ class DeviceFolderDialog(QDialog):
         self._moving_folders = bool(self._blocked_roots)
         self.setWindowTitle(title)
         self.resize(480, 520)
-        layout = QVBoxLayout(self)
+        layout = QVBoxLayout(self.content)
+        layout.setContentsMargins(18, 8, 18, 16)
         label = QLabel(f"Choose a destination folder on {device.name}")
         layout.addWidget(label)
         self.feedback = QLabel(
@@ -166,7 +165,7 @@ class DeviceFolderDialog(QDialog):
         # Shokz Refill deliberately keeps a flat folder layout. New folders are
         # always top-level, even when an existing folder happens to be selected.
         parent = self.device.root
-        name, accepted = QInputDialog.getText(self, "New folder", "Folder name:")
+        name, accepted = InputDialog.getText(self, "New folder", "Folder name:")
         if not accepted or not name:
             return
         self.new_folder_button.setEnabled(False)
@@ -192,29 +191,3 @@ class DeviceFolderDialog(QDialog):
     def done(self, result: int) -> None:
         self.tasks.shutdown()
         super().done(result)
-
-
-class AuthDialog(QDialog):
-    def __init__(self, parent: QWidget | None = None) -> None:
-        super().__init__(parent)
-        self.setWindowTitle("Connect YouTube Music")
-        self.resize(650, 470)
-        layout = QVBoxLayout(self)
-        instructions = QLabel(
-            "1. Sign in at music.youtube.com.\n"
-            "2. Open Developer Tools → Network, filter for /browse, and select a POST request.\n"
-            "3. Firefox: Copy → Copy Request Headers. Chrome/Edge: copy the Request Headers "
-            "section (or paste the header JSON from Copy as fetch).\n"
-            "4. Paste below. The credentials stay only on this computer."
-        )
-        instructions.setWordWrap(True)
-        layout.addWidget(instructions)
-        self.headers = QTextEdit()
-        self.headers.setPlaceholderText("Paste request headers here…")
-        layout.addWidget(self.headers)
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        buttons.accepted.connect(self.accept)
-        buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)

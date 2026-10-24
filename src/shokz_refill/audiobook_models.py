@@ -10,6 +10,7 @@ from typing import Any
 from urllib.parse import quote, urlsplit, urlunsplit
 
 from .naming import sanitize_component
+from .playback_order import ordered_name
 
 
 @dataclass(frozen=True)
@@ -95,18 +96,21 @@ class ExportPart:
     number: int
     title: str
     segments: tuple[Segment, ...]
+    total: int = 1
 
     @property
     def filename(self) -> str:
-        return sanitize_component(self.title, max_bytes=90) + ".mp3"
+        """Zero-padded position prefix, so name order, copy order and TRCK all agree."""
+        return ordered_name(self.number, self.total, self.title)
 
     def source_id(self, server: str, book: Audiobook, export_options: str = "") -> str:
         value = {
-            "layout": "single-mp3-v1",
+            "layout": "ordered-mp3-v1",
             "export_options": export_options,
             "server": server,
             "item": book.item_id,
             "number": self.number,
+            "total": self.total,
             "segments": [(s.source_index, s.offset, s.duration) for s in self.segments],
             "sources": [(s.index, s.download_path, s.size, s.modified) for s in book.sources],
         }
@@ -203,8 +207,42 @@ def map_book(data: dict[str, Any], *, expanded: bool = False) -> Audiobook:
     )
 
 
+def _chapter_parts(book: Audiobook, sources: list[AudioSource]) -> list[ExportPart] | None:
+    """One part per chapter when chapters tile the book cleanly; None means use the files."""
+    total = sum(source.duration for source in sources)
+    chapters = book.chapters
+    if len(chapters) < 2:
+        return None
+    previous_end = 0.0
+    for chapter in chapters:
+        if (
+            chapter.start < 0
+            or chapter.end <= chapter.start
+            or chapter.start < previous_end - 0.05
+            or chapter.end > total + 1
+        ):
+            return None
+        previous_end = chapter.end
+    starts: list[tuple[AudioSource, float]] = []
+    cursor = 0.0
+    for source in sources:
+        starts.append((source, cursor))
+        cursor += source.duration
+    parts: list[ExportPart] = []
+    for number, chapter in enumerate(chapters, 1):
+        segments: list[Segment] = []
+        for source, begin in starts:
+            low, high = max(chapter.start, begin), min(chapter.end, begin + source.duration)
+            if high - low > 0.01:
+                segments.append(Segment(source.index, low - begin, high - low))
+        if not segments:
+            return None
+        parts.append(ExportPart(number, chapter.title, tuple(segments), len(chapters)))
+    return parts
+
+
 def export_plan(book: Audiobook) -> tuple[ExportPart, ...]:
-    """One complete book, following Audiobookshelf's track indices rather than filenames."""
+    """Ordered parts: one per chapter if they tile the book, else one per Audiobookshelf track."""
     if not book.available or not book.sources:
         raise ValueError("This book has no available audio tracks")
     sources = sorted(book.sources, key=lambda source: source.index)
@@ -215,8 +253,15 @@ def export_plan(book: Audiobook) -> tuple[ExportPart, ...]:
         for source in sources
     ):
         raise ValueError("Audiobook has invalid track durations or indices")
-    return (
+    chapters = _chapter_parts(book, sources)
+    if chapters is not None:
+        return tuple(chapters)
+    return tuple(
         ExportPart(
-            1, book.title, tuple(Segment(source.index, 0, source.duration) for source in sources)
-        ),
+            number,
+            source.filename.rsplit(".", 1)[0] if "." in source.filename else source.filename,
+            (Segment(source.index, 0, source.duration),),
+            len(sources),
+        )
+        for number, source in enumerate(sources, 1)
     )

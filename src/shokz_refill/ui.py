@@ -7,23 +7,28 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
-from PySide6.QtCore import Qt, QTimer, Signal, Slot
-from PySide6.QtGui import QDragEnterEvent, QDragMoveEvent, QDropEvent
+from PySide6.QtCore import QEvent, QPoint, Qt, QTimer, Signal, Slot
+from PySide6.QtGui import (
+    QAction,
+    QDragEnterEvent,
+    QDragMoveEvent,
+    QDropEvent,
+    QMouseEvent,
+    QShowEvent,
+)
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QComboBox,
     QDialog,
     QFileDialog,
+    QFrame,
     QHBoxLayout,
     QHeaderView,
-    QInputDialog,
     QLabel,
+    QLineEdit,
     QMainWindow,
     QMenu,
-    QMessageBox,
     QProgressBar,
     QPushButton,
-    QSplitter,
     QTableWidget,
     QTableWidgetItem,
     QTabWidget,
@@ -40,18 +45,31 @@ from .book_export import BookExportOptions
 from .browser_panel import BrowserPanel
 from .config import ConfigStore
 from .device import DeviceDetector, manual_device
-from .dialogs import AuthDialog, DeviceFolderDialog
+from .dialogs import DeviceFolderDialog
 from .downloads import DownloadQueue, cleanup_stale_cache
 from .files import DeviceFileService
 from .filesystem import device_operation
+from .icons import icon
+from .library_view import LibraryEntry, library_rows
 from .media import MediaDownloader
 from .metadata import validate_source_mp3
 from .models import Device, DownloadJob, JobStatus, Playlist, Track
 from .naming import playlist_folder_name, sanitize_component
+from .navigation import SETTINGS_PAGE, Sidebar
+from .page_layout import PageTemplate
+from .playback_order import next_position
 from .queue_panel import QueuePanel
+from .settings_page import SettingsPage
 from .table_filters import ColumnFilters
+from .table_state import TableEmptyState
+from .theme import ON_ACCENT, RoundedComboBox, role
+from .themed_dialog import InputDialog, MessageDialog
 from .transfer import TransferManager
+from .transfer_wizard import TransferWizard
+from .voice_preview import VoicePreview
+from .window_frame import EDGE_MARGIN, TitleBar, cursor_for, edges_at
 from .youtube import YouTubeMusicService
+from .youtube_dialog import AuthDialog
 
 
 @dataclass(slots=True)
@@ -82,7 +100,11 @@ class DeviceFileTable(QTableWidget):
         if event.source() is not self:
             event.ignore()
             return
-        rows = sorted({index.row() for index in self.selectionModel().selectedRows()})
+        rows = sorted(
+            index.row()
+            for index in self.selectionModel().selectedRows()
+            if not self.isRowHidden(index.row())
+        )
         target_row = self.rowAt(event.position().toPoint().y())
         self.moveRequested.emit(rows, target_row)
         event.setDropAction(Qt.DropAction.MoveAction)
@@ -127,6 +149,7 @@ class MainWindow(QMainWindow):
         )
         self.audiobook_queue = AudiobookQueue(store.cache_dir, self.transfer, self._queue_callback)
         self._queues = (self.queue, self.audiobook_queue)
+        self._initial_focus_cleared = False
         self._build_ui()
         self._run(lambda: cleanup_stale_cache(store.cache_dir, transfer_state), lambda _v: None)
         self.resize(self.config.window_width, self.config.window_height)
@@ -140,11 +163,56 @@ class MainWindow(QMainWindow):
             self.device_operation_progress.setValue, Qt.ConnectionType.QueuedConnection
         )
 
+    def showEvent(self, event: QShowEvent) -> None:
+        super().showEvent(event)
+        if not self._initial_focus_cleared:
+            # The first tab stop (device refresh) would otherwise open with a focus ring.
+            self._initial_focus_cleared = True
+            QTimer.singleShot(0, self._clear_initial_focus)
+
+    def _clear_initial_focus(self) -> None:
+        # Hand focus to the page container (click focus only), so no control shows a focus ring.
+        host = self.centralWidget()
+        if host is not None:
+            host.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
+            host.setFocus(Qt.FocusReason.OtherFocusReason)
+
     def _build_ui(self) -> None:
         self.setWindowTitle("Shokz Refill")
+        self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setMouseTracking(True)
         central = QWidget()
-        outer = QVBoxLayout(central)
+        central.setObjectName("windowShell")
+        central.setMouseTracking(True)
+        self._shell_layout = QVBoxLayout(central)
+        self._shell_layout.setContentsMargins(*([EDGE_MARGIN] * 4))
+        self.window_frame = QFrame()
+        self.window_frame.setObjectName("windowFrame")
+        # Resize cursors belong to the transparent margin only; never inherit them inside.
+        self.window_frame.setCursor(Qt.CursorShape.ArrowCursor)
+        self._shell_layout.addWidget(self.window_frame)
+        outer = QHBoxLayout(self.window_frame)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+        self.sidebar = Sidebar()
+        outer.addWidget(self.sidebar)
+        workspace = QWidget()
+        workspace.setObjectName("workspace")
+        column = QVBoxLayout(workspace)
+        column.setContentsMargins(0, 0, 0, 0)
+        column.setSpacing(0)
+        self.title_bar = TitleBar(self)
+        column.addWidget(self.title_bar)
+        body = QWidget()
+        column.addWidget(body, 1)
+        content = QVBoxLayout(body)
+        content.setContentsMargins(24, 4, 20, 16)
         self.tabs = QTabWidget()
+        self.tabs.tabBar().hide()
+        self.sidebar.pageRequested.connect(self.tabs.setCurrentIndex)
+        self.tabs.currentChanged.connect(self.sidebar.set_page)
+        self.sidebar.refreshRequested.connect(self._poll_devices)
         self.tabs.addTab(self._youtube_tab(), "YouTube Music")
         settings = AudiobookshelfSettings(self.store.config_dir / "audiobookshelf.json")
         self.audiobookshelf_panel = AudiobookshelfPanel(settings.load())
@@ -158,32 +226,91 @@ class MainWindow(QMainWindow):
         self.audiobookshelf.jobsQueued.connect(self._update_actions)
         self.tabs.addTab(self.audiobookshelf_panel, "Audiobookshelf")
         self.tabs.addTab(self._device_tab(), "Shokz device / files")
-        self.speech_settings = SpeechSettingsPanel(self.config.book_export_options())
-        self.speech_settings.saveRequested.connect(self._save_speech_settings)
-        self.tabs.addTab(self.speech_settings, "Settings")
         self.queue_panel = QueuePanel()
         self.queue_panel.retryRequested.connect(self._retry_jobs)
         self.queue_panel.cancelRequested.connect(self._cancel_jobs)
+        self.queue_panel.summaryChanged.connect(self.sidebar.set_transfers)
         self.queue_table = self.queue_panel.table
-        self.overall_progress = self.queue_panel.overall
         self.queueUpdated.connect(self._update_queue_row, Qt.ConnectionType.QueuedConnection)
-        splitter = QSplitter(Qt.Orientation.Vertical)
-        splitter.addWidget(self.tabs)
-        splitter.addWidget(self.queue_panel)
-        splitter.setSizes([500, 220])
-        outer.addWidget(splitter)
+        self.tabs.addTab(self.queue_panel, "Transfers")
+        self.speech_settings = SpeechSettingsPanel(self.config.book_export_options())
+        self.speech_settings.saveRequested.connect(self._save_speech_settings)
+        self.voice_preview = VoicePreview(self.tasks, self.store.cache_dir, self.speech_settings)
+        self.settings_page = SettingsPage(
+            self.audiobookshelf_panel.connection_card,
+            self.speech_settings,
+            self.speech_settings.save,
+        )
+        self.settings_page.authRequested.connect(self._connect_youtube)
+        self.settings_page.disconnectRequested.connect(self._disconnect_youtube)
+        self.auth_label = self.settings_page.auth_label
+        self.connect_button = self.settings_page.connect_button
+        self.disconnect_button = self.settings_page.disconnect_button
+        self.audiobookshelf_panel.settingsRequested.connect(
+            lambda: self.tabs.setCurrentIndex(SETTINGS_PAGE)
+        )
+        self.tabs.addTab(self.settings_page, "Settings")
+        content.addWidget(self.tabs)
+        outer.addWidget(workspace, 1)
+        self.setMinimumSize(1040, 720)
         self.setCentralWidget(central)
-        self.statusBar().showMessage("Ready")
+        status_bar = self.statusBar()
+        status_bar.setSizeGripEnabled(False)
+        status_bar.hide()
+        status_bar.messageChanged.connect(lambda text: status_bar.setVisible(bool(text)))
+
+    def _is_maximized(self) -> bool:
+        return self.isMaximized() or self.isFullScreen()
+
+    def _set_chrome_maximized(self) -> None:
+        maximized = self._is_maximized()
+        self.title_bar.sync()
+        if self.window_frame.property("maximized") == maximized:
+            return
+        margin = 0 if maximized else EDGE_MARGIN
+        self._shell_layout.setContentsMargins(margin, margin, margin, margin)
+        for widget in (self.window_frame, self.sidebar):
+            widget.setProperty("maximized", maximized)
+            widget.style().unpolish(widget)
+            widget.style().polish(widget)
+
+    def changeEvent(self, event: QEvent) -> None:
+        super().changeEvent(event)
+        if event.type() == QEvent.Type.WindowStateChange and hasattr(self, "title_bar"):
+            self._set_chrome_maximized()
+
+    def _resize_edges(self, position: QPoint) -> Qt.Edge:
+        if self._is_maximized():
+            return Qt.Edge(0)
+        return edges_at(position, self.size())
+
+    def mouseMoveEvent(self, event: QMouseEvent) -> None:
+        shape = cursor_for(self._resize_edges(event.position().toPoint()))
+        if shape != self.cursor().shape():
+            self.setCursor(shape)
+        super().mouseMoveEvent(event)
+
+    def mousePressEvent(self, event: QMouseEvent) -> None:
+        edges = self._resize_edges(event.position().toPoint())
+        handle = self.windowHandle()
+        if event.button() == Qt.MouseButton.LeftButton and edges and handle is not None:
+            handle.startSystemResize(edges)
+            event.accept()
+            return
+        super().mousePressEvent(event)
 
     def _save_speech_settings(self, options: BookExportOptions) -> None:
         options.validate()
+        self.config.book_tts_announce = options.announce
+        self.config.book_announce_chapters = options.announce_chapters
+        self.config.book_chapter_template = options.chapter_template
         self.config.book_tts_template = options.template
         self.config.book_tts_voice = options.voice
         self.config.book_tts_rate = options.rate
         snapshot = replace(self.config)
 
         def saved(_value: object) -> None:
-            self.speech_settings.status.setText(
+            self.speech_settings.set_status(
                 "Settings saved"
                 if self.speech_settings.options == options
                 else "Settings saved; newer changes remain unsaved"
@@ -193,20 +320,20 @@ class MainWindow(QMainWindow):
             lambda: self.store.save(snapshot),
             saved,
             "Saving speech settings…",
-            lambda message: self.speech_settings.status.setText(message),
+            self.speech_settings.set_status,
             key="settings",
         )
 
     def _youtube_tab(self) -> QWidget:
         self.browser = BrowserPanel()
-        self.browser.authRequested.connect(self._connect_youtube)
-        self.browser.disconnectRequested.connect(self._disconnect_youtube)
         self.browser.libraryRequested.connect(self._load_library)
         self.browser.backRequested.connect(self._browser_go_back)
         self.browser.forwardRequested.connect(self._browser_go_forward)
         self.browser.searchRequested.connect(self._search)
         self.browser.downloadRequested.connect(self._download_selected)
-        self.browser.playlistDownloadRequested.connect(self._download_current_playlist)
+        self.browser.pendingChanged.connect(self._update_actions)
+        self.browser.playlistAddRequested.connect(self._add_playlist_to_send_list)
+        self.browser.settingsRequested.connect(lambda: self.tabs.setCurrentIndex(SETTINGS_PAGE))
         self.browser.contextRequested.connect(self._results_context_menu)
         self.browser.activated.connect(self._result_double_clicked)
         self.browser.selectionChanged.connect(self._update_actions)
@@ -216,39 +343,43 @@ class MainWindow(QMainWindow):
         self.browser_forward = self.browser.browser_forward
         self.search_edit = self.browser.search_edit
         self.search_type = self.browser.search_type
-        self.auth_label = self.browser.auth_label
-        self.connect_button = self.browser.connect_button
-        self.disconnect_button = self.browser.disconnect_button
         self.library_button = self.browser.library_button
         self.download_button = self.browser.download_button
-        self.download_playlist_button = self.browser.download_playlist_button
-        self.destination_label = self.browser.destination_label
         return self.browser
 
     def _device_tab(self) -> QWidget:
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        top = QHBoxLayout()
-        self.device_combo = QComboBox()
+        page = PageTemplate("Shokz files")
+        self.device_combo = RoundedComboBox()
         self.device_combo.currentIndexChanged.connect(self._device_selected)
-        manual = QPushButton("Select device folder")
+        manual = QPushButton("Browse…")
+        manual.setIcon(icon("folder"))
+        role(manual, "quiet")
+        manual.setToolTip("Select the mounted device folder manually")
         self.manual_device_button = manual
         manual.clicked.connect(self._select_manual_device)
-        self.storage_label = QLabel("No Shokz connected")
-        top.addWidget(QLabel("Device:"))
-        top.addWidget(self.device_combo, 1)
-        top.addWidget(manual)
-        top.addWidget(self.storage_label)
-        layout.addLayout(top)
-        location = QHBoxLayout()
-        self.folder_back = QPushButton("<")
-        self.folder_back.setFixedWidth(34)
+        self.device_combo.setAccessibleName("Shokz device")
+        self.device_combo.setMinimumWidth(180)
+        page.header.addWidget(manual)
+        self.folder_label = page.subtitle
+        self.folder_label.clear()
+        # The device selector right below already shows the path, so this line counts items.
+        location = page.controls
+        location.addWidget(self.device_combo)
+        self.path_edit = QLineEdit()
+        self.path_edit.setReadOnly(True)
+        self.path_edit.setAccessibleName("Current device folder")
+        self.path_edit.setPlaceholderText("No folder selected")
+        location.addWidget(self.path_edit, 1)
+        self.folder_back = QPushButton()
+        self.folder_back.setIcon(icon("back"))
+        self.folder_back.setFixedWidth(36)
         self.folder_back.setAccessibleName("Previous device folder")
         self.folder_back.setToolTip("Go back to the previously visited folder")
         self.folder_back.setEnabled(False)
         self.folder_back.clicked.connect(self._folder_go_back)
-        self.folder_forward = QPushButton(">")
-        self.folder_forward.setFixedWidth(34)
+        self.folder_forward = QPushButton()
+        self.folder_forward.setIcon(icon("forward"))
+        self.folder_forward.setFixedWidth(36)
         self.folder_forward.setAccessibleName("Next device folder")
         self.folder_forward.setToolTip("Go forward to the next visited folder")
         self.folder_forward.setEnabled(False)
@@ -256,13 +387,21 @@ class MainWindow(QMainWindow):
         location.addWidget(self.folder_back)
         location.addWidget(self.folder_forward)
         self.device_root_button = QPushButton("Device root")
+        self.device_root_button.setToolTip("Go back to the device's top-level folders")
+        self.device_root_button.setFocusPolicy(Qt.FocusPolicy.TabFocus)
         self.device_root_button.clicked.connect(self._go_device_root)
         location.addWidget(self.device_root_button)
-        self.folder_label = QLabel("No folder selected")
-        self.folder_label.setWordWrap(True)
-        location.addWidget(self.folder_label, 1)
-        layout.addLayout(location)
+        self.files_filter_button = QPushButton()
+        self.files_filter_button.setIcon(icon("filter"))
+        self.files_filter_button.setFixedWidth(36)
+        self.files_filter_button.setToolTip("Filter files")
+        self.files_filter_button.setAccessibleName("Filter files")
+        location.addWidget(self.files_filter_button)
         self.files = DeviceFileTable(0, 3)
+        self.files_empty_state = TableEmptyState(
+            self.files,
+            "Connect your Shokz\nChoose a mounted device folder to manage its MP3 files.",
+        )
         self.files.setHorizontalHeaderLabels(["Name", "Type", "Size"])
         self.files.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.files.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -281,34 +420,16 @@ class MainWindow(QMainWindow):
         files_header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
         files_header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         self.file_filters = ColumnFilters(self.files, (0, 1))
+        library_rows(self.files, book=True)
+        files_header.hide()
+        filter_menu = QMenu(self.files_filter_button)
+        filter_menu.addAction("Filter name…", lambda: self.file_filters.edit(0))
+        filter_menu.addAction("Filter type…", lambda: self.file_filters.edit(1))
+        filter_menu.addAction("Clear filters", self.file_filters.clear)
+        self.files_filter_button.setMenu(filter_menu)
         self.files.doubleClicked.connect(self._open_folder)
         self.files.itemSelectionChanged.connect(self._update_actions)
-        layout.addWidget(self.files)
-        actions = QHBoxLayout()
-        self.file_buttons: dict[str, QPushButton] = {}
-        for label, handler in (
-            ("New folder", self._new_folder),
-            ("Rename", self._rename),
-            ("Move selected…", self._move_selected),
-            ("Delete", self._delete),
-            ("Add local MP3", self._add_local),
-            ("Change download folder…", self._select_destination),
-        ):
-            button = QPushButton(label)
-            button.clicked.connect(handler)
-            self.file_buttons[label] = button
-            actions.addWidget(button)
-        self.resume_button = QPushButton("Resume interrupted copies")
-        self.resume_button.clicked.connect(self._resume_transfers)
-        self.stop_device_button = QPushButton("Cancel operation")
-        self.stop_device_button.clicked.connect(self._device_cancel.set)
-        controls = QHBoxLayout()
-        controls.addWidget(self.resume_button)
-        controls.addWidget(self.stop_device_button)
-        controls.addStretch()
-        actions.addStretch()
-        layout.addLayout(actions)
-        layout.addLayout(controls)
+        page.content.addWidget(self.files)
         device_activity = QHBoxLayout()
         self.device_operation_label = QLabel("Device operation: idle")
         self.device_operation_label.setWordWrap(True)
@@ -317,11 +438,57 @@ class MainWindow(QMainWindow):
         self.device_operation_progress.setRange(0, 100)
         self.device_operation_progress.setValue(0)
         self.device_operation_progress.setVisible(False)
+        role(self.device_operation_label, "muted")
+        self.device_operation_label.setVisible(False)
         device_activity.addWidget(self.device_operation_label)
         device_activity.addWidget(self.device_operation_progress)
         device_activity.addStretch()
-        layout.addLayout(device_activity)
-        return widget
+        page.footer.addLayout(device_activity, 1)
+        page.footer.addLayout(self._file_toolbar())
+        return page
+
+    def _file_toolbar(self) -> QHBoxLayout:
+        """Compact file actions; rarely used device tools live in the overflow menu."""
+        toolbar = QHBoxLayout()
+        toolbar.setSpacing(4)
+        self.file_buttons: dict[str, QPushButton] = {}
+        for label, glyph, handler in (
+            ("New folder", "plus", self._new_folder),
+            ("Rename", None, self._rename),
+            ("Move selected…", None, self._move_selected),
+            ("Delete", None, self._delete),
+        ):
+            button = QPushButton(label.replace(" selected", ""))
+            if glyph:
+                button.setIcon(icon(glyph))
+            button.setToolTip(label.removesuffix("…"))
+            button.clicked.connect(handler)
+            role(button, "danger" if label == "Delete" else "quiet")
+            self.file_buttons[label] = button
+            toolbar.addWidget(button)
+        add = QPushButton("Add MP3")
+        add.setToolTip("Copy local MP3 files to this folder without re-encoding")
+        role(add, "primary")
+        add.setIcon(icon("plus", ON_ACCENT))
+        add.clicked.connect(self._add_local)
+        self.file_buttons["Add local MP3"] = add
+        toolbar.addWidget(add)
+        more = QPushButton()
+        more.setIcon(icon("more"))
+        more.setFixedWidth(36)
+        more.setToolTip("More device actions")
+        more.setAccessibleName("More device actions")
+        role(more, "quiet")
+        menu = QMenu(more)
+        self.resume_button = QAction("Resume interrupted copies", menu)
+        self.resume_button.triggered.connect(self._resume_transfers)
+        self.stop_device_button = QAction("Cancel operation", menu)
+        self.stop_device_button.triggered.connect(self._device_cancel.set)
+        menu.addAction(self.resume_button)
+        menu.addAction(self.stop_device_button)
+        more.setMenu(menu)
+        toolbar.addWidget(more)
+        return toolbar
 
     def _run(
         self,
@@ -337,7 +504,7 @@ class MainWindow(QMainWindow):
         self.statusBar().showMessage(message)
 
         def completed(value: object) -> None:
-            self.statusBar().showMessage("Ready")
+            self.statusBar().clearMessage()
             success(value)
 
         self.tasks.start(function, completed, failure or self._show_error, key=key)
@@ -351,6 +518,13 @@ class MainWindow(QMainWindow):
             for job in queue.jobs.values()
         )
 
+    def _at_device_root(self) -> bool:
+        return (
+            self.device is not None
+            and self.current_folder is not None
+            and self.current_folder == self.device.root
+        )
+
     def _update_actions(self) -> None:
         if not hasattr(self, "file_buttons"):
             return
@@ -358,10 +532,7 @@ class MainWindow(QMainWindow):
         writable = ready and not self._device_busy
         paths = self._selected_paths()
         editable = writable and not self._reserved_paths(paths)
-        self.download_button.setEnabled(
-            ready and any(isinstance(item, Track) for item in self._selected_result_objects())
-        )
-        self.download_playlist_button.setEnabled(ready and self.browser_page.playlist is not None)
+        self.download_button.setEnabled(ready and bool(self.browser.pending))
         for label, button in self.file_buttons.items():
             enabled = writable
             if label == "Rename":
@@ -369,6 +540,8 @@ class MainWindow(QMainWindow):
             elif label in {"Move selected…", "Delete"}:
                 enabled = editable and bool(paths)
             button.setEnabled(enabled)
+            if label == "New folder":
+                button.setVisible(self._at_device_root())
         self.resume_button.setEnabled(writable)
         self.stop_device_button.setEnabled(self._device_busy and not self._closing)
         self.device_combo.setEnabled(not self._device_busy)
@@ -419,49 +592,36 @@ class MainWindow(QMainWindow):
 
     def _show_error(self, message: str) -> None:
         self.statusBar().showMessage("Operation failed")
-        QMessageBox.warning(self, "Shokz Refill", message or "The operation failed")
+        MessageDialog.warning(self, "Shokz Refill", message or "The operation failed")
 
     def _refresh_auth_label(self) -> None:
         if self.youtube.connection_verified:
-            label = "YouTube Music: connected"
+            label = "Connected"
         elif self.youtube.authenticated:
-            label = "YouTube Music: saved session (not yet verified)"
+            label = "Saved session (not yet verified)"
         else:
-            label = "YouTube Music: not connected"
+            label = "Not connected"
         self.auth_label.setText(label)
         self.connect_button.setEnabled(True)
         self.disconnect_button.setEnabled(self.youtube.authenticated)
         self.library_button.setEnabled(self.youtube.authenticated)
 
     def _connect_youtube(self) -> None:
-        if self.tasks.active("auth"):
+        if any(runner.active("auth") for runner in self.findChildren(TaskRunner)):
             return
-        dialog = AuthDialog(self)
-        if dialog.exec() != QDialog.DialogCode.Accepted:
-            return
-        raw = dialog.headers.toPlainText()
         self.tasks.cancel("browser")
-        self.connect_button.setEnabled(False)
-        self.disconnect_button.setEnabled(False)
-
-        def failed(message: str) -> None:
+        dialog = AuthDialog(self.youtube, self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            self._connected(dialog.account_name)
+        else:
             self._refresh_auth_label()
-            self._show_error(message)
-
-        self._run(
-            lambda: self.youtube.connect_headers(raw),
-            self._connected,
-            "Validating account…",
-            failed,
-            key="auth",
-        )
 
     def _connected(self, name: object) -> None:
         self._refresh_auth_label()
         self.statusBar().showMessage(f"YouTube Music connected: {name}")
 
     def _disconnect_youtube(self) -> None:
-        if self.tasks.active("auth"):
+        if any(runner.active("auth") for runner in self.findChildren(TaskRunner)):
             return
         self.tasks.cancel("browser")
         self.connect_button.setEnabled(False)
@@ -505,6 +665,25 @@ class MainWindow(QMainWindow):
             key="browser",
         )
 
+    def connect_saved_accounts(self) -> None:
+        """Sign in to remembered accounts at launch; failures stay quiet and reach the status."""
+        if self.youtube.authenticated:
+            self.tabs.setCurrentIndex(0)
+            self._run(
+                self.youtube.library_playlists,
+                self._library_loaded,
+                "Loading your playlists…",
+                failure=self._startup_library_failed,
+                key="browser",
+            )
+        credentials = self.audiobookshelf_panel.credentials()
+        if credentials.server and credentials.username and credentials.password:
+            self.audiobookshelf.connect_server()
+
+    def _startup_library_failed(self, message: str) -> None:
+        self._refresh_auth_label()
+        self.statusBar().showMessage(message or "Could not load your YouTube Music playlists")
+
     def _library_failed(self, message: str) -> None:
         self._refresh_auth_label()
         self._show_error(message)
@@ -522,13 +701,11 @@ class MainWindow(QMainWindow):
 
     def _set_browser_page(self, page: BrowserPage) -> None:
         self.browser_page = page
+        self.browser.current_playlist = page.playlist
         self.browser_title.setText(f"{page.title} — {len(page.items)} item(s)")
         self.browser_back.setEnabled(self.browser_history_index > 0)
         self.browser_forward.setEnabled(
             0 <= self.browser_history_index < len(self.browser_history) - 1
-        )
-        self.download_playlist_button.setEnabled(
-            page.playlist is not None and self.device is not None
         )
         self._show_results(page.items)
         self._render_device()
@@ -584,90 +761,74 @@ class MainWindow(QMainWindow):
     def _result_double_clicked(self, row: int, _column: int) -> None:
         table_item = self.results.item(row, 0)
         item = table_item.data(Qt.ItemDataRole.UserRole) if table_item else None
-        if not isinstance(item, (Track, Playlist)):
-            return
         if isinstance(item, Playlist):
             self._open_playlist(item)
-        elif self.browser_page.playlist is not None:
-            self._prepare_playlist_download(self.browser_page.playlist, [item])
-        else:
-            self._download_tracks([item])
+        elif isinstance(item, Track):
+            self.browser.toggle_pending(item)
 
-    def _download_selected(self) -> None:
-        tracks = [item for item in self._selected_result_objects() if isinstance(item, Track)]
-        if not tracks:
-            self._show_error("Select one or more songs first")
-            return
-        if self.browser_page.playlist is not None:
-            self._prepare_playlist_download(self.browser_page.playlist, tracks)
-            return
-        self._download_tracks(tracks)
-
-    def _download_tracks(self, tracks: list[Track]) -> None:
-        if not self.device:
-            self._show_error("No connected Shokz device is selected")
-            return
-        device = self.device
-        if self.destination is not None and self.destination != device.root:
-            self._enqueue_tracks(tracks, self.destination, device)
-            return
-        dialog = DeviceFolderDialog(
-            device,
-            [],
-            self,
-            title="Choose download folder",
-            allow_root=False,
-            allow_create=True,
-        )
-        if dialog.exec() != QDialog.DialogCode.Accepted or dialog.destination is None:
-            return
-        self.destination = dialog.destination
-        self.config.destination_relative = str(dialog.destination.relative_to(device.root))
-        self._render_device()
-        self._refresh_files()
-        self._enqueue_tracks(tracks, dialog.destination, device)
-
-    def _enqueue_tracks(self, tracks: list[Track], destination: Path, device: Device) -> None:
-        self.queue.enqueue(tracks, destination, device.root)
-
-    def _download_current_playlist(self) -> None:
-        playlist = self.browser_page.playlist
-        if playlist is not None:
-            tracks = [item for item in self.browser_page.items if isinstance(item, Track)]
-            self._prepare_playlist_download(playlist, tracks)
-
-    def _download_playlist(self, playlist: Playlist) -> None:
-        self._run(
-            lambda: self.youtube.playlist_tracks(playlist.playlist_id),
-            lambda objects: self._prepare_playlist_download(
-                playlist,
+    def _add_playlist_to_send_list(self, playlist: Playlist) -> None:
+        def added(objects: object) -> None:
+            tracks = (
                 [item for item in objects if isinstance(item, Track)]
                 if isinstance(objects, list)
-                else [],
-            ),
+                else []
+            )
+            if not tracks:
+                self._show_error("This playlist has no downloadable tracks")
+                return
+            self.browser.add_pending(tracks, origin=playlist)
+            self.statusBar().showMessage(f"Added {len(tracks)} song(s) from {playlist.title}")
+
+        self._run(
+            lambda: self.youtube.playlist_tracks(playlist.playlist_id),
+            added,
             f"Loading {playlist.title}…",
         )
 
-    def _prepare_playlist_download(self, playlist: Playlist, tracks: list[Track]) -> None:
-        if not tracks:
-            self._show_error("This playlist has no downloadable tracks")
+    def _download_selected(self) -> None:
+        """Open the transfer assistant for the send list."""
+        pending = list(self.browser.pending)
+        if not pending:
+            self._show_error("Add songs to the send list with + first")
             return
         if not self.device:
             self._show_error("No connected Shokz device is selected")
             return
         device = self.device
-        folder_name = playlist_folder_name(playlist.title)
+        origins = {
+            origin.playlist_id if origin else ""
+            for origin in (self.browser.pending_origin.get(t.video_id) for t in pending)
+        }
+        origin = self.browser.pending_origin.get(pending[0].video_id)
+        suggested = playlist_folder_name(origin.title) if origin and len(origins) == 1 else ""
+        wizard = TransferWizard(pending, device, self, suggested=suggested, last=self.destination)
+        if wizard.exec() != QDialog.DialogCode.Accepted or wizard.destination is None:
+            return
+        kept = {track.video_id for track in wizard.tracks}
+        self.browser.remove_pending([track for track in pending if track.video_id not in kept])
+        self._set_destination(wizard.destination)
+        self._enqueue_tracks(wizard.tracks, wizard.destination, device)
 
-        def prepare() -> Path:
-            return DeviceFileService(device.root).ensure_folder(device.root, folder_name)
+    def _enqueue_tracks(self, tracks: list[Track], destination: Path, device: Device) -> None:
+        # Device I/O (recreating a vanished download folder, reading its numbering) stays off
+        # the UI thread.
+        def prepare() -> tuple[Path, int]:
+            folder = destination
+            if not folder.exists() and folder.parent == device.root:
+                folder = DeviceFileService(device.root).ensure_folder(device.root, folder.name)
+            return folder, next_position(folder)
 
-        def enqueue(value: object) -> None:
-            if isinstance(value, Path):
-                self.queue.enqueue(tracks, value, device.root)
-                self.statusBar().showMessage(f"Queued {len(tracks)} track(s) in {value.name}")
-                self._refresh_files()
+        self._run(
+            prepare,
+            lambda value: self._enqueue_from(tracks, device, value),
+            "Preparing the download folder…",
+        )
 
-        self._run(prepare, enqueue, f"Preparing folder {folder_name}…")
+    def _enqueue_from(self, tracks: list[Track], device: Device, value: object) -> None:
+        if isinstance(value, tuple):
+            folder, start = value
+            self.queue.enqueue(tracks, folder, device.root, start=start)
+            self.browser.discard_pending(tracks)
 
     def _results_context_menu(self, position: Any) -> None:
         row = self.results.rowAt(position.y())
@@ -684,16 +845,16 @@ class MainWindow(QMainWindow):
         tracks = [item for item in selected if isinstance(item, Track)]
         menu = QMenu(self)
         open_action = menu.addAction("Open playlist") if playlist else None
-        playlist_action = (
-            menu.addAction("Download playlist to automatic folder")
-            if playlist or self.browser_page.playlist
-            else None
-        )
-        tracks_action = menu.addAction("Download selected track(s)") if tracks else None
-        if playlist_action is not None:
-            playlist_action.setEnabled(self.device is not None)
-        if tracks_action is not None:
-            tracks_action.setEnabled(self.device is not None)
+        add_playlist_action = menu.addAction("Add playlist to send list") if playlist else None
+        add_action = remove_action = all_action = None
+        if any(not self.browser.in_pending(track) for track in tracks):
+            add_action = menu.addAction("Add to send list")
+        if any(self.browser.in_pending(track) for track in tracks):
+            remove_action = menu.addAction("Remove from send list")
+        if self.browser_page.playlist is not None and any(
+            isinstance(item, Track) for item in self.browser_page.items
+        ):
+            all_action = menu.addAction("Add all songs to send list")
         select_all_action = menu.addAction("Select all")
         back_action = menu.addAction("Back") if self.browser_history_index > 0 else None
         forward_action = (
@@ -702,15 +863,20 @@ class MainWindow(QMainWindow):
             else None
         )
         chosen = menu.exec(self.results.viewport().mapToGlobal(position))
+        if chosen is None:
+            return
         if open_action is not None and chosen == open_action:
             self._open_selected_playlist()
-        elif playlist_action is not None and chosen == playlist_action:
-            if playlist:
-                self._download_playlist(playlist)
-            else:
-                self._download_current_playlist()
-        elif tracks_action is not None and chosen == tracks_action:
-            self._download_selected()
+        elif add_playlist_action is not None and playlist and chosen == add_playlist_action:
+            self._add_playlist_to_send_list(playlist)
+        elif add_action is not None and chosen == add_action:
+            self.browser.add_pending(tracks)
+        elif remove_action is not None and chosen == remove_action:
+            self.browser.remove_pending(tracks)
+        elif all_action is not None and chosen == all_action:
+            self.browser.add_pending(
+                [item for item in self.browser_page.items if isinstance(item, Track)]
+            )
         elif chosen == select_all_action:
             self.results.selectAll()
         elif back_action is not None and chosen == back_action:
@@ -740,7 +906,10 @@ class MainWindow(QMainWindow):
         self.device_combo.addItem("No device selected", None)
         selected_index = 0
         for device in devices:
-            self.device_combo.addItem(f"{device.name} — {device.root}", device)
+            self.device_combo.addItem(device.name, device)
+            self.device_combo.setItemData(
+                self.device_combo.count() - 1, str(device.root), Qt.ItemDataRole.ToolTipRole
+            )
             if current_root == device.root:
                 selected_index = self.device_combo.count() - 1
         self.device_combo.setCurrentIndex(selected_index)
@@ -813,37 +982,33 @@ class MainWindow(QMainWindow):
         self._update_devices([device])
 
     def _render_device(self) -> None:
+        self.sidebar.set_device(self.device)
+        self._update_path_bar()
+        self.files_empty_state.set_text(
+            "This folder is empty\nAdd local MP3 files or send audio from your libraries."
+            if self.device
+            else "Connect your Shokz\nChoose a mounted device folder to manage its MP3 files."
+        )
         self._update_actions()
         self.audiobookshelf.update_device()
-        self.folder_label.setText(
-            str(self.current_folder) if self.current_folder else "No folder selected"
-        )
+        if not self.current_folder:
+            self.folder_label.clear()
         if not self.device:
             self.folder_back.setEnabled(False)
             self.folder_forward.setEnabled(False)
-            self.storage_label.setText("No Shokz connected")
-            self.destination_label.setText("Destination: select a Shokz folder")
             self.files.setRowCount(0)
             return
-        gib = 1024**3
-        self.storage_label.setText(
-            f"{self.device.free / gib:.1f} GiB free / {self.device.total / gib:.1f} GiB"
-        )
         self.folder_back.setEnabled(self.folder_history_index > 0)
         self.folder_forward.setEnabled(
             0 <= self.folder_history_index < len(self.folder_history) - 1
         )
-        if self.browser_page.playlist is not None:
-            target = playlist_folder_name(self.browser_page.playlist.title)
-            self.destination_label.setText(f"Playlist folder: {target} (automatic)")
-        else:
-            self.destination_label.setText(
-                f"Download folder: {self.destination}"
-                if self.destination
-                else "Download folder: choose a folder when downloading"
-            )
+
+    def _update_path_bar(self) -> None:
+        self.path_edit.setText(str(self.current_folder) if self.current_folder else "")
+        self.path_edit.setCursorPosition(0)
 
     def _refresh_files(self) -> None:
+        self._update_path_bar()
         if not self.device or not self.current_folder or self._closing:
             return
         root, folder = self.device.root, self.current_folder
@@ -865,6 +1030,7 @@ class MainWindow(QMainWindow):
         self._run(read, show, "Reading device…", key="files")
 
     def _show_files(self, entries: list[tuple[Path, bool, int]]) -> None:
+        self.folder_label.setText(f"{len(entries)} item(s)")
         self.file_objects = [path for path, _directory, _size in entries]
         self._file_kinds = {path: directory for path, directory, _size in entries}
         self.files.clearContents()
@@ -876,14 +1042,21 @@ class MainWindow(QMainWindow):
                 "" if directory else f"{size / (1024 * 1024):.1f} MB",
             )
             for column, text in enumerate(values):
-                self.files.setItem(row, column, QTableWidgetItem(text))
+                item = QTableWidgetItem(text)
+                if column == 0:
+                    item.setData(
+                        Qt.ItemDataRole.UserRole,
+                        LibraryEntry(path.name, values[1], "folder" if directory else "music"),
+                    )
+                    item.setToolTip(path.name)
+                self.files.setItem(row, column, item)
         self._render_device()
 
     def _selected_paths(self) -> list[Path]:
         return [
             self.file_objects[index.row()]
             for index in self.files.selectionModel().selectedRows()
-            if index.row() < len(self.file_objects)
+            if index.row() < len(self.file_objects) and not self.files.isRowHidden(index.row())
         ]
 
     def _files_context_menu(self, position: Any) -> None:
@@ -904,29 +1077,26 @@ class MainWindow(QMainWindow):
         )
         menu = QMenu(self)
         open_action = menu.addAction("Open folder") if single_folder else None
-        destination_action = (
-            menu.addAction("Use as download destination") if single_folder else None
-        )
         rename_action = menu.addAction("Rename") if len(selected) == 1 else None
         move_action = menu.addAction("Move selected…") if selected else None
         delete_action = menu.addAction("Delete") if selected else None
         if selected:
             menu.addSeparator()
-        new_folder_action = menu.addAction("New folder at device root")
-        new_folder_action.setEnabled(self.device is not None and not self._device_busy)
+        # Folders only exist at the device root, so offer creation there only.
+        new_folder_action = menu.addAction("New folder") if self._at_device_root() else None
+        if new_folder_action is not None:
+            new_folder_action.setEnabled(not self._device_busy)
         add_mp3_action = menu.addAction("Add local MP3 here")
         chosen = menu.exec(self.files.viewport().mapToGlobal(position))
         if open_action is not None and chosen == open_action:
             self._open_folder()
-        elif destination_action is not None and chosen == destination_action:
-            self._set_destination(single_folder)
         elif rename_action is not None and chosen == rename_action:
             self._rename()
         elif move_action is not None and chosen == move_action:
             self._move_selected()
         elif delete_action is not None and chosen == delete_action:
             self._delete()
-        elif chosen == new_folder_action:
+        elif new_folder_action is not None and chosen == new_folder_action:
             self._new_folder()
         elif chosen == add_mp3_action:
             self._add_local()
@@ -973,7 +1143,7 @@ class MainWindow(QMainWindow):
         if not self.device or not self.current_folder:
             self._show_error("No Shokz device selected")
             return
-        name, accepted = QInputDialog.getText(self, "New folder", "Folder name:")
+        name, accepted = InputDialog.getText(self, "New folder", "Folder name:")
         if accepted and name:
             parent = self.device.root
             self._run_device(
@@ -992,7 +1162,7 @@ class MainWindow(QMainWindow):
         if not self.device or len(selected) != 1:
             self._show_error("Select exactly one file or folder")
             return
-        name, accepted = QInputDialog.getText(self, "Rename", "New name:", text=selected[0].stem)
+        name, accepted = InputDialog.getText(self, "Rename", "New name:", text=selected[0].stem)
         if accepted and name:
             root = self.device.root
             self._run_device(
@@ -1017,13 +1187,11 @@ class MainWindow(QMainWindow):
             if includes_folders
             else ""
         )
-        if (
-            QMessageBox.question(
-                self,
-                "Delete",
-                f"Permanently delete {len(selected)} selected item(s)?{detail}",
-            )
-            != QMessageBox.StandardButton.Yes
+        if not MessageDialog.question(
+            self,
+            "Delete",
+            f"Permanently delete {len(selected)} selected item(s)?{detail}",
+            destructive=True,
         ):
             return
         root = self.device.root
@@ -1152,6 +1320,7 @@ class MainWindow(QMainWindow):
         self, message: str, *, busy: bool = False, complete: bool = False
     ) -> None:
         self.device_operation_label.setText(f"Device operation: {message}")
+        self.device_operation_label.setVisible(True)
         self.device_operation_progress.setVisible(busy or complete)
         if busy:
             self.device_operation_progress.setRange(0, 0)
@@ -1159,19 +1328,10 @@ class MainWindow(QMainWindow):
             self.device_operation_progress.setRange(0, 100)
             self.device_operation_progress.setValue(100 if complete else 0)
 
-    def _select_destination(self) -> None:
-        if self.device is None:
-            return
-        dialog = DeviceFolderDialog(self.device, [], self, allow_root=False, allow_create=True)
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            self._set_destination(dialog.destination)
-
     def _set_destination(self, folder: Path | None) -> None:
         if self.device and folder is not None and folder != self.device.root:
             self.destination = folder
             self.config.destination_relative = str(folder.relative_to(self.device.root))
-            self._render_device()
-            self.tabs.setCurrentIndex(0)
 
     def _queue_callback(self, job: DownloadJob) -> None:
         self.queueUpdated.emit(job)
@@ -1202,6 +1362,7 @@ class MainWindow(QMainWindow):
         if not self._closing:
             self._closing = True
             self.device_timer.stop()
+            self.voice_preview.stop()
             self._device_cancel.set()
             for queue in self._queues:
                 queue.shutdown()

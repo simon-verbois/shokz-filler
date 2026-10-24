@@ -1,4 +1,4 @@
-"""Native portable-build validation of offline neural voices and merged MP3 production."""
+"""Native portable-build validation of offline neural voices and ordered MP3 production."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ def speech_smoke_test() -> int:
         )
         validate_mp3(output)
         english = speech.synthesize(
-            "Test book, by Author.", root / "english.wav", "en-us", 95, lambda: False
+            "Test book, by Author.", root / "english.wav", "en-us", 100, lambda: False
         )
         if not valid_voice(english):
             raise ValueError("Bundled English voice failed")

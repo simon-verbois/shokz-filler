@@ -2,15 +2,12 @@
 
 from __future__ import annotations
 
-from dataclasses import replace
-
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
-    QComboBox,
-    QDialog,
-    QDialogButtonBox,
     QFormLayout,
+    QFrame,
+    QHBoxLayout,
     QLabel,
     QPlainTextEdit,
     QPushButton,
@@ -19,114 +16,99 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from .audiobook_models import Audiobook
-from .book_export import VOICES, BookExportOptions
-
-
-class BookExportDialog(QDialog):
-    def __init__(
-        self, book: Audiobook, defaults: BookExportOptions, parent: QWidget | None = None
-    ) -> None:
-        super().__init__(parent)
-        self.book = book
-        self.defaults = defaults
-        self.setWindowTitle("Audiobook export")
-        self.resize(520, 320)
-        layout = QVBoxLayout(self)
-        title = QLabel(f"{book.title}\n{book.author}")
-        title.setTextFormat(Qt.TextFormat.PlainText)
-        title.setWordWrap(True)
-        layout.addWidget(title)
-        explanation = QLabel(
-            "One folder and one MP3 for this book. All audio tracks are merged "
-            "in the order provided by Audiobookshelf."
-        )
-        explanation.setWordWrap(True)
-        layout.addWidget(explanation)
-        self.announcement = QCheckBox("Read the book title and author before the book")
-        self.announcement.setChecked(True)
-        self.announcement.toggled.connect(self._preview)
-        layout.addWidget(self.announcement)
-        self.preview = QLabel()
-        self.preview.setTextFormat(Qt.TextFormat.PlainText)
-        self.preview.setWordWrap(True)
-        layout.addWidget(self.preview)
-        note = QLabel(
-            "The voice and announcement text can be changed in Settings. "
-            "Existing exports are preserved; a different export gets a new folder."
-        )
-        note.setWordWrap(True)
-        layout.addWidget(note)
-        self.buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
-        )
-        self.buttons.button(QDialogButtonBox.StandardButton.Ok).setText("Queue book")
-        self.buttons.accepted.connect(self.accept)
-        self.buttons.button(QDialogButtonBox.StandardButton.Cancel).setText("Skip book")
-        self.buttons.rejected.connect(self.reject)
-        layout.addWidget(self.buttons)
-        self._preview()
-
-    @property
-    def options(self) -> BookExportOptions:
-        return replace(self.defaults, announce=self.announcement.isChecked())
-
-    def _preview(self) -> None:
-        try:
-            text = self.options.text(self.book.title, self.book.author)
-            self.preview.setText(
-                f"Announcement: “{text}”\nLocal Piper male voice. "
-                "Then 3 seconds of silence, then the book."
-                if self.options.announce
-                else "The MP3 starts directly with the book."
-            )
-            self.buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(True)
-        except ValueError as exc:
-            self.preview.setText(str(exc))
-            self.buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(False)
+from .book_export import SILENCE_SECONDS, VOICES, BookExportOptions
+from .icons import icon
+from .theme import ON_ACCENT, RoundedComboBox, role
 
 
 class SpeechSettingsPanel(QWidget):
     saveRequested = Signal(object)
+    previewRequested = Signal(object)
 
     def __init__(self, settings: BookExportOptions) -> None:
         super().__init__()
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
         introduction = QLabel(
-            "Piper generates audiobook announcements locally with bundled neural male voices. "
+            "Piper generates audiobook announcements locally with bundled neural voices. "
             "Generated voices are cached locally and inserted into "
-            "the single MP3, followed by 3 seconds of silence."
+            "the spoken lead-in of each chapter file, followed by "
+            f"{SILENCE_SECONDS} seconds of silence."
         )
         introduction.setWordWrap(True)
+        role(introduction, "muted")
         layout.addWidget(introduction)
-        form = QFormLayout()
+        card = QFrame()
+        role(card, "card")
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(20, 16, 20, 16)
+        card_layout.setSpacing(10)
+        self.announce = QCheckBox("Announce the first chapter")
+        self.announce.setChecked(settings.announce)
+        self.announce.setToolTip("Spoken before chapter 1; when off, it starts directly")
+        card_layout.addWidget(self.announce)
         self.template = QPlainTextEdit(settings.template)
-        self.template.setAccessibleName("Audiobook announcement template")
-        self.template.setMaximumHeight(150)
-        form.addRow("Announcement text", self.template)
-        self.voice = QComboBox()
+        self.template.setAccessibleName("First chapter announcement")
+        self.template.setFixedHeight(64)
+        card_layout.addWidget(self.template)
+        self.announce_chapters = QCheckBox("Announce the other chapters")
+        self.announce_chapters.setChecked(settings.announce_chapters)
+        self.announce_chapters.setToolTip("Spoken before every chapter after the first")
+        card_layout.addWidget(self.announce_chapters)
+        self.chapter_template = QPlainTextEdit(settings.chapter_template)
+        self.chapter_template.setAccessibleName("Other chapters announcement")
+        self.chapter_template.setFixedHeight(64)
+        card_layout.addWidget(self.chapter_template)
+        form = QFormLayout()
+        form.setHorizontalSpacing(20)
+        form.setVerticalSpacing(12)
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+        self.voice = RoundedComboBox()
         for code, label in VOICES.items():
             self.voice.addItem(label, code)
         self.voice.setCurrentIndex(self.voice.findData(settings.voice))
-        form.addRow("Voice", self.voice)
+        voice_row = QHBoxLayout()
+        voice_row.setSpacing(8)
+        voice_row.addWidget(self.voice, 1)
+        self.preview_button = QPushButton("Preview")
+        self.preview_button.setIcon(icon("music"))
+        self.preview_button.setToolTip("Hear this voice, speed and announcement text")
+        self.preview_button.clicked.connect(self._request_preview)
+        voice_row.addWidget(self.preview_button)
+        form.addRow("Voice", voice_row)
         self.rate = QSpinBox()
         self.rate.setRange(60, 120)
         self.rate.setSuffix(" %")
         self.rate.setValue(settings.rate)
+        self.rate.setFixedWidth(110)
         form.addRow("Speech rate", self.rate)
-        layout.addLayout(form)
-        layout.addWidget(QLabel("Variables: $book_name, $author_name. Use $$ for a literal $."))
+        form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        card_layout.addLayout(form)
+        variables = QLabel(
+            "Variables: $book_name, $author_name, $chapter_number, $chapter_title. "
+            "Use $$ for a literal $."
+        )
+        variables.setWordWrap(True)
+        role(variables, "muted")
+        card_layout.addWidget(variables)
         self.preview = QLabel()
         self.preview.setTextFormat(Qt.TextFormat.PlainText)
         self.preview.setWordWrap(True)
-        layout.addWidget(self.preview)
+        card_layout.addWidget(self.preview)
+        layout.addWidget(card)
         self.status = QLabel()
         self.status.setWordWrap(True)
+        self._set_status("")
         layout.addWidget(self.status)
+        # Not laid out here: the Settings page floats it over the page's bottom-right corner.
         self.save = QPushButton("Save settings")
+        role(self.save, "primary")
+        self.save.setIcon(icon("check", ON_ACCENT))
         self.save.clicked.connect(self._save)
-        layout.addWidget(self.save)
-        layout.addStretch()
+        self.announce.toggled.connect(self._preview)
+        self.announce_chapters.toggled.connect(self._preview)
+        self.chapter_template.textChanged.connect(self._preview)
         self.template.textChanged.connect(self._preview)
         self.voice.currentIndexChanged.connect(self._preview)
         self.rate.valueChanged.connect(self._preview)
@@ -135,24 +117,64 @@ class SpeechSettingsPanel(QWidget):
     @property
     def options(self) -> BookExportOptions:
         return BookExportOptions(
-            True, self.template.toPlainText(), str(self.voice.currentData()), self.rate.value()
+            self.announce.isChecked(),
+            self.template.toPlainText(),
+            str(self.voice.currentData()),
+            self.rate.value(),
+            self.announce_chapters.isChecked(),
+            self.chapter_template.toPlainText(),
         )
 
     def _preview(self) -> None:
         try:
-            text = self.options.text("Les Misérables", "Victor Hugo")
-            self.preview.setText(f"Example: “{text}” → 3 seconds of silence → book")
+            options = self.options
+            speaks = options.announce or options.announce_chapters
+            self.template.setEnabled(options.announce)
+            self.chapter_template.setEnabled(options.announce_chapters)
+            for control in (self.voice, self.rate, self.preview_button):
+                control.setEnabled(speaks)
+            if not speaks:
+                self.preview.setText("Each MP3 starts directly with the chapter.")
+                self.save.setEnabled(True)
+                self._set_status("")
+                return
+            lines = []
+            for number, title in ((1, "Prologue"), (2, "La rencontre")):
+                text = options.part_text(number, "Les Misérables", "Victor Hugo", title)
+                lines.append(f"Chapter {number}: “{text}”" if text else f"Chapter {number}: —")
+            self.preview.setText(
+                "\n".join(lines) + f"\nEach is followed by {SILENCE_SECONDS} seconds of silence."
+            )
             self.save.setEnabled(True)
-            self.status.clear()
+            self._set_status("")
         except ValueError as exc:
             self.preview.clear()
-            self.status.setText(str(exc))
+            self._set_status(str(exc))
             self.save.setEnabled(False)
+
+    def _request_preview(self) -> None:
+        try:
+            self.options.validate()
+        except ValueError as exc:
+            self._set_status(str(exc))
+            return
+        self.previewRequested.emit(self.options)
+
+    def set_preview_state(self, text: str) -> None:
+        """Reflect synthesis or playback; the button doubles as Stop."""
+        self.preview_button.setText(text)
+
+    def set_status(self, text: str) -> None:
+        self._set_status(text)
+
+    def _set_status(self, text: str) -> None:
+        self.status.setText(text)
+        self.status.setVisible(bool(text))
 
     def _save(self) -> None:
         try:
             self.options.validate()
-            self.status.setText("Saving settings…")
+            self._set_status("Saving settings…")
             self.saveRequested.emit(self.options)
         except ValueError as exc:
-            self.status.setText(str(exc))
+            self._set_status(str(exc))

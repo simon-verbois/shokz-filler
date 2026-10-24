@@ -16,11 +16,13 @@ from .media import AudioConverter, DownloadCancelled, MediaDownloader
 from .metadata import read_identity
 from .models import DownloadJob, JobStatus, Track
 from .naming import track_filename
+from .playback_order import OrderGate, next_position, ordered_name
 
 MAX_CONCURRENT_DOWNLOADS = 3
 MAX_CONCURRENT_CONVERSIONS = 2
 MAX_CONCURRENT_TRANSFERS = 1
 JobCallback = Callable[[DownloadJob], None]
+_TERMINAL = {JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.COMPLETE, JobStatus.SKIPPED}
 
 
 class Downloader(Protocol):
@@ -109,15 +111,32 @@ class DownloadQueue:
         self._futures: dict[str, set[Future[None]]] = {}
         self._lock = threading.RLock()
         self._closed = False
+        self._gates: dict[str, OrderGate] = {}
 
     def enqueue(
-        self, tracks: list[Track], destination: Path, device_root: Path
+        self,
+        tracks: list[Track],
+        destination: Path,
+        device_root: Path,
+        *,
+        ordered: bool = True,
+        start: int | None = None,
     ) -> list[DownloadJob]:
+        """Queue tracks; `ordered` numbers the files and publishes them in the given order.
+
+        `start` is the first playback position; callers on the UI thread compute it in a worker
+        (`next_position` lists the device folder) and pass it in.
+        """
         if self._closed:
             raise RuntimeError("The download queue is shutting down")
         created: list[DownloadJob] = []
-        for track in tracks:
+        first = (start if start is not None else next_position(destination)) if ordered else 0
+        gate = OrderGate(first) if ordered else None
+        for offset, track in enumerate(tracks):
             job = DownloadJob(uuid.uuid4().hex, track, destination, device_root=device_root)
+            if gate is not None:
+                job.position = first + offset
+                self._gates[job.job_id] = gate
             duplicate = any(
                 item.track.video_id == track.video_id
                 and item.destination == destination
@@ -147,6 +166,10 @@ class DownloadQueue:
             job.status = status
         if progress is not None:
             job.progress = progress
+        if job.status in _TERMINAL and job.position is not None:
+            gate = self._gates.get(job.job_id)
+            if gate is not None:
+                gate.skip(job.position)
         self.callback(replace(job))
 
     def _track_future(self, job: DownloadJob, future: Future[None]) -> None:
@@ -187,7 +210,31 @@ class DownloadQueue:
     def _submit_transfer(
         self, job: DownloadJob, device_root: Path, work: Path, cached: Path
     ) -> None:
+        gate = self._gates.get(job.job_id)
+        if gate is None or job.position is None or gate.passed(job.position):
+            self._release_transfer(job, device_root, work, cached)
+            return
+
+        def release() -> None:
+            try:
+                self._release_transfer(job, device_root, work, cached)
+            except Exception as exc:
+                self._handle_failure(job, exc)
+
+        gate.ready(job.position, release)
+
+    def _release_transfer(
+        self, job: DownloadJob, device_root: Path, work: Path, cached: Path
+    ) -> None:
         self._submit(self._transfer_executor, self._transfer_stage, job, device_root, work, cached)
+
+    @staticmethod
+    def _cached_name(job: DownloadJob) -> str:
+        title = f"{job.track.artist} - {job.track.title}"
+        if job.position is None:
+            return track_filename(job.track.artist, job.track.title)
+        # Three digits keep names sortable for any realistic playlist size.
+        return ordered_name(job.position, 999, title)
 
     @property
     def idle(self) -> bool:
@@ -252,7 +299,7 @@ class DownloadQueue:
     ) -> None:
         try:
             self._raise_if_cancelled(job)
-            cached = work / track_filename(job.track.artist, job.track.title)
+            cached = work / self._cached_name(job)
             job.cached_mp3 = self.converter.convert(
                 source,
                 cached,
@@ -334,6 +381,7 @@ class DownloadQueue:
                     continue
                 job.cancel_requested = False
                 job.error = ""
+                self._gates.pop(job.job_id, None)  # Its slot has passed; keep the numbered name.
                 self._update(job, JobStatus.QUEUED, 0)
                 self._submit_download(job, device_root)
 

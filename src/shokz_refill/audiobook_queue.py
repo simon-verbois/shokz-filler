@@ -139,7 +139,7 @@ class AudiobookQueue:
             if (
                 candidate.is_dir()
                 and pattern.fullmatch(candidate.name)
-                and self._existing(candidate, identity)
+                and self._present(candidate, {identity})
             ):
                 return candidate
         if preferred.is_dir() and not preferred.is_symlink():
@@ -177,79 +177,89 @@ class AudiobookQueue:
                         "Selected device changed or disconnected; select it again and retry"
                     )
 
-            self._update(job, JobStatus.DOWNLOADING, 0, "Reading audiobook source order")
+            self._update(job, JobStatus.DOWNLOADING, 0, "Reading audiobook chapter order")
             book = work.client.book(work.item_id)
-            part = export_plan(book)[0]
+            parts = export_plan(book)
             work.options.text(book.title, book.author)
-            self.normalizer.check_size(sum(segment.duration for segment in part.segments))
-            identity = part.source_id(
-                work.server, book, work.options.fingerprint(book.title, book.author)
-            )
+            identities = [
+                part.source_id(
+                    work.server,
+                    book,
+                    work.options.fingerprint(book.title, book.author, part.number, part.title),
+                )
+                for part in parts
+            ]
+            for part in parts:
+                self.normalizer.check_size(sum(segment.duration for segment in part.segments))
             with device_operation(cancelled):
                 check_device()
                 if not work.destination_prepared:
-                    job.destination = self._prepare_destination(root, job.destination, identity)
+                    # Parts are published in order, so the first one identifies this export.
+                    job.destination = self._prepare_destination(
+                        root, job.destination, identities[0]
+                    )
                     work.destination_prepared = True
-                if self._existing(job.destination, identity):
-                    self._update(
-                        job, JobStatus.SKIPPED, 100, "This complete audiobook is already present"
-                    )
-                    return
+                present = self._present(job.destination, set(identities))
+            pending = [
+                (part, identity)
+                for part, identity in zip(parts, identities, strict=True)
+                if identity not in present
+            ]
+            if not pending:
+                self._update(
+                    job, JobStatus.SKIPPED, 100, "This complete audiobook is already present"
+                )
+                return
             cache.mkdir(parents=True, exist_ok=True)
-            output = cache / part.filename
-            if not self._valid_cache(output, identity):
-                sources: dict[int, Path] = {}
-                for index, segment in enumerate(part.segments):
-                    source = next(
-                        source for source in book.sources if source.index == segment.source_index
-                    )
-                    sources[source.index] = self._source(
-                        job, work, source, cache, index, len(part.segments)
+            needed = sorted({s.source_index for part, _ in pending for s in part.segments})
+            sources: dict[int, Path] = {}
+            for ordinal, index in enumerate(needed):
+                source = next(source for source in book.sources if source.index == index)
+                sources[index] = self._source(job, work, source, cache, ordinal, len(needed))
+            for position, (part, identity) in enumerate(pending):
+                self._check(job)
+                base = 45 + position * 55 // len(pending)
+                span = 55 // len(pending)
+                label = f"Chapter {part.number}/{len(parts)}: {part.title}"
+                output = cache / part.filename
+                if not self._valid_cache(output, identity):
+                    self._update(job, JobStatus.CONVERTING, base, f"Converting {label}")
+                    self.normalizer.convert(
+                        part,
+                        book,
+                        sources,
+                        output,
+                        identity,
+                        len(parts),
+                        cancelled,
+                        self._converting(job, base, span, label),
+                        options=work.options,
                     )
                 self._check(job)
-                self._update(job, JobStatus.CONVERTING, 45, "Merging the book into one MP3")
-                self.normalizer.convert(
-                    part,
-                    book,
-                    sources,
-                    output,
-                    identity,
-                    1,
-                    cancelled,
-                    lambda percent: self._update(
-                        job,
-                        JobStatus.CONVERTING,
-                        45 + int(percent * 0.45),
-                        "Merging book and spoken introduction"
-                        if work.options.announce
-                        else "Merging book in Audiobookshelf order",
-                    ),
-                    options=work.options,
-                )
-            self._check(job)
-            with device_operation(cancelled):
-                check_device()
-                if not self._existing(job.destination, identity):
-                    self._update(
-                        job,
-                        JobStatus.TRANSFERRING,
-                        90,
-                        f"Copying complete audiobook to {job.destination.name}",
-                    )
-                    self.transfer.transfer(
-                        output,
-                        job.destination / part.filename,
-                        root,
-                        lambda percent: self._update(
+                # Strictly one file at a time, in playback order: Shokz players follow the
+                # transmission order, and the zero-padded names keep name sorting identical.
+                with device_operation(cancelled):
+                    check_device()
+                    if identity not in self._present(job.destination, {identity}):
+                        self._update(
                             job,
                             JobStatus.TRANSFERRING,
-                            90 + percent // 10,
-                            "Copying the single audiobook MP3",
-                        ),
-                        cancelled,
-                    )
+                            base + int(span * 0.7),
+                            f"Copying {label}",
+                        )
+                        self.transfer.transfer(
+                            output,
+                            job.destination / part.filename,
+                            root,
+                            self._copying(job, base, span),
+                            cancelled,
+                        )
+                output.unlink(missing_ok=True)
             self._update(
-                job, JobStatus.COMPLETE, 100, f"One complete MP3 in {job.destination.name}"
+                job,
+                JobStatus.COMPLETE,
+                100,
+                f"{len(parts)} ordered MP3 files in {job.destination.name}",
             )
             shutil.rmtree(cache, ignore_errors=True)
         except Exception as exc:
@@ -264,14 +274,37 @@ class AudiobookQueue:
         finally:
             current_cancellation.reset(token)
 
+    def _converting(self, job: DownloadJob, base: int, span: int, label: str) -> Progress:
+        def report(percent: int) -> None:
+            self._update(
+                job,
+                JobStatus.CONVERTING,
+                base + int(percent * span * 0.7 / 100),
+                f"Converting {label}",
+            )
+
+        return report
+
+    def _copying(self, job: DownloadJob, base: int, span: int) -> Progress:
+        def report(percent: int) -> None:
+            self._update(
+                job,
+                JobStatus.TRANSFERRING,
+                base + int(span * (0.7 + percent * 0.3 / 100)),
+                job.error,
+            )
+
+        return report
+
     @staticmethod
-    def _existing(destination: Path, identity: str) -> bool:
-        return any(
-            not path.is_symlink()
-            and path.suffix.lower() == ".mp3"
-            and read_identity(path).source_id == identity
+    def _present(destination: Path, identities: set[str]) -> set[str]:
+        return {
+            found
             for path in destination.iterdir()
-        )
+            if not path.is_symlink()
+            and path.suffix.lower() == ".mp3"
+            and (found := read_identity(path).source_id) in identities
+        }
 
     def _valid_cache(self, output: Path, identity: str) -> bool:
         if not output.is_file() or read_identity(output).source_id != identity:

@@ -83,6 +83,8 @@ fi
 echo "Creating release ${tag} from branch ${branch}."
 
 printf '%s\n' "$tag" > VERSION
+sed -i "s/^version = \".*\"/version = \"${tag}\"/" pyproject.toml
+sed -i "s/^__version__ = \".*\"/__version__ = \"${tag}\"/" src/shokz_refill/__init__.py
 
 git add -A
 git commit -m "Release ${tag}"

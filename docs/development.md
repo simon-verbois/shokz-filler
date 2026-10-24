@@ -15,12 +15,13 @@ broadly compatible MP3: **CBR 192 kbps, 44.1 kHz, stereo, ID3v2.3**.
    labelled; manual selection is available for devices whose USB metadata cannot be recognized.
 2. Browse the device files as needed. Standalone search downloads ask for their own destination.
 3. Search YouTube Music, or connect an account and select **My playlists**. Open a playlist,
-   use the **<** and **>** buttons to navigate, then select tracks and choose
-   **Download / transfer selected**.
-4. To transfer an entire playlist, choose **Download whole playlist** (or use the playlist's
-   right-click menu). Shokz Refill creates or reuses a folder that keeps the playlist's original
+   use the **<** and **>** buttons to navigate, and add tracks to the send list with **+**.
+   Nothing downloads until you choose **Send to Shokz (N)**, which opens the transfer assistant
+   (`transfer_wizard.py`): step 1 reviews and reorders the songs, step 2 picks or creates a folder.
+4. To transfer an entire playlist, open it and use right-click → **Add all songs to send list**,
+   then **Send to Shokz**. Shokz Refill creates or reuses a folder that keeps the playlist's original
    capitalization and spaces, such as `My Running Mix`, directly at the device root.
-5. Watch download, conversion, and transfer progress in the queue. Failed or cancelled items can be retried with **Retry selected**, and
+5. Watch download, conversion, and transfer progress in the **Transfers** page and the sidebar summary. Failed or cancelled items can be retried with **Retry selected**, and
    active or queued items can be cancelled. Retrying a transfer reuses its converted MP3 cache.
 
 Downloads, conversions, and device transfers use independent bounded worker pools. A conversion
@@ -28,7 +29,7 @@ therefore does not prevent the next track from downloading, while writes to remo
 strictly sequential.
 
 For songs selected outside a playlist, Shokz Refill uses the download folder selected with
-**Change download folder…** or **Use as download destination**. If no folder has been chosen,
+**Change…** beside the destination or **Use as download destination**. If no folder has been chosen,
 the in-app folder tree opens on the first download. The device root is hidden: choose an existing
 folder or create a new top-level folder. Downloading these songs directly to the device root is
 intentionally disabled. Playlists always use their automatic folder, shown below the results.
@@ -39,13 +40,11 @@ again before transfer. A title or artist match alone is not treated as proof of 
 or unidentified files are preserved; filename conflicts receive numbered names. Skipped items remain
 visible as **already present** in the queue.
 
-Click a YouTube Music result-column header to sort ascending; click it again for descending order.
-Before the first click, search relevance order is preserved.
+Use the filter menu above YouTube Music results to sort by title, artist or duration. Repeating a sort reverses its direction. Before the first sort, search relevance order is preserved.
 
-Click the magnifying glass in a column header to filter by text (case-insensitive).
+Use the library or transfer-queue filter menu to filter by text (case-insensitive). In Shokz files, use the magnifying glass in a column header.
 Filters are available for result titles/artists, device names/types, and queue tracks/statuses;
-multiple column filters combine. Clear the text or right-click the magnifying glass to clear
-one or all filters. Hidden rows are deselected before any operation on selected items.
+multiple column filters combine. Clear the text or choose **Clear filters** from the menu; device header controls also support right-click to clear filters. Hidden rows are deselected before any operation on selected items.
 
 The device browser can create, rename, move, and recursively delete folders; rename, move, or delete MP3s;
 and add local MP3 files. `SYSTEM` and `System Volume Information` are hidden, regardless of case. Moves support multi-selection:
@@ -95,27 +94,33 @@ These fields can also be initialized with the environment variables `AUDIOBOOKSH
 by the application or included in the portable build.
 
 Click **Connect**, choose a book library, browse pages or search by title/author, and select one or
-more books with the usual Ctrl/Shift selection controls. **Download / transfer selected books**
+more books with the usual Ctrl/Shift selection controls. **Send to Shokz**
 queues only the selected books. Choose the Shokz device in the device tab first.
 
 Each book gets a separate top-level folder named from its author and title, with a short stable ID
-to distinguish books sharing the same name. **All its audio is merged into one MP3**, using the
-server's configured track order, including manually reordered tracks and multi-disc books.
-Alphabetical filenames and the headset's ordering of separate files cannot reorder chapters within
-this single MP3. Server chapter timing errors do not cause any source audio to be discarded.
+to distinguish books sharing the same name. **Each chapter becomes one MP3** named `NN - Title.mp3`
+(zero-padded to the book's size). Chapters come from Audiobookshelf when they tile the book without
+gaps or overlaps, possibly spanning several source files; otherwise each server track becomes one
+file, in the server's track order. Shokz documents both name order (help article) and transfer time
+(OpenSwim Pro FAQ), so `playback_order.py` applies both: padded prefixes, strictly sequential
+publication, and `TRCK` tags. Two optional texts are spoken before the files: one for chapter 1 (by default the book, author
+and chapter number) and one for the others (by default the chapter number), using `$book_name`,
+`$author_name`, `$chapter_number` and `$chapter_title`. Music downloads use the same component: files are numbered
+`NNN - Artist - Title.mp3`, continue after the highest number already in the folder, and an
+`OrderGate` releases transfers strictly in playlist order even though downloads run concurrently.
 
-When queuing selected books, a dialog opens for each book. **Read the book title and author before
-the book** is checked by default. The dialog shows the exact announcement and lets you disable it
-for that book. **Skip book** leaves that book out of the queue. The resulting file contains:
+Selected books are queued directly. **Settings → Audiobook announcement** controls **Read the book
+title and author before each book** (on by default), the voice, speed and text, and lets you preview
+the voice. The resulting file contains:
 
 1. The spoken announcement, generated offline with Piper neural speech.
-2. **3 seconds of silence.**
+2. **1.5 seconds of silence.**
 3. The complete book in Audiobookshelf source order.
 
 When the option is disabled, no introduction or extra silence is inserted.
 
 The **Settings** tab configures the announcement template, male voice (French Tom or English John) and speech
-speed (60–120%, default **95%**). The voice is normalized to **−16 LUFS** with a
+speed (60–120%, default **100%**). The voice is normalized to **−16 LUFS** with a
 −1.5 dB true-peak target before the silence is appended. The default text is
 `$book_name, de $author_name.`. Supported variables are `$book_name` and `$author_name`, including the `${book_name}` form; `$$` inserts a literal dollar sign. For example:
 
@@ -130,7 +135,7 @@ engine and voice models are included in the portable app: **no Internet, Google 
 separate service, or user-installed runtime is needed**. Speed is controlled by the neural model's
 duration scaling, preserving pitch. Generated announcements are validated and cached locally by
 voice, text and speed. Failed synthesis stops the export with a retryable error. Previous engine
-settings migrate to Piper at 95%; existing device files are preserved.
+settings migrate to Piper at 100%; existing device files are preserved.
 
 The dedicated normalization engine accepts M4B/M4A/AAC, MP3, FLAC, Ogg/Opus, WAV and other audio
 containers supported by the bundled ffmpeg. Sources are normalized individually into **MP3 CBR
@@ -140,24 +145,23 @@ even for books with many files. Both the intermediate and final MP3 formats are 
 
 A single audiobook worker downloads, converts and copies books sequentially. YouTube's bounded
 pipeline can continue in parallel; all writes still use the shared device lock. The common queue
-shows download, speech/merge and copy progress. Cancelled or failed exports retain cached sources,
+shows download, speech/conversion and copy progress. Cancelled or failed exports retain cached sources,
 normalized components and resumable device-transfer partials for **Retry selected**. No incomplete
 book is presented as a finished MP3.
 
 An identical complete export is skipped. Changing the spoken text, voice, rate, introduction option
 or source content changes its identity. Existing exports, including older chapter-by-chapter
 folders, are preserved; a different version is placed in a new numbered folder. Each new export
-therefore contains one MP3 instead of mixing complete books with old chapter files. Very long
-books that would exceed the conservative 4 GiB single-file limit are rejected explicitly.
+therefore contains only the numbered chapter files. A chapter that would exceed the conservative
+4 GiB single-file limit is rejected explicitly.
 
 The account needs download permission. The integration reads libraries and original audio through
 the [Audiobookshelf API](https://api.audiobookshelf.org/); it does not change the library, server
 chapter order, listening progress or playback sessions. Encrypted/DRM-protected content that ffmpeg
 cannot decode reports an error.
 
-Server and username are remembered after a successful connection. The password is saved only when
-**Remember password on this computer** is checked, in the private per-user `audiobookshelf.json`
-configuration file. The session token remains in memory. **Disconnect / forget** cancels audiobook
+The server, username and password are remembered after a successful connection, in the private
+per-user `audiobookshelf.json` configuration file (readable by this user only). The session token remains in memory. **Disconnect / forget** cancels audiobook
 jobs and removes the saved connection. Credentials are never placed in download URLs or logs;
 authenticated redirects to other locations are rejected.
 
@@ -171,7 +175,7 @@ Shokz Refill server.
 
 A saved session is labelled as unverified until an account request succeeds. If **My playlists**
 rejects an old or malformed session, the application displays a reconnect message and stays open.
-Use **Connect YouTube Music** to replace it with fresh headers. Temporary network/server failures
+Use **Settings → Accounts → Connect** to replace it with fresh headers. Temporary network/server failures
 report an error without invalidating the saved session.
 
 The resulting browser session data remains in your per-user configuration directory with owner-only
@@ -281,7 +285,7 @@ binary distributor's accompanying documentation. Shokz Refill's own source is MI
   `cancellation.py` supplies cancellation to services without importing Qt.
 - `downloads.py` coordinates bounded YouTube pipeline stages and the duplicate policy.
 - `audiobookshelf.py` handles the read-only server API; `audiobook_models.py` builds ordered export
-  plans, `audiobook_normalizer.py` merges audio, and `audiobook_queue.py` publishes complete books.
+  plans, `audiobook_normalizer.py` converts each chapter, `playback_order.py` names and sequences files, and `audiobook_queue.py` publishes them in order.
   `audiobook_panel.py` owns connection, browsing and selection; `audiobook_settings.py` persists
   opt-in credentials. `book_export.py` snapshots export options and validates announcement
   templates; `book_dialogs.py` owns export and speech settings dialogs. `speech.py` runs the

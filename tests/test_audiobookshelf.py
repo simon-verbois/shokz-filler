@@ -52,23 +52,25 @@ def item() -> dict:
     }
 
 
-def test_merged_book_follows_server_order_instead_of_filenames() -> None:
+def test_book_follows_server_order_and_splits_by_chapter_with_ordered_names() -> None:
     book = map_book(item(), expanded=True)
     assert [source.filename for source in book.sources] == ["Z.m4b", "A.mp3"]
     assert book.sources[0].download_path == "/api/items/book/file/new-inode/download"
     plan = export_plan(book)
-    assert len(plan) == 1 and plan[0].filename == "Title.mp3"
+    assert [part.filename for part in plan] == ["01 - One.mp3", "02 - Two.mp3"]
     assert [(s.source_index, s.offset, s.duration) for s in plan[0].segments] == [
         (1, 0, 10),
-        (2, 0, 10),
+        (2, 0, 5),
     ]
+    assert [(s.source_index, s.offset, s.duration) for s in plan[1].segments] == [(2, 5, 5)]
 
 
-def test_merging_keeps_all_audio_even_if_chapters_overlap_or_have_gaps() -> None:
+def test_invalid_chapters_fall_back_to_one_part_per_server_track() -> None:
     book = map_book(item(), expanded=True)
     book = replace(book, chapters=(Chapter("Invalid", 0, 25), Chapter("Overlap", 5, 10)))
-    merged = export_plan(book)[0]
-    assert sum(segment.duration for segment in merged.segments) == 20
+    plan = export_plan(book)
+    assert [part.filename for part in plan] == ["01 - Z.mp3", "02 - A.mp3"]
+    assert sum(s.duration for part in plan for s in part.segments) == 20
 
 
 def test_duplicate_source_indices_are_rejected() -> None:
@@ -201,14 +203,12 @@ def test_errors_do_not_include_response_body_or_credentials(
     assert "secret-password" not in str(error.value)
 
 
-def test_settings_password_is_opt_in_private_and_environment_overrides(
+def test_settings_password_is_remembered_private_and_environment_overrides(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     store = AudiobookshelfSettings(tmp_path / "audiobookshelf.json")
     credentials = AudiobookshelfCredentials("https://server", "user", "secret-password")
-    store.save(credentials, remember_password=False)
-    assert "secret-password" not in store.path.read_text()
-    store.save(credentials, remember_password=True)
+    store.save(credentials)
     assert store.load() == credentials
     if os.name == "posix":
         assert store.path.stat().st_mode & 0o077 == 0
@@ -222,16 +222,6 @@ def test_ebook_only_items_are_not_marked_downloadable() -> None:
     data = item()
     data["media"]["numTracks"] = 0
     assert not map_book(data).available
-
-
-def test_environment_password_does_not_enable_implicit_password_storage(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    store = AudiobookshelfSettings(tmp_path / "audiobookshelf.json")
-    store.save(AudiobookshelfCredentials("https://server", "user"), remember_password=False)
-    monkeypatch.setenv("AUDIOBOOKSHELF_PASSWORD", "environment-secret")
-    assert store.load().password == "environment-secret"
-    assert not store.has_saved_password()
 
 
 def test_cancelled_http_download_keeps_partial_out_of_final_path(

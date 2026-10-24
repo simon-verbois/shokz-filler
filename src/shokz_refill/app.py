@@ -9,7 +9,9 @@ from PySide6.QtCore import QCoreApplication, QTimer
 from PySide6.QtWidgets import QApplication
 
 from .config import ConfigStore
+from .icons import app_icon
 from .media import bundled_binary
+from .theme import apply_theme
 from .ui import MainWindow
 
 
@@ -28,6 +30,9 @@ def main() -> int:
     QCoreApplication.setOrganizationName("Shokz Refill")
     QCoreApplication.setApplicationName("Shokz Refill")
     app = QApplication(sys.argv)
+    app.setWindowIcon(app_icon())
+    app.setDesktopFileName("shokz-refill")
+    apply_theme(app)
     window = MainWindow(store)
     window.show()
     if "--smoke-test" in sys.argv:
@@ -35,4 +40,6 @@ def main() -> int:
         bundled_binary("deno")
         import_module("yt_dlp_ejs")
         QTimer.singleShot(500, window.close)
+    else:
+        window.connect_saved_accounts()
     return app.exec()

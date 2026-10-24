@@ -22,7 +22,7 @@ redistributing that build.
 ## Offline neural speech synthesis
 
 Portable builds include Piper 1.8.0 (GPLv3-or-later), its eSpeak NG phonemizer, ONNX Runtime (MIT)
-and the Tom French and John English neural voice models. eSpeak provides phonemes only; Piper's
+and the Tom, Siwis (French), John, Kristin (US English), Cori (UK English), Thorsten (German), Pim (Dutch) and Davefx (Spanish) neural voice models. eSpeak provides phonemes only; Piper's
 neural models produce the audio. No announcement is sent to a remote service.
 
 - Piper engine source: <https://github.com/OHF-Voice/piper1-gpl/tree/v1.8.0>
@@ -32,6 +32,10 @@ neural models produce the audio. No announcement is sent to a remote service.
 - Tom model card: <https://huggingface.co/rhasspy/piper-voices/blob/main/fr/fr_FR/tom/medium/MODEL_CARD>
 - Tom dataset and training source (AGPLv3): <https://git.bksp.space/Tjiho/French-tts-model-piper>
 - John model card: <https://huggingface.co/rhasspy/piper-voices/blob/main/en/en_US/john/medium/MODEL_CARD>
+- Siwis (French, CC-BY 4.0, attribution required): <https://datashare.is.ed.ac.uk/handle/10283/2353>
+- Kristin (US English, public domain) and Cori (UK English, public domain): LibriVox recordings, see their model cards
+- Thorsten (German, CC0): <https://github.com/thorstenMueller/Thorsten-Voice>
+- Pim (Dutch, CC0) and Davefx (Spanish, CC0): <https://github.com/OHF-Voice/voice-datasets>
 
 Full license texts are included under `licenses/`, and model cards beside the models in
 `shokz_refill/voices/`. The voice revision and SHA-256 digests are recorded in

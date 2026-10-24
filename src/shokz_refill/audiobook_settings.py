@@ -1,4 +1,4 @@
-"""Optional per-user connection persistence; passwords are never saved implicitly."""
+"""Per-user connection persistence in a private (0600) file."""
 
 from __future__ import annotations
 
@@ -34,22 +34,10 @@ class AudiobookshelfSettings:
             os.environ.get("AUDIOBOOKSHELF_PASSWORD", data.get("password", "")),
         )
 
-    def has_saved_password(self) -> bool:
-        try:
-            raw = json.loads(self.path.read_text(encoding="utf-8"))
-            return (
-                isinstance(raw, dict)
-                and isinstance(raw.get("password"), str)
-                and bool(raw["password"])
-            )
-        except (OSError, ValueError):
-            return False
-
-    def save(self, credentials: AudiobookshelfCredentials, *, remember_password: bool) -> None:
+    def save(self, credentials: AudiobookshelfCredentials) -> None:
+        """Always remembers the connection, in a file readable by this user only."""
         check_cancelled()
         data = asdict(credentials)
-        if not remember_password:
-            data["password"] = ""
         self.path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         temporary = self.path.with_name(self.path.name + f".{uuid.uuid4().hex}.tmp")
         try:

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from mutagen.id3 import ID3
 
-from shokz_refill.audiobook_models import Audiobook, AudioSource, export_plan
+from shokz_refill.audiobook_models import Audiobook, AudioSource, Chapter, export_plan
 from shokz_refill.audiobook_normalizer import AudiobookNormalizer
 from shokz_refill.book_export import BookExportOptions
 from shokz_refill.metadata import read_identity
@@ -24,12 +24,13 @@ class FakeSpeech:
         return output
 
 
-def test_merged_mp3_contains_speech_silence_then_sources_in_server_order(tmp_path: Path) -> None:
+def test_first_chapter_mp3_has_speech_silence_then_its_sources_in_order(tmp_path: Path) -> None:
     book = Audiobook(
         "id",
         "Book",
         "Author",
         sources=(AudioSource(1, "z.m4b", "/1", 10), AudioSource(2, "a.mp3", "/2", 10)),
+        chapters=(Chapter("One", 0, 15), Chapter("Two", 15, 20)),
     )
     part = export_plan(book)[0]
     commands: list[list[str]] = []
@@ -49,16 +50,16 @@ def test_merged_mp3_contains_speech_silence_then_sources_in_server_order(tmp_pat
         {1: tmp_path / "z.m4b", 2: tmp_path / "a.mp3"},
         tmp_path / part.filename,
         "source-id",
-        1,
+        2,
         lambda: False,
     )
-    assert speech.texts == ["Book, de Author."]
-    assert "apad=pad_dur=3" in commands[0]
+    assert speech.texts == ["Book, de Author. Chapitre 1."]
+    assert "apad=pad_dur=1.5" in commands[0]
     assert str(tmp_path / "z.m4b") in commands[1]
     assert str(tmp_path / "a.mp3") in commands[2]
     assert manifests == [
-        "ffconcat version 1.0\nfile 'introduction.mp3'\n"
-        "file 'normalized-00001.mp3'\nfile 'normalized-00002.mp3'\n"
+        "ffconcat version 1.0\nfile 'introduction-0001.mp3'\n"
+        "file 'normalized-0001-00001.mp3'\nfile 'normalized-0001-00002.mp3'\n"
     ]
     assert commands[-1][commands[-1].index("-codec:a") + 1] == "copy"
     for command in commands[:-1]:
@@ -66,7 +67,7 @@ def test_merged_mp3_contains_speech_silence_then_sources_in_server_order(tmp_pat
             assert command[command.index(option) + 1] == value
     tags = ID3(output)
     assert tags.version[:2] == (2, 3)
-    assert str(tags["TRCK"]) == "1/1" and str(tags["TALB"]) == "Book"
+    assert str(tags["TRCK"]) == "1/2" and str(tags["TIT2"]) == "One" and str(tags["TALB"]) == "Book"
     assert read_identity(output).source_id == "source-id"
 
 
@@ -89,11 +90,11 @@ def test_disabling_announcement_does_not_invoke_speech_or_add_silence(tmp_path: 
         "id",
         1,
         lambda: False,
-        options=BookExportOptions(announce=False),
+        options=BookExportOptions(announce=False, announce_chapters=False),
     )
     assert speech.texts == []
     assert len(commands) == 2
-    assert all("apad=pad_dur=3" not in command for command in commands)
+    assert all("apad=pad_dur=1.5" not in command for command in commands)
 
 
 def test_cancelled_conversion_never_publishes_book(tmp_path: Path) -> None:
@@ -116,7 +117,7 @@ def test_cancelled_conversion_never_publishes_book(tmp_path: Path) -> None:
             "id",
             1,
             lambda: False,
-            options=BookExportOptions(announce=False),
+            options=BookExportOptions(announce=False, announce_chapters=False),
         )
     assert not (tmp_path / part.filename).exists()
     assert not list(tmp_path.glob("*.encoding.mp3"))
@@ -148,7 +149,7 @@ def test_progress_includes_normalization_and_final_merge(
         1,
         lambda: False,
         seen.append,
-        BookExportOptions(announce=False),
+        BookExportOptions(announce=False, announce_chapters=False),
     )
     assert seen == [0, 45, 95, 100]
     assert not list(tmp_path.glob("*.progress"))
@@ -180,6 +181,7 @@ def test_many_sources_use_a_manifest_and_bounded_commands(tmp_path: Path) -> Non
         sources=tuple(
             AudioSource(index, f"{index}.mp3", f"/{index}", 1) for index in range(1, 121)
         ),
+        chapters=(Chapter("A", 0, 100), Chapter("B", 100, 120)),
     )
     commands: list[list[str]] = []
     manifests: list[str] = []
@@ -200,9 +202,9 @@ def test_many_sources_use_a_manifest_and_bounded_commands(tmp_path: Path) -> Non
         "id",
         1,
         lambda: False,
-        options=BookExportOptions(announce=False),
+        options=BookExportOptions(announce=False, announce_chapters=False),
     )
-    assert len(commands) == 121
+    assert len(commands) == 101
     assert max(len(" ".join(command)) for command in commands) < 4000
-    assert len(manifests[0].splitlines()) == 121
-    assert manifests[0].endswith("file 'normalized-00120.mp3'\n")
+    assert len(manifests[0].splitlines()) == 101
+    assert manifests[0].endswith("file 'normalized-0001-00100.mp3'\n")

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from functools import partial
 
-from PySide6.QtCore import QEvent, QObject, QSize, Qt, QTimer
+from PySide6.QtCore import QEvent, QItemSelectionModel, QObject, QSize, Qt, QTimer
 from PySide6.QtGui import QIcon, QPainter, QPen, QPixmap
-from PySide6.QtWidgets import QInputDialog, QMenu, QTableWidget, QToolButton
+from PySide6.QtWidgets import QMenu, QTableWidget, QToolButton
 from shiboken6 import isValid
+
+from .themed_dialog import InputDialog
 
 
 class ColumnFilters(QObject):
@@ -85,7 +87,7 @@ class ColumnFilters(QObject):
     def edit(self, column: int) -> None:
         item = self.table.horizontalHeaderItem(column)
         name = item.text() if item else str(column)
-        text, accepted = QInputDialog.getText(
+        text, accepted = InputDialog.getText(
             self.table,
             f"Filter {name}",
             "Contains (leave empty to clear):",
@@ -136,6 +138,11 @@ class ColumnFilters(QObject):
             )
             self.table.setRowHidden(row, hidden)
         # Hidden selections must not be included in download/delete operations.
-        for item in self.table.selectedItems():
-            if self.table.isRowHidden(item.row()):
-                item.setSelected(False)
+        selection = self.table.selectionModel()
+        for index in selection.selectedRows():
+            if self.table.isRowHidden(index.row()):
+                selection.select(
+                    index,
+                    QItemSelectionModel.SelectionFlag.Deselect
+                    | QItemSelectionModel.SelectionFlag.Rows,
+                )

@@ -9,7 +9,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from .book_export import DEFAULT_ANNOUNCEMENT, BookExportOptions
+from .book_export import DEFAULT_ANNOUNCEMENT, DEFAULT_CHAPTER_ANNOUNCEMENT, BookExportOptions
 from .cancellation import check_cancelled
 
 
@@ -24,6 +24,9 @@ def _platform_dir(kind: str) -> Path:
     return base / "shokz-refill"
 
 
+_LEGACY_ANNOUNCEMENT = "$book_name, de $author_name."
+
+
 @dataclass(slots=True)
 class AppConfig:
     version: int = 1
@@ -33,12 +36,20 @@ class AppConfig:
     window_height: int = 760
     book_tts_template: str = DEFAULT_ANNOUNCEMENT
     book_tts_voice: str = "fr"
-    book_tts_rate: int = 95
+    book_tts_rate: int = 100
     book_tts_engine: str = "piper-v1"
+    book_tts_announce: bool = True
+    book_announce_chapters: bool = True
+    book_chapter_template: str = DEFAULT_CHAPTER_ANNOUNCEMENT
 
     def book_export_options(self) -> BookExportOptions:
         return BookExportOptions(
-            True, self.book_tts_template, self.book_tts_voice, self.book_tts_rate
+            self.book_tts_announce,
+            self.book_tts_template,
+            self.book_tts_voice,
+            self.book_tts_rate,
+            self.book_announce_chapters,
+            self.book_chapter_template,
         )
 
 
@@ -70,15 +81,19 @@ class ConfigStore:
                 if dimension in valid and not 640 <= valid[dimension] <= 7680:
                     del valid[dimension]
             if raw.get("book_tts_engine") != "piper-v1":
-                valid["book_tts_rate"] = 95
+                valid["book_tts_rate"] = 100
                 valid["book_tts_engine"] = "piper-v1"
+            if valid.get("book_tts_template") == _LEGACY_ANNOUNCEMENT:
+                # The old default had no chapter; chapter 1 used to get it appended automatically.
+                valid["book_tts_template"] = DEFAULT_ANNOUNCEMENT
             config = AppConfig(**valid)
             try:
                 config.book_export_options().validate()
             except ValueError:
                 config.book_tts_template = DEFAULT_ANNOUNCEMENT
+                config.book_chapter_template = DEFAULT_CHAPTER_ANNOUNCEMENT
                 config.book_tts_voice = "fr"
-                config.book_tts_rate = 95
+                config.book_tts_rate = 100
             return config
         except (OSError, ValueError, TypeError):
             return AppConfig()

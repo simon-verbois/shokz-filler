@@ -62,3 +62,4 @@ class DownloadJob:
     cached_mp3: Path | None = None
     cancel_requested: bool = False
     device_root: Path | None = None
+    position: int | None = None  # 1-based playback position; None leaves the name unnumbered

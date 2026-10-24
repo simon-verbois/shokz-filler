@@ -58,7 +58,7 @@ def test_queue_completes_repeated_tracks(tmp_path: Path) -> None:
     job = queue.enqueue([track], tmp_path, tmp_path)[0]
     wait_for_terminal(job)
     assert job.status == JobStatus.COMPLETE
-    assert (tmp_path / "Artist - Song.mp3").is_file()
+    assert (tmp_path / "001 - Artist - Song.mp3").is_file()
     repeated_job = queue.enqueue([track], tmp_path, tmp_path)[0]
     wait_for_terminal(repeated_job)
     assert repeated_job.status == JobStatus.SKIPPED

@@ -33,7 +33,7 @@ class AudiobookNormalizer:
     @staticmethod
     def check_size(duration: float) -> None:
         if duration * 24_000 + 2 * 1024**2 >= MAX_MP3_BYTES:
-            raise ValueError("The merged MP3 would exceed the safe 4 GiB file limit for the device")
+            raise ValueError("This MP3 would exceed the safe 4 GiB file limit for the device")
 
     def _cached(self, path: Path, identity: str) -> bool:
         if not path.is_file() or read_identity(path).source_id != identity:
@@ -158,12 +158,19 @@ class AudiobookNormalizer:
             temporary.unlink(missing_ok=True)
 
     def _introduction(
-        self, book: Audiobook, cache: Path, options: BookExportOptions, cancelled: Cancelled
+        self,
+        book: Audiobook,
+        cache: Path,
+        options: BookExportOptions,
+        part: ExportPart,
+        text: str,
+        cancelled: Cancelled,
     ) -> tuple[Path, float]:
-        text = options.text(book.title, book.author)
-        identity = "announcement:" + options.fingerprint(book.title, book.author)
-        output = cache / "introduction.mp3"
-        wave_path = cache / "announcement.wav"
+        identity = "announcement:" + options.fingerprint(
+            book.title, book.author, part.number, part.title
+        )
+        output = cache / f"introduction-{part.number:04d}.mp3"
+        wave_path = cache / f"announcement-{part.number:04d}.wav"
         temporary = output.with_suffix(".encoding.mp3")
         # Regenerate the WAV to measure the exact speech duration.
         try:
@@ -192,8 +199,8 @@ class AudiobookNormalizer:
                     author=book.author,
                     title="Introduction",
                     book_title=book.title,
-                    number=1,
-                    total=1,
+                    number=part.number,
+                    total=part.total,
                 )
                 temporary.replace(output)
             return output, duration
@@ -222,18 +229,21 @@ class AudiobookNormalizer:
         # Keep a normalized MP3 per input, then remux: no giant filter graph or second lossy encode.
         needed = int(duration * 48_000) + 16 * 1024**2
         if shutil.disk_usage(output.parent).free < needed:
-            raise OSError("Not enough local cache space to merge this audiobook")
+            raise OSError("Not enough local cache space to convert this audiobook part")
         pieces: list[Path] = []
         progress(0)
-        if options.announce:
-            intro, extra = self._introduction(book, output.parent, options, cancelled)
+        lead_in = options.part_text(part.number, book.title, book.author, part.title)
+        if lead_in:
+            intro, extra = self._introduction(
+                book, output.parent, options, part, lead_in, cancelled
+            )
             pieces.append(intro)
             duration += extra
             self.check_size(duration)
         for index, segment in enumerate(part.segments):
             if cancelled():
                 raise InterruptedError("Audiobook conversion cancelled")
-            component = output.parent / f"normalized-{index + 1:05d}.mp3"
+            component = output.parent / f"normalized-{part.number:04d}-{index + 1:05d}.mp3"
             identity = (
                 "component:"
                 + hashlib.sha256(
@@ -257,7 +267,7 @@ class AudiobookNormalizer:
                     report,
                 )
             )
-        manifest = output.parent / "merge.ffconcat"
+        manifest = output.parent / f"merge-{part.number:04d}.ffconcat"
         temporary = output.with_suffix(".encoding.mp3")
         try:
             # Generated basenames avoid manifest injection and Windows command-length limits.
@@ -293,14 +303,14 @@ class AudiobookNormalizer:
                 temporary,
                 source_id=source_id,
                 author=book.author,
-                title=book.title,
+                title=part.title,
                 book_title=book.title,
-                number=1,
-                total=1,
+                number=part.number,
+                total=total_parts,
             )
             self.validator(temporary)
             if temporary.stat().st_size > MAX_MP3_BYTES:
-                raise ValueError("The merged MP3 exceeds the safe 4 GiB file limit")
+                raise ValueError("This MP3 exceeds the safe 4 GiB file limit")
             if cancelled():
                 raise InterruptedError("Audiobook conversion cancelled")
             temporary.replace(output)

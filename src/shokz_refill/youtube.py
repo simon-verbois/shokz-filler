@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+import json
 import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Protocol, cast
 
 import requests
 import ytmusicapi
-from ytmusicapi import YTMusic
+from ytmusicapi import OAuthCredentials, YTMusic
 
+from .browser_auth import BrowserSessionImporter, LoginBrowser
 from .cancellation import check_cancelled
 from .models import Playlist, Track
+from .youtube_oauth import DeviceCode, GoogleDeviceAuth, OAuthClient, save_private_json
 
 
 class TimeoutSession(requests.Session):
@@ -92,7 +96,8 @@ class YouTubeMusicService:
         self._auth_client = None
         return PermissionError(
             "The saved YouTube Music session could not be validated; it may be invalid or expired. "
-            "Click Connect YouTube Music and paste fresh request headers."
+            "Click Connect YouTube Music to sign in again, "
+            "or use Advanced to paste fresh request headers."
         )
 
     def _public(self) -> YTMusicClient:
@@ -111,15 +116,104 @@ class YouTubeMusicService:
             raise PermissionError("Connect YouTube Music first")
         if self._auth_client is None:
             try:
-                self._auth_client = cast(
-                    YTMusicClient,
-                    YTMusic(str(self.auth_path), requests_session=TimeoutSession()),
-                )
+                raw = json.loads(self.auth_path.read_text(encoding="utf-8"))
+                if isinstance(raw, dict) and raw.get("shokz_oauth") == 1:
+                    self._auth_client = self._oauth_client(
+                        OAuthClient(raw["client_id"], raw["client_secret"]), raw["token"]
+                    )
+                else:
+                    self._auth_client = cast(
+                        YTMusicClient,
+                        YTMusic(str(self.auth_path), requests_session=TimeoutSession()),
+                    )
             except InterruptedError:
                 raise
             except Exception:
                 raise self._invalid_session() from None
         return self._auth_client
+
+    def oauth_settings(self) -> OAuthClient:
+        """Load local client settings; environment variables can provision installations."""
+        try:
+            raw = json.loads(self.auth_path.with_name("oauth-client.json").read_text("utf-8"))
+            client = OAuthClient(str(raw["client_id"]), str(raw["client_secret"]))
+        except (OSError, ValueError, KeyError, TypeError):
+            client = OAuthClient("", "")
+        return OAuthClient(
+            os.environ.get("SHOKZ_YOUTUBE_CLIENT_ID", client.client_id),
+            os.environ.get("SHOKZ_YOUTUBE_CLIENT_SECRET", client.client_secret),
+        )
+
+    @staticmethod
+    def _oauth_client(client: OAuthClient, token: dict[str, Any]) -> YTMusicClient:
+        session = TimeoutSession()
+        return cast(
+            YTMusicClient,
+            YTMusic(
+                dict(token),
+                oauth_credentials=OAuthCredentials(client.client_id, client.client_secret, session),
+                requests_session=session,
+            ),
+        )
+
+    def connect_oauth(self, client: OAuthClient, show_code: Callable[[DeviceCode], None]) -> str:
+        """Authorize and validate a replacement without disturbing the previous session."""
+        client.validate()
+        save_private_json(
+            self.auth_path.with_name("oauth-client.json"),
+            {
+                "client_id": client.client_id,
+                "client_secret": client.client_secret,
+            },
+        )
+        token = GoogleDeviceAuth().authorize(client, show_code)
+        try:
+            authenticated = self._oauth_client(client, token)
+            info = authenticated.get_account_info()
+        except InterruptedError:
+            raise
+        except Exception:
+            raise ValueError(
+                "Google authorization succeeded, but YouTube Music could not validate the account. "
+                "Try again or use Advanced browser headers."
+            ) from None
+        save_private_json(
+            self.auth_path,
+            {
+                "shokz_oauth": 1,
+                "client_id": client.client_id,
+                "client_secret": client.client_secret,
+                "token": token,
+            },
+        )
+        self._auth_client = authenticated
+        self._auth_invalid = False
+        self._auth_verified = True
+        return str(info.get("accountName") or info.get("channelHandle") or "Connected")
+
+    def connect_browser(self, browser: LoginBrowser) -> str:
+        """Validate the selected browser's session before replacing saved credentials."""
+        headers = BrowserSessionImporter().headers(browser)
+        try:
+            client = YTMusic(headers, requests_session=TimeoutSession())
+            info = client.get_account_info()
+        except InterruptedError:
+            raise
+        except (requests.Timeout, requests.ConnectionError):
+            raise RuntimeError(
+                "Could not reach YouTube Music. Check your connection and try again."
+            ) from None
+        except Exception:
+            raise ValueError(
+                "YouTube Music could not validate this session. Sign in again in the selected "
+                "browser, or try Firefox. If you use several Google accounts, sign in with "
+                "the account you want as the browser's first Google account."
+            ) from None
+        save_private_json(self.auth_path, headers)
+        self._auth_client = cast(YTMusicClient, client)
+        self._auth_invalid = False
+        self._auth_verified = True
+        return str(info.get("accountName") or info.get("channelHandle") or "Connected")
 
     def connect_headers(self, raw_headers: str) -> str:
         if not raw_headers.strip():
@@ -151,6 +245,7 @@ class YouTubeMusicService:
         self._auth_invalid = False
         self._auth_verified = False
         self.auth_path.unlink(missing_ok=True)
+        self.auth_path.with_name("oauth-client.json").unlink(missing_ok=True)
 
     def search_songs(self, query: str) -> list[Track]:
         return [

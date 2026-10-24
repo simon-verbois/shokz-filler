@@ -17,8 +17,8 @@ _Real application screenshots with fictional demonstration data. The desktop int
 ## What it does
 
 - **YouTube Music**: search tracks and playlists, select multiple songs, download an entire playlist and access playlists from your account.
-- **Audiobookshelf**: connect to your server, search and choose books to take along. Each book gets **one folder and one MP3**, with its tracks in the order supplied by the server.
-- **Offline spoken introductions**: French male voice Tom or English male voice John through Piper, **95%** default speed, normalised volume and **3 seconds of silence**. Customise the text with `$book_name` and `$author_name`.
+- **Audiobookshelf**: connect to your server, search and choose books to take along. Each book gets **one folder** with **one numbered MP3 per chapter** (`01 - Title.mp3`, `02 - …`), so you always know where you are in the book.
+- **Offline spoken introductions**: French male voice Tom or English male voice John through Piper, **100%** default speed, normalised volume and **1.5 seconds of silence**. Two customisable texts: one before the first chapter and one before the others, with `$book_name`, `$author_name`, `$chapter_number` and `$chapter_title`.
 - **Device management**: check free space, create and organise folders, import local MP3 files and confirm deletions. `SYSTEM` and `System Volume Information` are hidden from the browser and folder pickers.
 - **Verified transfers**: recognise duplicates, preserve files on name conflicts, validate partial files and verify SHA-256 integrity before publishing the final file.
 
@@ -45,13 +45,22 @@ On Windows, launch the `.exe`. No separate Python or FFmpeg installation is need
 ## First use
 
 1. Connect your Shokz by USB and open their storage on your computer.
-2. In **Shokz device / files**, select the device. If necessary, use **Select device folder** to select its mounted volume.
-3. For music, open **YouTube Music**, search for songs or a playlist and select tracks using `Ctrl` / `Shift`.
-4. Click **Download / transfer selected** and choose a folder. For a complete playlist, open it and click **Download whole playlist**: its folder is created automatically.
-5. Follow the queue. **Retry selected** restarts failed or cancelled items; **Cancel selected** requests cancellation.
+2. In **Shokz files**, select the device. If necessary, use **Browse…** to select its mounted volume.
+3. For music, open **YouTube Music**, search for songs or open a playlist, and add songs to the **send list** with **+** (or double-click, or right-click → *Add to send list* / *Add all songs to send list*). The list keeps its order across searches and playlists, and that order becomes the playback order.
+4. Click **Send to Shokz (N)** to open the transfer assistant: review or reorder the songs, then choose a folder on the device or create one. A playlist's own name is suggested when all songs come from it.
+5. Follow progress in **Transfers**: the sidebar shows the live count and overall progress on every screen. **Retry selected** restarts failed or cancelled items; **Cancel selected** requests cancellation.
 6. Wait for transfers to finish and eject the headset through your operating system before unplugging it.
 
-Public search does not require a YouTube account. To use **My playlists**, click **Connect YouTube Music** and follow the connection dialog.
+Use the sidebar or `Alt+1` to `Alt+5` to switch screens. The device summary and transfer progress stay visible in the sidebar. Accounts and preferences all live in **Settings**. Music sorting and filters are available from the filter button above the results.
+
+Public search does not require a YouTube account. To use **My playlists**, open **Settings → Accounts** and click **Connect** next to YouTube Music:
+
+1. Choose your browser if several are installed, then click **Open YouTube Music**.
+2. Sign in normally in the browser. Return to Shokz Refill: it imports and validates the session automatically. If you are already signed in, click **I'm signed in — Connect** directly.
+
+There is no Google Cloud setup, client ID, secret, script or browser extension to install. Connecting imports the selected browser's session locally and saves only cookies applicable to YouTube Music. The browser's main Google account is used. Your Google password is never requested by Shokz Refill. The saved session also supplies cookies to the media downloader. **Disconnect** removes the application's local copy; it does not sign you out of your browser.
+
+Supported browsers are Firefox, Chrome, Edge, Brave and Chromium on Linux and Windows. Use a normal window, not private browsing. Browser protections can prevent cookie access, especially in Chromium-based browsers on Windows: close the browser and retry, or use Firefox. **Advanced connection options** retains manual request-header import as a fallback. Existing saved sessions continue to work.
 
 The [illustrated usage guide](https://simon-verbois.github.io/shokz-filler/#guide) covers each workflow, voice settings and interrupted transfers in all five website languages.
 
@@ -61,20 +70,20 @@ The [illustrated usage guide](https://simon-verbois.github.io/shokz-filler/#guid
 
 To export a book:
 
-1. Select your headset in the device tab first.
-2. In **Audiobookshelf**, enter **Server**, **Username** and **Password**, then click **Connect**. The address must include `https://` or `http://`.
-3. Choose a library and select books, then click **Download / transfer selected books**.
-4. For each book, keep or disable the announcement and choose **Queue book**. **Skip book** leaves that book out.
-5. The app downloads the sources, converts and merges them, and copies the MP3 into the book’s own folder.
+1. Select your headset in **Shokz files** first.
+2. In **Settings → Audiobookshelf** (also reachable from the Audiobookshelf screen with **Connection settings**), enter **Server**, **Username** and **Password**, then click **Connect**. The address must include `https://` or `http://`.
+3. Choose a library and select books, then click **Send to Shokz**.
+4. The books are queued straight away, with the announcement choices from **Settings** (no popup).
+5. The app downloads the sources, converts them into one MP3 per chapter, and copies the files one at a time, in order, into the book’s own folder.
 
-The announcement is enabled by default. **Settings** lets you choose the voice, speed and text, for example:
+The announcement is enabled by default. **Settings** lets you turn it off, choose the voice, speed and text, and preview the voice, for example:
 
 ```text
 You are listening to $book_name.
 A book by $author_name.
 ```
 
-Choose **John** for an English announcement or **Tom** for French. Speech synthesis is entirely local. Downloading books requires access to your server and an account with download permission. The password is remembered only if you tick the corresponding option.
+Choose **John** for an English announcement or **Tom** for French. Speech synthesis is entirely local. Downloading books requires access to your server and an account with download permission. The connection, including the password, is remembered in a private per-user file; **Disconnect / forget** removes it.
 
 <details>
 <summary>View the voice settings</summary>
@@ -86,7 +95,8 @@ Choose **John** for an English announcement or **Tom** for French. Speech synthe
 ## Things to know
 
 - The conversion target is fixed. Audiobookshelf sources can include M4B, M4A, MP3, FLAC, Ogg/Opus and WAV, depending on the formats FFmpeg can decode.
-- Merging preserves track order **within a book**. The app cannot guarantee the headset firmware’s playback order for separate files.
+- Shokz documents two behaviours (name order in the help article, transfer time in the OpenSwim Pro FAQ), so every file is zero-padded by position **and** copied sequentially in that order, and TRCK tags are written. The firmware's real behaviour still needs a manual check on each model.
+- Optional spoken chapter numbers: the first file says the book, author and chapter 1; the others only their chapter number.
 - Audiobookshelf exports exceeding the conservative **4 GiB per-file** limit are refused. Allow space on your computer for the conversion cache too.
 - Duplicate detection uses identifiers embedded in MP3 files. Matching titles or authors alone are not conclusive evidence of a duplicate.
 - Downloads require access to the media and the appropriate rights. The app does not bypass DRM.
@@ -101,7 +111,7 @@ python3 -m venv .venv
 .venv/bin/pip install -e '.[dev]'
 .venv/bin/python scripts/fetch_tts_voices.py
 scripts/fetch_ffmpeg_linux.sh
-./start-shokzfiller.sh
+./start-shokz-refill.sh
 ```
 
 The two voice models are fetched from a pinned revision and verified by SHA-256. Portable executables include them afterwards; speech synthesis does not contact a service.
@@ -132,4 +142,4 @@ python3 scripts/build_site.py
 python3 -m http.server 8000 --directory build/site
 ```
 
-The build rejects missing translations, stale generated pages and broken local links. It publishes only explicitly allowlisted public assets. Regenerate screenshots with fictional data using `.venv/bin/python scripts/capture_screenshots.py`. In GitHub Actions, run **Shokz Refill presentation site** on the default branch to publish.
+The build rejects missing translations, stale generated pages and broken local links. It publishes only explicitly allowlisted public assets. The [desktop design notes](docs/ui-design.md) describe the native UI and its interaction rules. Regenerate screenshots with fictional data using `.venv/bin/python scripts/capture_screenshots.py`. In GitHub Actions, run **Shokz Refill presentation site** on the default branch to publish.

@@ -5,22 +5,21 @@ from __future__ import annotations
 from collections.abc import Callable
 from pathlib import Path
 
-from PySide6.QtCore import QObject, Qt, Signal
+from PySide6.QtCore import QObject, QPoint, Qt, Signal
 from PySide6.QtWidgets import (
     QAbstractItemView,
-    QCheckBox,
-    QComboBox,
-    QDialog,
+    QApplication,
+    QFrame,
     QGridLayout,
     QHBoxLayout,
     QHeaderView,
     QLabel,
     QLineEdit,
+    QMenu,
     QPushButton,
     QTableWidget,
     QTableWidgetItem,
     QVBoxLayout,
-    QWidget,
 )
 
 from .audiobook_models import Audiobook, AudiobookshelfCredentials, BookPage, Library, export_plan
@@ -28,50 +27,86 @@ from .audiobook_queue import AudiobookQueue
 from .audiobook_settings import AudiobookshelfSettings
 from .audiobookshelf import AudiobookshelfClient
 from .background import TaskRunner
-from .book_dialogs import BookExportDialog
 from .book_export import BookExportOptions
+from .icons import icon
+from .library_view import library_rows
 from .models import Device
+from .page_layout import PageTemplate
+from .table_state import TableEmptyState
+from .theme import ON_ACCENT, RoundedComboBox, role
 
 
-class AudiobookshelfPanel(QWidget):
+class AudiobookshelfPanel(PageTemplate):
+    settingsRequested = Signal()
+
     def __init__(self, credentials: AudiobookshelfCredentials) -> None:
-        super().__init__()
-        layout = QVBoxLayout(self)
+        super().__init__("Audiobookshelf")
+        self.settings_button = QPushButton("Connection settings")
+        self.settings_button.setIcon(icon("settings"))
+        role(self.settings_button, "quiet")
+        self.settings_button.clicked.connect(self.settingsRequested)
+        self.header.addWidget(self.settings_button)
+        # The connection form is built here but hosted by the Settings page.
+        card = QFrame()
+        self.connection_card = card
+        role(card, "card")
+        connection_layout = QVBoxLayout(card)
+        connection_layout.setContentsMargins(16, 12, 16, 12)
         fields = QGridLayout()
+        fields.setHorizontalSpacing(12)
+        fields.setVerticalSpacing(4)
         self.server = QLineEdit(credentials.server)
         self.server.setPlaceholderText("https://audiobooks.example.com")
         self.username = QLineEdit(credentials.username)
         self.password = QLineEdit(credentials.password)
         self.password.setEchoMode(QLineEdit.EchoMode.Password)
-        for column, (title, widget) in enumerate(
-            (("Server", self.server), ("Username", self.username), ("Password", self.password))
+        for row, column, span, title, widget in (
+            (0, 0, 2, "Server", self.server),
+            (2, 0, 1, "Username", self.username),
+            (2, 1, 1, "Password", self.password),
         ):
             label = QLabel(title)
             label.setBuddy(widget)
-            fields.addWidget(label, 0, column)
-            fields.addWidget(widget, 1, column)
+            fields.addWidget(label, row, column, 1, span)
+            fields.addWidget(widget, row + 1, column, 1, span)
+        connection_layout.addLayout(fields)
         self.connect_button = QPushButton("Connect")
         self.disconnect_button = QPushButton("Disconnect / forget")
-        fields.addWidget(self.connect_button, 1, 3)
-        fields.addWidget(self.disconnect_button, 1, 4)
-        layout.addLayout(fields)
-        connection = QHBoxLayout()
-        self.remember = QCheckBox("Remember password on this computer")
-        self.remember.setToolTip("Stores the password in your private per-user configuration file")
-        self.status = QLabel("Connect to your Audiobookshelf server to browse books")
-        self.status.setWordWrap(True)
-        connection.addWidget(self.remember)
-        connection.addWidget(self.status, 1)
-        layout.addLayout(connection)
-        browse = QHBoxLayout()
-        self.libraries = QComboBox()
+        actions = QHBoxLayout()
+        actions.setSpacing(8)
+        actions.addStretch(1)
+        actions.addWidget(self.connect_button)
+        actions.addWidget(self.disconnect_button)
+        connection_layout.addSpacing(6)
+        connection_layout.addLayout(actions)
+        self.status = self.subtitle
+        self.status.clear()  # The empty state below already says it.
+        self.connection_status = QLabel()
+        self.connection_status.setWordWrap(True)
+        self.connection_status.setTextFormat(Qt.TextFormat.PlainText)
+        role(self.connection_status, "muted")
+        connection_layout.addWidget(self.connection_status)
+        self.libraries = RoundedComboBox()
         self.libraries.setAccessibleName("Audiobookshelf library")
         self.query = QLineEdit()
         self.query.setPlaceholderText("Search books or authors")
         self.query.setAccessibleName("Search Audiobookshelf")
-        self.search = QPushButton("Search / refresh")
-        self.previous = QPushButton("Previous")
-        self.next = QPushButton("Next")
+        self.query.addAction(icon("search"), QLineEdit.ActionPosition.LeadingPosition)
+        self.query.setClearButtonEnabled(True)
+        self.search = QPushButton()
+        self.search.setIcon(icon("refresh"))
+        self.search.setToolTip("Search / refresh")
+        self.search.setAccessibleName("Search or refresh books")
+        self.previous = QPushButton()
+        self.previous.setIcon(icon("back"))
+        self.previous.setToolTip("Previous page")
+        self.previous.setAccessibleName("Previous page of books")
+        self.next = QPushButton()
+        self.next.setIcon(icon("forward"))
+        self.next.setToolTip("Next page")
+        self.next.setAccessibleName("Next page of books")
+        for button in (self.search, self.previous, self.next):
+            button.setFixedWidth(36)
         self.page_label = QLabel()
         for control in (
             self.libraries,
@@ -81,45 +116,90 @@ class AudiobookshelfPanel(QWidget):
             self.page_label,
             self.next,
         ):
-            browse.addWidget(control)
-        layout.addLayout(browse)
+            self.controls.addWidget(control)
+        self.controls.setStretch(1, 1)
         self.books = QTableWidget(0, 4)
+        library_rows(self.books, book=True)
         self.books.setHorizontalHeaderLabels(["Title", "Author", "Duration", "Availability"])
         self.books.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.books.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.books.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
+        self.books.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.books.customContextMenuRequested.connect(self._context_menu)
         header = self.books.horizontalHeader()
+        header.hide()
         header.setMinimumSectionSize(90)
         header.setSectionResizeMode(0, QHeaderView.ResizeMode.Stretch)
         header.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive)
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         self.books.setColumnWidth(1, 230)
-        layout.addWidget(self.books)
-        self.details = QLabel(
-            "Select one or more books. Each book gets its own folder on the device."
+        self.books.setColumnHidden(3, True)  # Availability is shown with the duration.
+        self.empty_state = TableEmptyState(
+            self.books, "Your audiobook library\nConnect to your server to choose books."
         )
+        self.content.addWidget(self.books)
+        self.details = QLabel()
         self.details.setTextFormat(Qt.TextFormat.PlainText)
         self.details.setWordWrap(True)
-        layout.addWidget(self.details)
-        self.device_label = QLabel("No Shokz selected — choose a device in Shokz device / files")
+        role(self.details, "muted")
+        self.device_label = QLabel("No Shokz selected — choose a device in Shokz files")
         self.device_label.setWordWrap(True)
-        layout.addWidget(self.device_label)
-        actions = QHBoxLayout()
-        self.download = QPushButton("Download / transfer selected books")
-        actions.addWidget(QLabel("One book → one folder → one MP3"))
-        actions.addStretch()
-        actions.addWidget(self.download)
-        layout.addLayout(actions)
-        policy = QLabel(
-            "MP3 CBR 192 kbps · 44.1 kHz · stereo · sources merged in Audiobookshelf order. "
-            "Existing parts are skipped; conflicts keep both files."
+        role(self.device_label, "muted")
+        info = QVBoxLayout()
+        info.setSpacing(2)
+        info.addWidget(self.details)
+        info.addWidget(self.device_label)
+        self.footer.addLayout(info, 1)
+        self.download = QPushButton("Send to Shokz")
+        role(self.download, "primary")
+        self.download.setIcon(icon("download", ON_ACCENT))
+        self.download.setToolTip(
+            "One book → one folder → one numbered MP3 per chapter (01 - Title.mp3…), copied in "
+            "playback order. MP3 CBR 192 kbps · 44.1 kHz · stereo. Existing files are skipped; "
+            "conflicts keep both files."
         )
-        policy.setWordWrap(True)
-        layout.addWidget(policy)
+        self.footer.addWidget(self.download)
         self.download.setEnabled(False)
         self.disconnect_button.setEnabled(False)
         self.set_browsing_enabled(False)
+
+    def _context_menu(self, point: QPoint) -> None:
+        self.build_context_menu(point).exec(self.books.viewport().mapToGlobal(point))
+
+    def build_context_menu(self, point: QPoint) -> QMenu:
+        """Menu for the book under the pointer; actions run through their own handlers."""
+        row = self.books.rowAt(point.y())
+        if row >= 0 and not self.books.selectionModel().isRowSelected(row):
+            self.books.clearSelection()
+            self.books.selectRow(row)
+        selected = self.selected_books()
+        menu = QMenu(self)
+
+        def add(text: str, enabled: bool, handler: Callable[[], object], glyph: str = "") -> None:
+            action = menu.addAction(icon(glyph), text) if glyph else menu.addAction(text)
+            action.setEnabled(enabled)
+            action.triggered.connect(lambda _checked=False: handler())
+
+        add("Send to Shokz…", self.download.isEnabled(), self.download.click, "download")
+        add("Copy title and author", bool(selected), lambda: self._copy_titles(selected))
+        menu.addSeparator()
+        add("Select all", self.books.rowCount() > 0, self.books.selectAll)
+        add(
+            "Clear selection",
+            self.books.selectionModel().hasSelection(),
+            self.books.clearSelection,
+        )
+        add("Refresh list", self.search.isEnabled(), self.search.click, "refresh")
+        return menu
+
+    @staticmethod
+    def _copy_titles(books: list[Audiobook]) -> None:
+        QApplication.clipboard().setText("\n".join(f"{b.title} — {b.author}" for b in books))
+
+    def set_status(self, text: str) -> None:
+        self.status.setText(text)
+        self.connection_status.setText(text)
 
     def credentials(self) -> AudiobookshelfCredentials:
         return AudiobookshelfCredentials(
@@ -147,16 +227,17 @@ class AudiobookshelfPanel(QWidget):
             control.setEnabled(enabled)
 
     def show_page(self, page: BookPage, *, search: bool = False) -> None:
+        self.empty_state.set_text("No books found\nTry another search or choose another library.")
         self.books.setRowCount(0)
         self.books.setRowCount(len(page.books))
         for row, book in enumerate(page.books):
-            duration = f"{int(book.duration) // 3600}:{int(book.duration) // 60 % 60:02d}"
+            duration = f"{int(book.duration) // 3600}h {int(book.duration) // 60 % 60:02d}m"
             for column, text in enumerate(
                 (
                     book.title,
                     book.author,
-                    duration,
-                    "Available" if book.available else "Unavailable",
+                    duration if book.available else f"{duration} · Unavailable",
+                    "",
                 )
             ):
                 item = QTableWidgetItem(text)
@@ -166,9 +247,7 @@ class AudiobookshelfPanel(QWidget):
         self.previous.setEnabled(not search and page.page > 0)
         self.next.setEnabled(not search and (page.page + 1) * page.limit < page.total)
         self.page_label.setText(f"{page.total} result(s)" if search else f"Page {page.page + 1}")
-        self.details.setText(
-            "Select one or more books. Each book gets its own folder on the device."
-        )
+        self.details.clear()
 
 
 class AudiobookshelfController(QObject):
@@ -201,10 +280,9 @@ class AudiobookshelfController(QObject):
         panel.next.clicked.connect(lambda: self.load_books(self.page + 1))
         panel.books.itemSelectionChanged.connect(self.selection_changed)
         panel.download.clicked.connect(self.download_selected)
-        panel.remember.setChecked(settings.has_saved_password())
 
     def _failed(self, message: str) -> None:
-        self.panel.status.setText(message or "Audiobookshelf operation failed")
+        self.panel.set_status(message or "Audiobookshelf operation failed")
 
     def connect_server(self) -> None:
         if self.tasks.active("login") or self.tasks.active("forget"):
@@ -216,20 +294,18 @@ class AudiobookshelfController(QObject):
         self.panel.download.setEnabled(False)
         self.panel.disconnect_button.setEnabled(False)
         credentials = self.panel.credentials()
-        remember = self.panel.remember.isChecked()
         self.panel.connect_button.setEnabled(False)
         for field in (
             self.panel.server,
             self.panel.username,
             self.panel.password,
-            self.panel.remember,
         ):
             field.setEnabled(False)
-        self.panel.status.setText("Connecting to Audiobookshelf…")
+        self.panel.set_status("Connecting to Audiobookshelf…")
 
         def login() -> AudiobookshelfClient:
             client = AudiobookshelfClient.login(credentials)
-            self.settings.save(credentials, remember_password=remember)
+            self.settings.save(credentials)
             return client
 
         def connected(client: AudiobookshelfClient) -> None:
@@ -239,11 +315,10 @@ class AudiobookshelfController(QObject):
                 self.panel.server,
                 self.panel.username,
                 self.panel.password,
-                self.panel.remember,
             ):
                 field.setEnabled(True)
             self.panel.disconnect_button.setEnabled(True)
-            self.panel.status.setText(
+            self.panel.set_status(
                 "Connected"
                 if client.connection.can_download
                 else "Connected — this account has no download permission"
@@ -259,7 +334,6 @@ class AudiobookshelfController(QObject):
                 self.panel.server,
                 self.panel.username,
                 self.panel.password,
-                self.panel.remember,
             ):
                 field.setEnabled(True)
             self._failed(message)
@@ -275,7 +349,7 @@ class AudiobookshelfController(QObject):
         if self.panel.libraries.count():
             self.load_books()
         else:
-            self.panel.status.setText("This account has no audiobook libraries")
+            self.panel.set_status("This account has no audiobook libraries")
 
     def load_books(self, page: int = 0) -> None:
         client = self.client
@@ -287,13 +361,13 @@ class AudiobookshelfController(QObject):
         self._library = library
         self.page = max(0, int(page))
         query, selected_page = self._query, self.page
-        self.panel.status.setText("Loading books…")
+        self.panel.set_status("Loading books…")
         self.panel.books.setRowCount(0)
         self.panel.download.setEnabled(False)
 
         def show(result: BookPage) -> None:
             self.panel.show_page(result, search=bool(query))
-            self.panel.status.setText(f"{result.total} book(s) — select the ones to transfer")
+            self.panel.set_status(f"{result.total} book(s) — select the ones to transfer")
 
         self.tasks.start(
             lambda: client.books(library, page=selected_page, query=query),
@@ -341,9 +415,7 @@ class AudiobookshelfController(QObject):
     def update_device(self) -> None:
         device = self.get_device()
         self.panel.device_label.setText(
-            f"Device: {device.name} — {device.root}"
-            if device is not None
-            else "No Shokz selected — choose a device in Shokz device / files"
+            "" if device is not None else "No Shokz selected — choose a device in Shokz files"
         )
         self.panel.download.setEnabled(
             self.client is not None
@@ -359,42 +431,33 @@ class AudiobookshelfController(QObject):
             self._failed("Select a device and one or more books first")
             return
         try:
-            queued = 0
-            for book in selected:
-                dialog = BookExportDialog(book, self.get_options(), self.panel)
-                if dialog.exec() != QDialog.DialogCode.Accepted:
-                    continue
-                # A modal dialog processes device events; recheck the selected destination.
-                current = self.get_device()
-                if current is None or current.root != device.root or self.client is not client:
-                    raise ValueError(
-                        "The selected device or server changed; select the books again"
-                    )
-                jobs = self.queue.enqueue([book], device.root, client, options=dialog.options)
-                queued += len(jobs)
-            self.panel.status.setText(f"Queued {queued} book(s) — one MP3 per book")
+            options = self.get_options()
+            queued = len(self.queue.enqueue(selected, device.root, client, options=options))
+            self.panel.set_status(f"Queued {queued} book(s) — one MP3 per book")
             self.jobsQueued.emit()
         except (OSError, ValueError, PermissionError, RuntimeError) as exc:
             self._failed(str(exc))
 
     def disconnect_server(self) -> None:
+        self.panel.empty_state.set_text(
+            "Your audiobook library\nConnect to your server to choose books."
+        )
         for key in ("login", "libraries", "books", "detail"):
             self.tasks.cancel(key)
         self.queue.cancel(list(self.queue.jobs))
         self.client = None
         self.panel.password.clear()
-        self.panel.remember.setChecked(False)
         self.panel.books.setRowCount(0)
         self.panel.libraries.clear()
         self.panel.set_browsing_enabled(False)
         self.panel.download.setEnabled(False)
         self.panel.disconnect_button.setEnabled(False)
         self.panel.connect_button.setEnabled(False)
-        self.panel.status.setText("Disconnected; forgetting the saved connection…")
+        self.panel.set_status("Disconnected; forgetting the saved connection…")
 
         def forgotten(_value: object) -> None:
             self.panel.connect_button.setEnabled(True)
-            self.panel.status.setText("Disconnected; saved connection removed")
+            self.panel.set_status("Disconnected; saved connection removed")
 
         def failed(message: str) -> None:
             self.panel.connect_button.setEnabled(True)

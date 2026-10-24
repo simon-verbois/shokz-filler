@@ -60,4 +60,5 @@ exe = EXE(
     strip=False,
     upx=False,
     console=False,
+    icon=str(root / "assets" / "shokz-refill.ico") if sys.platform == "win32" else None,
 )

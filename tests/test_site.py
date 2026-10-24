@@ -88,7 +88,7 @@ def test_five_languages_have_local_assets_canonical_urls_and_accessible_copy(web
         assert 'aria-current="page"' in page
         assert "data-i18n" not in page
         assert "$book_name" in page and "$author_name" in page
-        assert "<strong>Download / transfer selected books</strong>" in page
+        assert "<strong>Send selected books to Shokz</strong>" in page
         if language != "en":
             assert 'src="../screenshots/music.png"' in page
             assert 'href="../styles.css"' in page
