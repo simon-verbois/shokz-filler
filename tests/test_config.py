@@ -6,7 +6,7 @@ from shokz_refill.config import AppConfig, ConfigStore
 
 def test_config_round_trip_and_bad_input(tmp_path: Path) -> None:
     store = ConfigStore(tmp_path / "config", tmp_path / "cache")
-    config = AppConfig(manual_device="/media/test", window_width=900)
+    config = AppConfig(manual_device="/media/test", window_width=900, guided_tour_seen=True)
     store.save(config)
     assert store.load() == config
     if os.name == "posix":
@@ -18,7 +18,10 @@ def test_config_round_trip_and_bad_input(tmp_path: Path) -> None:
 def test_wrong_json_types_fall_back_to_valid_defaults(tmp_path: Path) -> None:
     store = ConfigStore(tmp_path / "config", tmp_path / "cache")
     store.ensure_dirs()
-    store.path.write_text('{"window_width": "invalid", "window_height": -1, "manual_device": 42}')
+    store.path.write_text(
+        '{"window_width": "invalid", "window_height": -1, "manual_device": 42, '
+        '"guided_tour_seen": "false"}'
+    )
     assert store.load() == AppConfig()
 
 

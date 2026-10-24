@@ -7,6 +7,7 @@ import time
 from collections.abc import Iterator
 
 import pytest
+from shiboken6 import isValid
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -54,5 +55,6 @@ def finish_qt_windows(
     else:
         pytest.fail("Qt workers did not finish during test cleanup")
     for window in windows:
-        window.deleteLater()
+        if isValid(window):
+            window.deleteLater()
     QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)

@@ -1,5 +1,6 @@
 import threading
 import time
+from dataclasses import replace
 from pathlib import Path
 
 from mutagen.id3 import ID3
@@ -249,5 +250,90 @@ def test_legacy_chapter_files_are_preserved_when_creating_ordered_export(tmp_pat
         assert job.destination != old
         assert (old / "00001 chapter.mp3").read_bytes() == b"legacy audio"
         assert len(list(job.destination.glob("*.mp3"))) == 2
+    finally:
+        queue.shutdown()
+
+
+def test_retry_of_changed_sources_preserves_old_export_and_partial_cache(tmp_path: Path) -> None:
+    root = tmp_path / "device"
+    root.mkdir()
+    stop = True
+
+    class RevisedClient(Client):
+        revision = "first"
+
+        def book(self, item_id: str) -> Audiobook:
+            book = super().book(item_id)
+            return replace(
+                book,
+                sources=tuple(replace(source, modified=self.revision) for source in book.sources),
+            )
+
+    class PartialTransfer(TransferManager):
+        def transfer(self, source, destination, root, progress, cancelled):  # type: ignore[no-untyped-def]
+            def report(value: int) -> None:
+                nonlocal stop
+                progress(value)
+                if stop and destination.name.startswith("02") and value > 0:
+                    stop = False
+                    queue.cancel([next(iter(queue.jobs))])
+
+            return super().transfer(source, destination, root, report, cancelled)
+
+    client = RevisedClient()
+    queue = AudiobookQueue(
+        tmp_path / "cache",
+        PartialTransfer(tmp_path / "state.json", chunk_size=50),
+        normalizer=normalizer([]),
+    )
+    try:
+        job = queue.enqueue([Audiobook("one", "Book", "Author")], root, client)[0]
+        wait(queue)
+        assert job.status == JobStatus.CANCELLED
+        original_folder = job.destination
+        original = (original_folder / "01 - First.mp3").read_bytes()
+        partial = next(original_folder.glob("*.part"))
+        partial_bytes = partial.read_bytes()
+        cached = next((tmp_path / "cache").rglob("02 - Second.mp3"))
+        cached_bytes = cached.read_bytes()
+        client.revision = "second"
+        queue.retry([job.job_id], root, client)
+        wait(queue)
+        assert job.status == JobStatus.COMPLETE
+        assert job.destination != original_folder
+        assert (original_folder / "01 - First.mp3").read_bytes() == original
+        assert partial.read_bytes() == partial_bytes
+        assert cached.read_bytes() == cached_bytes
+        assert sorted(path.name for path in job.destination.glob("*.mp3")) == [
+            "01 - First.mp3",
+            "02 - Second.mp3",
+        ]
+    finally:
+        queue.shutdown()
+
+
+def test_changed_later_announcement_does_not_reuse_a_conflicting_export(tmp_path: Path) -> None:
+    root = tmp_path / "device"
+    root.mkdir()
+    client = Client()
+    queue = AudiobookQueue(
+        tmp_path / "cache", TransferManager(tmp_path / "state.json"), normalizer=normalizer([])
+    )
+    try:
+        book = Audiobook("one", "Book", "Author")
+        first = queue.enqueue([book], root, client)[0]
+        wait(queue)
+        original = {p.name: p.read_bytes() for p in first.destination.glob("*.mp3")}
+        second = queue.enqueue(
+            [book],
+            root,
+            client,
+            options=replace(BookExportOptions(), chapter_template="Part $chapter_number"),
+        )[0]
+        wait(queue)
+        assert first.status == second.status == JobStatus.COMPLETE
+        assert first.destination != second.destination
+        assert {p.name: p.read_bytes() for p in first.destination.glob("*.mp3")} == original
+        assert len(list(second.destination.glob("*.mp3"))) == 2
     finally:
         queue.shutdown()

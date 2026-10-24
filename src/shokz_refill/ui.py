@@ -44,17 +44,18 @@ from .book_dialogs import SpeechSettingsPanel
 from .book_export import BookExportOptions
 from .browser_panel import BrowserPanel
 from .config import ConfigStore
-from .device import DeviceDetector, manual_device
+from .device import DeviceDetector, manual_device, verify_device
 from .dialogs import DeviceFolderDialog
 from .downloads import DownloadQueue, cleanup_stale_cache
 from .files import DeviceFileService
 from .filesystem import device_operation
+from .guided_tour import GuidedTour, application_tour_steps
 from .icons import icon
 from .library_view import LibraryEntry, library_rows
+from .local_import import LocalMp3Importer
 from .media import MediaDownloader
-from .metadata import validate_source_mp3
 from .models import Device, DownloadJob, JobStatus, Playlist, Track
-from .naming import playlist_folder_name, sanitize_component
+from .naming import playlist_folder_name
 from .navigation import SETTINGS_PAGE, Sidebar
 from .page_layout import PageTemplate
 from .playback_order import next_position
@@ -141,6 +142,7 @@ class MainWindow(QMainWindow):
         self._file_kinds: dict[Path, bool] = {}
         transfer_state = store.cache_dir / "transfers.json"
         self.transfer = TransferManager(transfer_state)
+        self.local_import = LocalMp3Importer(store.cache_dir, self.transfer)
         self.queue = DownloadQueue(
             store.cache_dir,
             self.transfer,
@@ -150,6 +152,7 @@ class MainWindow(QMainWindow):
         self.audiobook_queue = AudiobookQueue(store.cache_dir, self.transfer, self._queue_callback)
         self._queues = (self.queue, self.audiobook_queue)
         self._initial_focus_cleared = False
+        self.guided_tour: GuidedTour | None = None
         self._build_ui()
         self._run(lambda: cleanup_stale_cache(store.cache_dir, transfer_state), lambda _v: None)
         self.resize(self.config.window_width, self.config.window_height)
@@ -171,6 +174,8 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(0, self._clear_initial_focus)
 
     def _clear_initial_focus(self) -> None:
+        if self.guided_tour is not None:
+            return
         # Hand focus to the page container (click focus only), so no control shows a focus ring.
         host = self.centralWidget()
         if host is not None:
@@ -213,6 +218,7 @@ class MainWindow(QMainWindow):
         self.sidebar.pageRequested.connect(self.tabs.setCurrentIndex)
         self.tabs.currentChanged.connect(self.sidebar.set_page)
         self.sidebar.refreshRequested.connect(self._poll_devices)
+        self.sidebar.tourRequested.connect(self.show_guided_tour)
         self.tabs.addTab(self._youtube_tab(), "YouTube Music")
         settings = AudiobookshelfSettings(self.store.config_dir / "audiobookshelf.json")
         self.audiobookshelf_panel = AudiobookshelfPanel(settings.load())
@@ -258,6 +264,35 @@ class MainWindow(QMainWindow):
         status_bar.setSizeGripEnabled(False)
         status_bar.hide()
         status_bar.messageChanged.connect(lambda text: status_bar.setVisible(bool(text)))
+
+    def show_guided_tour_if_needed(self) -> None:
+        """Offer onboarding at startup until the tour has been opened once."""
+        if not self.config.guided_tour_seen:
+            self.show_guided_tour()
+
+    def show_guided_tour(self) -> None:
+        """Open a single, nonblocking tour without triggering application actions."""
+        if self._closing or not self.isVisible():
+            return
+        if self.guided_tour is not None:
+            self.guided_tour.raise_()
+            self.guided_tour.activateWindow()
+            return
+        tour = GuidedTour(self, self.tabs, application_tour_steps(self))
+        self.guided_tour = tour
+        tour.finished.connect(lambda _result: setattr(self, "guided_tour", None))
+        tour.open()
+        if not self.config.guided_tour_seen:
+            self.config.guided_tour_seen = True
+            snapshot = replace(self.config)
+            self._run(
+                lambda: self.store.save(snapshot),
+                lambda _value: None,
+                "",
+                lambda error: self.statusBar().showMessage(
+                    f"Could not save guided tour preference: {error}"
+                ),
+            )
 
     def _is_maximized(self) -> bool:
         return self.isMaximized() or self.isFullScreen()
@@ -467,7 +502,7 @@ class MainWindow(QMainWindow):
             self.file_buttons[label] = button
             toolbar.addWidget(button)
         add = QPushButton("Add MP3")
-        add.setToolTip("Copy local MP3 files to this folder without re-encoding")
+        add.setToolTip("Import MP3 files; normalize to 192 kbps, 44.1 kHz stereo when needed")
         role(add, "primary")
         add.setIcon(icon("plus", ON_ACCENT))
         add.clicked.connect(self._add_local)
@@ -813,6 +848,8 @@ class MainWindow(QMainWindow):
         # Device I/O (recreating a vanished download folder, reading its numbering) stays off
         # the UI thread.
         def prepare() -> tuple[Path, int]:
+            if device.identity is not None:
+                verify_device(device.root, device.identity)
             folder = destination
             if not folder.exists() and folder.parent == device.root:
                 folder = DeviceFileService(device.root).ensure_folder(device.root, folder.name)
@@ -827,7 +864,9 @@ class MainWindow(QMainWindow):
     def _enqueue_from(self, tracks: list[Track], device: Device, value: object) -> None:
         if isinstance(value, tuple):
             folder, start = value
-            self.queue.enqueue(tracks, folder, device.root, start=start)
+            self.queue.enqueue(
+                tracks, folder, device.root, start=start, expected_device=device.identity
+            )
             self.browser.discard_pending(tracks)
 
     def _results_context_menu(self, position: Any) -> None:
@@ -1271,32 +1310,20 @@ class MainWindow(QMainWindow):
         if not names:
             return
         sources = [Path(name) for name in names]
-        root, folder = self.device.root, self.current_folder
+        device, folder = self.device, self.current_folder
         self._set_device_operation(
             f"Copying {len(sources)} MP3 file(s) — keep the Shokz connected", busy=True
         )
 
-        def copy_files() -> int:
-            copied = 0
-            for source in sources:
-                validate_source_mp3(source)
-                safe_name = sanitize_component(source.stem, max_bytes=220) + ".mp3"
-
-                def report(value: int, completed: int = copied) -> None:
-                    self.deviceProgress.emit(int((completed + value / 100) * 100 / len(sources)))
-
-                self.transfer.transfer(
-                    source,
-                    folder / safe_name,
-                    root,
-                    report,
-                    self._device_cancel.is_set,
-                )
-                copied += 1
-            return copied
-
         self._run_device(
-            copy_files,
+            lambda: self.local_import.import_files(
+                sources,
+                folder,
+                device.root,
+                self.deviceProgress.emit,
+                self._device_cancel.is_set,
+                expected_device=device.identity,
+            ),
             self._local_added,
             f"Copying {len(sources)} MP3 file(s) — keep the Shokz connected",
         )

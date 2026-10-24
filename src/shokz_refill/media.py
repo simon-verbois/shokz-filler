@@ -166,6 +166,23 @@ class AudioConverter:
     def convert(
         self, source: Path, output: Path, track: Track, progress: Progress, cancelled: Cancelled
     ) -> Path:
+        return self._convert(source, output, progress, cancelled, track=track)
+
+    def normalize(
+        self, source: Path, output: Path, progress: Progress, cancelled: Cancelled
+    ) -> Path:
+        """Normalize local audio to the target format while retaining its existing metadata."""
+        return self._convert(source, output, progress, cancelled)
+
+    def _convert(
+        self,
+        source: Path,
+        output: Path,
+        progress: Progress,
+        cancelled: Cancelled,
+        *,
+        track: Track | None = None,
+    ) -> Path:
         output.parent.mkdir(parents=True, exist_ok=True)
         temporary = output.with_suffix(".encoding.mp3")
         command = [
@@ -194,13 +211,14 @@ class AudioConverter:
             if cancelled():
                 raise DownloadCancelled("Conversion cancelled")
             progress(90)
-            write_metadata(
-                temporary,
-                source_id=track.video_id,
-                artist=track.artist,
-                title=track.title,
-                album=track.album,
-            )
+            if track is not None:
+                write_metadata(
+                    temporary,
+                    source_id=track.video_id,
+                    artist=track.artist,
+                    title=track.title,
+                    album=track.album,
+                )
             validate_mp3(temporary)
             if cancelled():
                 raise DownloadCancelled("Conversion cancelled")

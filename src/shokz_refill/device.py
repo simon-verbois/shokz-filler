@@ -18,12 +18,31 @@ def _usage(path: Path) -> tuple[int, int, int]:
     return usage.total, usage.used, usage.free
 
 
+def device_identity(root: Path) -> tuple[int, int]:
+    """Capture the selected directory's identity in a worker before long operations."""
+    info = root.stat()
+    return info.st_dev, info.st_ino
+
+
+def verify_device(root: Path, expected: tuple[int, int]) -> None:
+    if device_identity(root) != expected:
+        raise OSError("Selected device changed or disconnected; select the original device again")
+
+
 def manual_device(path: Path) -> Device:
     root = path.expanduser().resolve(strict=True)
     if not root.is_dir():
         raise ValueError("Selected device path is not a folder")
     total, used, free = _usage(root)
-    return Device(root.name or str(root), root, total, used, free, automatic=False)
+    return Device(
+        root.name or str(root),
+        root,
+        total,
+        used,
+        free,
+        automatic=False,
+        identity=device_identity(root),
+    )
 
 
 class DeviceDetector:
@@ -61,7 +80,14 @@ class DeviceDetector:
                 try:
                     total, used, free = _usage(path)
                     devices.append(
-                        Device(label or description or path.name, path, total, used, free)
+                        Device(
+                            label or description or path.name,
+                            path,
+                            total,
+                            used,
+                            free,
+                            identity=device_identity(path),
+                        )
                     )
                 except OSError:
                     pass
@@ -90,7 +116,16 @@ class DeviceDetector:
             root = Path(root_string)
             try:
                 total, used, free = _usage(root)
-                devices.append(Device(label or f"Shokz ({letter}:)", root, total, used, free))
+                devices.append(
+                    Device(
+                        label or f"Shokz ({letter}:)",
+                        root,
+                        total,
+                        used,
+                        free,
+                        identity=device_identity(root),
+                    )
+                )
             except OSError:
                 pass
         return devices

@@ -1,3 +1,5 @@
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -44,6 +46,42 @@ def test_gate_releases_strictly_in_order_and_skips_failed_items() -> None:
     gate.skip(4)
     gate.ready(5, lambda: released.append(5))
     assert released == [2, 3, 5] and gate.passed(5)
+
+
+def test_concurrent_gate_callbacks_are_submitted_in_order() -> None:
+    gate = OrderGate(1)
+    entered, proceed = threading.Event(), threading.Event()
+    released: list[int] = []
+
+    def first() -> None:
+        entered.set()
+        assert proceed.wait(3)
+        released.append(1)
+
+    with ThreadPoolExecutor(1) as executor:
+        future = executor.submit(gate.ready, 1, first)
+        try:
+            assert entered.wait(2)
+            gate.ready(2, lambda: released.append(2))
+            assert released == []
+        finally:
+            proceed.set()
+        future.result(timeout=2)
+    assert released == [1, 2]
+
+
+def test_gate_allows_reentrant_readiness_and_ignores_cancelled_slots() -> None:
+    gate = OrderGate(1)
+    released: list[int] = []
+    gate.skip(2)
+    gate.ready(2, lambda: released.append(2))
+
+    def first() -> None:
+        released.append(1)
+        gate.ready(3, lambda: released.append(3))
+
+    gate.ready(1, first)
+    assert released == [1, 3]
 
 
 class SlowFirstConverter:

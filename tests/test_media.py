@@ -1,9 +1,13 @@
 import json
 import os
+import shutil
 import stat
 from pathlib import Path
 
-from shokz_refill.media import _download_auth_options
+import pytest
+
+from shokz_refill.media import AudioConverter, DownloadCancelled, _download_auth_options
+from shokz_refill.metadata import read_identity, validate_mp3
 
 
 def test_download_auth_uses_scoped_cookie_file(tmp_path: Path) -> None:
@@ -113,3 +117,42 @@ def test_process_kills_child_that_ignores_termination(monkeypatch) -> None:  # t
     with pytest.raises(DownloadCancelled):
         run_process(["fake"], cancelled)
     assert child.terminated and child.killed and child.reaped
+
+
+def test_local_conversion_uses_target_format_and_preserves_metadata(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    commands: list[list[str]] = []
+
+    def run(command: list[str], cancelled) -> None:  # type: ignore[no-untyped-def]
+        commands.append(command)
+        shutil.copyfile(Path(__file__).parent / "fixtures" / "target-stereo.mp3", command[-1])
+
+    monkeypatch.setattr("shokz_refill.media.bundled_binary", lambda _name: Path("fake-ffmpeg"))
+    monkeypatch.setattr("shokz_refill.media.run_process", run)
+    source = Path(__file__).parent / "fixtures" / "source-mono.mp3"
+    output = tmp_path / "normalized.mp3"
+    AudioConverter().normalize(source, output, lambda _p: None, lambda: False)
+    command = commands[0]
+    for flag, expected in (("-b:a", "192k"), ("-ar", "44100"), ("-ac", "2")):
+        assert command[command.index(flag) + 1] == expected
+    validate_mp3(output)
+    assert read_identity(output).artist == "Local artist"
+    assert not list(tmp_path.glob("*.encoding.mp3"))
+
+
+def test_local_conversion_cancellation_does_not_publish_output(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def run(command, cancelled):  # type: ignore[no-untyped-def]
+        Path(command[-1]).write_bytes(b"unfinished")
+        raise DownloadCancelled("cancelled")
+
+    monkeypatch.setattr("shokz_refill.media.bundled_binary", lambda _name: Path("fake-ffmpeg"))
+    monkeypatch.setattr("shokz_refill.media.run_process", run)
+    output = tmp_path / "normalized.mp3"
+    with pytest.raises(DownloadCancelled):
+        AudioConverter().normalize(Path("source.mp3"), output, lambda _p: None, lambda: False)
+    assert not list(tmp_path.iterdir())

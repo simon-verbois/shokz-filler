@@ -42,4 +42,5 @@ def main() -> int:
         QTimer.singleShot(500, window.close)
     else:
         window.connect_saved_accounts()
+        QTimer.singleShot(0, window.show_guided_tour_if_needed)
     return app.exec()

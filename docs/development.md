@@ -11,6 +11,19 @@ broadly compatible MP3: **CBR 192 kbps, 44.1 kHz, stereo, ID3v2.3**.
 
 ## Use
 
+On first launch, a **Guided tour** highlights the main controls without requiring an account or a
+connected device. Use **Back**, **Next**, **Finish**, or **Skip tour**; **Escape** also closes it.
+The page used before opening the tour is restored on exit. Opening the tour sets
+`guided_tour_seen` in the existing local `config.json`, including when it is skipped, so it does
+not open automatically again. Existing configurations without this field receive the tour once.
+Replay it from **Guided tour**, below the sidebar divider and above **Settings**.
+
+The tour's content and widget targets live in `src/shokz_refill/guided_tour.py`. Any change to a
+covered control, feature, or workflow must update the affected tour steps and
+`tests/test_guided_tour.py` in the same change (see `AGENTS.md`). Ordinary updates must preserve
+the seen preference. Startup schedules the tour from `app.py` after the main window is shown;
+portable smoke mode skips onboarding.
+
 1. Connect or manually select the mounted Shokz volume. Automatically detected media is clearly
    labelled; manual selection is available for devices whose USB metadata cannot be recognized.
 2. Browse the device files as needed. Standalone search downloads ask for their own destination.
@@ -47,7 +60,10 @@ Filters are available for result titles/artists, device names/types, and queue t
 multiple column filters combine. Clear the text or choose **Clear filters** from the menu; device header controls also support right-click to clear filters. Hidden rows are deselected before any operation on selected items.
 
 The device browser can create, rename, move, and recursively delete folders; rename, move, or delete MP3s;
-and add local MP3 files. `SYSTEM` and `System Volume Information` are hidden, regardless of case. Moves support multi-selection:
+and add local MP3 files. Already compatible MP3s are copied directly; other valid MP3s are normalized
+in a background worker to CBR 192 kbps, 44.1 kHz stereo before copying. Normalization preserves
+the original files and retains cached output when needed to resume an interrupted transfer.
+`SYSTEM` and `System Volume Information` are hidden, regardless of case. Moves support multi-selection:
 drag selected items onto a visible folder, or use **Move selected…** to choose a destination from
 the in-app folder tree. Folders remain flat at the device root and cannot be nested; MP3 files can
 be moved into a folder. Moves remain inside the selected device. Recursive deletes require explicit
@@ -108,6 +124,9 @@ and chapter number) and one for the others (by default the chapter number), usin
 `$author_name`, `$chapter_number` and `$chapter_title`. Music downloads use the same component: files are numbered
 `NNN - Artist - Title.mp3`, continue after the highest number already in the folder, and an
 `OrderGate` releases transfers strictly in playlist order even though downloads run concurrently.
+Sends to the same folder share position reservations and a transfer gate, including overlapping
+batches. The selected device identity is checked before downloads and again before copying;
+replacing a volume at the same path stops the transfer.
 
 Selected books are queued directly. **Settings → Audiobook announcement** controls **Read the book
 title and author before each book** (on by default), the voice, speed and text, and lets you preview

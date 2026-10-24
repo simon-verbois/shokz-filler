@@ -62,9 +62,12 @@ class OrderGate:
         self._ready: dict[int, Callable[[], None]] = {}
         self._skipped: set[int] = set()
         self._lock = threading.Lock()
+        self._draining = False
 
     def ready(self, position: int, release: Callable[[], None]) -> None:
         with self._lock:
+            if position < self._next or position in self._skipped:
+                return
             self._ready[position] = release
         self._drain()
 
@@ -74,20 +77,33 @@ class OrderGate:
 
     def skip(self, position: int) -> None:
         with self._lock:
+            if position < self._next:
+                return
             self._skipped.add(position)
             self._ready.pop(position, None)
         self._drain()
 
     def _drain(self) -> None:
+        with self._lock:
+            if self._draining:
+                return
+            self._draining = True
         while True:
             with self._lock:
                 while self._next in self._skipped:
+                    self._skipped.remove(self._next)
                     self._next += 1
                 release = self._ready.pop(self._next, None)
                 if release is None:
+                    self._draining = False
                     return
                 self._next += 1
-            release()
+            try:
+                release()
+            except BaseException:
+                with self._lock:
+                    self._draining = False
+                raise
 
 
 @dataclass(frozen=True)

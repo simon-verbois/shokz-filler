@@ -73,6 +73,44 @@ def test_invalid_chapters_fall_back_to_one_part_per_server_track() -> None:
     assert sum(s.duration for part in plan for s in part.segments) == 20
 
 
+@pytest.mark.parametrize(
+    "chapters",
+    [
+        (Chapter("One", 10, 20), Chapter("Two", 30, 40)),
+        (Chapter("One", 1, 30), Chapter("Two", 30, 60)),
+        (Chapter("One", 0, 20), Chapter("Two", 21, 60)),
+        (Chapter("One", 0, 30), Chapter("Two", 30, 59)),
+        (Chapter("One", 0, 30), Chapter("Two", 29, 60)),
+        (Chapter("One", 0, 30), Chapter("Two", 30, 60.1)),
+        (Chapter("One", 0, float("nan")), Chapter("Two", 30, 60)),
+    ],
+)
+def test_incomplete_chapters_preserve_all_audio_by_falling_back(
+    chapters: tuple[Chapter, ...],
+) -> None:
+    book = Audiobook(
+        "book", "Book", sources=(AudioSource(1, "full.m4b", "/audio", 60),), chapters=chapters
+    )
+    parts = export_plan(book)
+    assert len(parts) == 1
+    assert [(s.offset, s.duration) for s in parts[0].segments] == [(0, 60)]
+
+
+def test_chapter_rounding_is_snapped_without_losing_or_repeating_audio() -> None:
+    book = Audiobook(
+        "book",
+        "Book",
+        sources=(AudioSource(1, "a.m4b", "/a", 30), AudioSource(2, "b.m4b", "/b", 30)),
+        chapters=(Chapter("One", 0.02, 30), Chapter("Two", 29.98, 59.98)),
+    )
+    parts = export_plan(book)
+    assert len(parts) == 2
+    assert [(s.source_index, s.offset, s.duration) for p in parts for s in p.segments] == [
+        (1, 0, 30),
+        (2, 0, 30),
+    ]
+
+
 def test_duplicate_source_indices_are_rejected() -> None:
     book = map_book(item(), expanded=True)
     book = replace(book, sources=(book.sources[0], book.sources[0]))

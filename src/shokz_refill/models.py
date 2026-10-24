@@ -37,6 +37,7 @@ class Device:
     used: int
     free: int
     automatic: bool = True
+    identity: tuple[int, int] | None = None
 
 
 class JobStatus(StrEnum):
@@ -63,3 +64,4 @@ class DownloadJob:
     cancel_requested: bool = False
     device_root: Path | None = None
     position: int | None = None  # 1-based playback position; None leaves the name unnumbered
+    device_identity: tuple[int, int] | None = None

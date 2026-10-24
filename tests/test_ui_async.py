@@ -30,6 +30,35 @@ def test_background_result_reaches_ui(tmp_path: Path) -> None:
     assert received == ["result"]
 
 
+def test_local_import_runs_in_worker_with_selected_device_identity(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    qt_application: QApplication,
+) -> None:
+    root = tmp_path / "device"
+    root.mkdir()
+    window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
+    device = manual_device(root)
+    window.device, window.current_folder = device, root
+    source = Path(__file__).parent / "fixtures" / "source-mono.mp3"
+    monkeypatch.setattr(
+        "shokz_refill.ui.QFileDialog.getOpenFileNames", lambda *_args: ([str(source)], "")
+    )
+    calls: list[tuple[QThread, tuple[int, int] | None]] = []
+
+    def import_files(sources, folder, selected_root, progress, cancelled, *, expected_device):  # type: ignore[no-untyped-def]
+        assert sources == [source] and folder == selected_root == root
+        calls.append((QThread.currentThread(), expected_device))
+        return 1
+
+    monkeypatch.setattr(window.local_import, "import_files", import_files)
+    window._add_local()
+    pump_until(qt_application, lambda: bool(calls) and not window._device_busy)
+    assert calls[0][0] != qt_application.thread()
+    assert calls[0][1] == device.identity
+    assert "Copy complete" in window.device_operation_label.text()
+
+
 def test_expired_library_error_runs_on_ui_thread(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

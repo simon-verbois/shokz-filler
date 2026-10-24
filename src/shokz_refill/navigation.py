@@ -115,6 +115,7 @@ class TransferIndicator(QWidget):
 class Sidebar(QWidget):
     pageRequested = Signal(int)
     refreshRequested = Signal()
+    tourRequested = Signal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -188,6 +189,14 @@ class Sidebar(QWidget):
                 layout.addSpacing(4)
                 layout.addWidget(divider)
                 layout.addSpacing(4)
+                self.tour_button = QPushButton("Guided tour")
+                self.tour_button.setIcon(icon("help"))
+                self.tour_button.setIconSize(QSize(23, 23))
+                self.tour_button.setToolTip("Show the guided tour again")
+                self.tour_button.setFocusPolicy(Qt.FocusPolicy.TabFocus)
+                role(self.tour_button, "nav")
+                self.tour_button.clicked.connect(self.tourRequested)
+                layout.addWidget(self.tour_button)
             layout.addWidget(button)
         self.set_page(0)
         self.set_device(None)

@@ -40,6 +40,7 @@ _PATHS = {
     "check": '<circle cx="12" cy="12" r="9"/><path d="m7 12 3 3 7-7"/>',
     "clock": '<circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/>',
     "error": '<circle cx="12" cy="12" r="9"/><path d="M12 6v7m0 3v1"/>',
+    "help": '<circle cx="12" cy="12" r="9"/><path d="M9 9a3 3 0 0 1 6 0c0 2-3 2-3 4m0 3v.1"/>',
     "minimize": '<path d="M6 12h12"/>',
     "maximize": '<rect x="6" y="6" width="12" height="12" rx="1.5"/>',
     "restore": '<rect x="5" y="9" width="10" height="10" rx="1.5"/><path d="M9 9V6h10v10h-4"/>',

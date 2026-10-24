@@ -213,27 +213,37 @@ def _chapter_parts(book: Audiobook, sources: list[AudioSource]) -> list[ExportPa
     chapters = book.chapters
     if len(chapters) < 2:
         return None
+    tolerance = 0.05
     previous_end = 0.0
     for chapter in chapters:
         if (
-            chapter.start < 0
+            not math.isfinite(chapter.start)
+            or not math.isfinite(chapter.end)
+            or chapter.start < 0
             or chapter.end <= chapter.start
-            or chapter.start < previous_end - 0.05
-            or chapter.end > total + 1
+            or abs(chapter.start - previous_end) > tolerance
+            or chapter.end > total + tolerance
         ):
             return None
         previous_end = chapter.end
+    if abs(previous_end - total) > tolerance:
+        return None
     starts: list[tuple[AudioSource, float]] = []
     cursor = 0.0
     for source in sources:
         starts.append((source, cursor))
         cursor += source.duration
     parts: list[ExportPart] = []
+    # Snap tolerated rounding differences to shared boundaries: no audio is omitted or repeated.
+    boundaries = [0.0, *(chapter.end for chapter in chapters[:-1]), total]
     for number, chapter in enumerate(chapters, 1):
         segments: list[Segment] = []
+        start, end = boundaries[number - 1 : number + 1]
+        if end <= start:
+            return None
         for source, begin in starts:
-            low, high = max(chapter.start, begin), min(chapter.end, begin + source.duration)
-            if high - low > 0.01:
+            low, high = max(start, begin), min(end, begin + source.duration)
+            if high > low:
                 segments.append(Segment(source.index, low - begin, high - low))
         if not segments:
             return None

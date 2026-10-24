@@ -45,7 +45,7 @@ class BookWork:
     server: str
     item_id: str
     options: BookExportOptions
-    destination_prepared: bool = False
+    export_identity: str = ""
 
 
 class AudiobookQueue:
@@ -132,16 +132,15 @@ class AudiobookQueue:
                 "Audiobook cancelled; cached audio and partial transfers were kept for retry"
             )
 
-    def _prepare_destination(self, root: Path, preferred: Path, identity: str) -> Path:
+    def _prepare_destination(self, root: Path, preferred: Path, identities: set[str]) -> Path:
         service = DeviceFileService(root)
         pattern = re.compile(re.escape(preferred.name) + r"(?: [0-9]+)?$")
         for candidate in service.list_dir(root):
-            if (
-                candidate.is_dir()
-                and pattern.fullmatch(candidate.name)
-                and self._present(candidate, {identity})
-            ):
-                return candidate
+            if candidate.is_dir() and pattern.fullmatch(candidate.name):
+                files = [path for path in candidate.iterdir() if path.suffix.lower() == ".mp3"]
+                # A shared first chapter alone cannot prove that the other files match this export.
+                if files and len(self._present(candidate, identities)) == len(files):
+                    return candidate
         if preferred.is_dir() and not preferred.is_symlink():
             safe = service.checked(preferred)
             if not any(path.suffix.lower() == ".mp3" for path in safe.iterdir()):
@@ -189,16 +188,19 @@ class AudiobookQueue:
                 )
                 for part in parts
             ]
+            # Track the complete revision, including other chapters' announcements, across retries.
+            export_identity = hashlib.sha256(json.dumps(identities).encode()).hexdigest()
+            # Old revisions can still back resumable partials; never overwrite their cached sources.
+            cache = cache / export_identity
             for part in parts:
                 self.normalizer.check_size(sum(segment.duration for segment in part.segments))
             with device_operation(cancelled):
                 check_device()
-                if not work.destination_prepared:
-                    # Parts are published in order, so the first one identifies this export.
+                if work.export_identity != export_identity:
                     job.destination = self._prepare_destination(
-                        root, job.destination, identities[0]
+                        root, root / book.folder_name(work.server), set(identities)
                     )
-                    work.destination_prepared = True
+                    work.export_identity = export_identity
                 present = self._present(job.destination, set(identities))
             pending = [
                 (part, identity)

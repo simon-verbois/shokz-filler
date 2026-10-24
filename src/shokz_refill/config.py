@@ -34,6 +34,7 @@ class AppConfig:
     destination_relative: str = "."
     window_width: int = 1100
     window_height: int = 760
+    guided_tour_seen: bool = False
     book_tts_template: str = DEFAULT_ANNOUNCEMENT
     book_tts_voice: str = "fr"
     book_tts_rate: int = 100
