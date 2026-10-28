@@ -40,7 +40,7 @@ def collision_path(path: Path) -> Path:
     if (
         not path.exists()
         and not path.is_symlink()
-        and not path.with_name(path.name + ".shokz-refill.part").exists()
+        and not path.with_name(path.name + ".shokz-filler.part").exists()
     ):
         return path
     for number in range(2, 10_000):
@@ -48,7 +48,7 @@ def collision_path(path: Path) -> Path:
         if (
             not candidate.exists()
             and not candidate.is_symlink()
-            and not candidate.with_name(candidate.name + ".shokz-refill.part").exists()
+            and not candidate.with_name(candidate.name + ".shokz-filler.part").exists()
         ):
             return candidate
     raise FileExistsError(f"Could not find a free name for {path.name}")

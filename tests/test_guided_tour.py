@@ -10,9 +10,9 @@ from PySide6.QtCore import QPoint, Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QFrame
 
-from shokz_refill.config import AppConfig, ConfigStore
-from shokz_refill.models import Track
-from shokz_refill.ui import MainWindow
+from shokz_filler.config import AppConfig, ConfigStore
+from shokz_filler.models import Track
+from shokz_filler.ui import MainWindow
 
 
 def test_first_open_is_saved_even_when_skipped_and_can_be_replayed(

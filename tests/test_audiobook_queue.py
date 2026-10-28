@@ -5,14 +5,14 @@ from pathlib import Path
 
 from mutagen.id3 import ID3
 
-from shokz_refill.audiobook_models import Audiobook, AudioSource, Chapter
-from shokz_refill.audiobook_normalizer import AudiobookNormalizer
-from shokz_refill.audiobook_queue import AudiobookQueue
-from shokz_refill.audiobookshelf import AudiobookshelfClient, Connection
-from shokz_refill.book_export import BookExportOptions
-from shokz_refill.metadata import read_identity
-from shokz_refill.models import JobStatus
-from shokz_refill.transfer import TransferManager
+from shokz_filler.audiobook_models import Audiobook, AudioSource, Chapter
+from shokz_filler.audiobook_normalizer import AudiobookNormalizer
+from shokz_filler.audiobook_queue import AudiobookQueue
+from shokz_filler.audiobookshelf import AudiobookshelfClient, Connection
+from shokz_filler.book_export import BookExportOptions
+from shokz_filler.metadata import read_identity
+from shokz_filler.models import JobStatus
+from shokz_filler.transfer import TransferManager
 
 
 class Client(AudiobookshelfClient):

@@ -3,10 +3,10 @@ from pathlib import Path
 
 import pytest
 
-from shokz_refill.local_import import LocalMp3Importer
-from shokz_refill.media import Cancelled, Progress
-from shokz_refill.metadata import validate_mp3
-from shokz_refill.transfer import TransferManager
+from shokz_filler.local_import import LocalMp3Importer
+from shokz_filler.media import Cancelled, Progress
+from shokz_filler.metadata import validate_mp3
+from shokz_filler.transfer import TransferManager
 
 FIXTURES = Path(__file__).parent / "fixtures"
 

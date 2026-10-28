@@ -41,7 +41,7 @@ def application_tour_steps(window: MainWindow) -> tuple[TourStep, ...]:
         TourStep(
             0,
             window.sidebar,
-            "Welcome to Shokz Refill",
+            "Welcome to Shokz Filler",
             "Load music, audiobooks and local MP3s onto your Shokz. "
             "This quick tour shows you where to start. You can skip it at any time.",
         ),
@@ -75,7 +75,8 @@ def application_tour_steps(window: MainWindow) -> tuple[TourStep, ...]:
             "Build your send list",
             "Use + beside a song or playlist to add it to your send list. "
             "Send to Shokz lets you review and reorder songs, then choose a destination "
-            "before starting. Output is MP3 at 192 kbps, 44.1 kHz, stereo.",
+            "before starting. Output is MP3 at 192 kbps, 44.1 kHz, stereo, "
+            "or mono if you enable it in Settings.",
         ),
         TourStep(
             1,
@@ -83,7 +84,8 @@ def application_tour_steps(window: MainWindow) -> tuple[TourStep, ...]:
             "Take audiobooks with you",
             "After connecting in Settings, choose a library and find a book. "
             "Send to Shokz exports one numbered MP3 per chapter in playback order. "
-            "You can review chapter voice announcements before exporting.",
+            "You can review chapter voice announcements before exporting; "
+            "Settings also holds the mono option.",
         ),
         TourStep(
             2,
@@ -98,8 +100,8 @@ def application_tour_steps(window: MainWindow) -> tuple[TourStep, ...]:
             window.sidebar.buttons[3],
             "Follow your transfers",
             "Watch downloads, conversion and copies here. Cancel active or queued items, "
-            "or retry failed and cancelled items. The sidebar indicator keeps you informed "
-            "while you browse other pages. Existing files are preserved.",
+            "retry failed and cancelled items, or clear finished ones. The sidebar indicator "
+            "keeps you informed while you browse other pages. Existing files are preserved.",
         ),
         TourStep(
             0,
@@ -120,7 +122,7 @@ class GuidedTour(QDialog):
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setWindowModality(Qt.WindowModality.WindowModal)
-        self.setWindowTitle("Guided tour — Shokz Refill")
+        self.setWindowTitle("Guided tour — Shokz Filler")
         self._host = parent
         self._pages = pages
         self._original_page = pages.currentIndex()

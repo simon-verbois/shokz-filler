@@ -3,7 +3,7 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "shokz-refill"
+name = "shokz-filler"
 version = "2026.43.5"
 description = "Load compatible MP3 music and audiobooks from YouTube Music, Audiobookshelf or local files"
 readme = "README.md"
@@ -27,10 +27,10 @@ dev = [
 ]
 
 [project.gui-scripts]
-shokz-refill = "shokz_refill.app:main"
+shokz-filler = "shokz_filler.app:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/shokz_refill"]
+packages = ["src/shokz_filler"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -46,7 +46,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 [tool.mypy]
 python_version = "3.11"
 strict = true
-packages = ["shokz_refill"]
+packages = ["shokz_filler"]
 exclude = ["build", "dist"]
 
 [[tool.mypy.overrides]]
@@ -54,5 +54,5 @@ module = ["ytmusicapi.*", "yt_dlp.*", "mutagen.*", "piper.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["shokz_refill.metadata", "shokz_refill.tts_worker"]
+module = ["shokz_filler.metadata", "shokz_filler.tts_worker"]
 disallow_untyped_calls = false

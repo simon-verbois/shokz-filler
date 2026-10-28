@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from PySide6.QtCore import Signal
-from PySide6.QtGui import QResizeEvent
 from PySide6.QtWidgets import (
+    QCheckBox,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -17,18 +17,19 @@ from PySide6.QtWidgets import (
 from .page_layout import PageTemplate
 from .theme import role
 
-SAVE_CLEARANCE = 56  # keeps the last card clear of the floating Save button
-SAVE_MARGIN = 20
-
 
 class SettingsPage(PageTemplate):
     authRequested = Signal()
     disconnectRequested = Signal()
 
     def __init__(
-        self, audiobookshelf_card: QWidget, speech: QWidget, save_button: QPushButton
+        self,
+        audiobookshelf_card: QWidget,
+        speech: QWidget,
+        save_button: QPushButton,
+        mono: bool = False,
     ) -> None:
-        super().__init__("Settings", controls=False, footer=False, subtitle=False)
+        super().__init__("Settings", controls=False, subtitle=False)
         self.scroll_area = QScrollArea()
         self.scroll_area.setFrameShape(QFrame.Shape.NoFrame)
         self.scroll_area.setWidgetResizable(True)
@@ -43,9 +44,11 @@ class SettingsPage(PageTemplate):
         layout.addWidget(self._section("Audiobookshelf"))
         layout.addWidget(audiobookshelf_card)
         layout.addSpacing(8)
+        layout.addWidget(self._section("Audio"))
+        layout.addWidget(self._audio_card(mono))
+        layout.addSpacing(8)
         layout.addWidget(self._section("Audiobook announcement"))
         layout.addWidget(speech)
-        layout.addSpacing(SAVE_CLEARANCE)
         layout.addStretch()
         page = QWidget()
         row = QHBoxLayout(page)
@@ -53,19 +56,43 @@ class SettingsPage(PageTemplate):
         row.addWidget(body, 1)
         self.scroll_area.setWidget(page)
         self.save_button = save_button
-        save_button.setParent(self)
-        save_button.adjustSize()
-        save_button.raise_()
+        self.footer.addStretch()
+        self.footer.addWidget(save_button)
+        self.speech = speech
+        self.mono_check.toggled.connect(self.refresh_save)
+        if hasattr(speech, "changed"):
+            speech.changed.connect(self.refresh_save)
+        self.refresh_save()
 
-    def resizeEvent(self, event: QResizeEvent) -> None:
-        super().resizeEvent(event)
-        button = self.save_button
-        button.adjustSize()
-        button.move(
-            self.width() - button.width() - SAVE_MARGIN,
-            self.height() - button.height() - SAVE_MARGIN,
+    def _audio_card(self, mono: bool) -> QFrame:
+        card = QFrame()
+        role(card, "card")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(16, 12, 16, 12)
+        self.mono_check = QCheckBox("Convert audio to mono")
+        self.mono_saved = mono
+        self.mono_check.setChecked(mono)
+        note = QLabel(
+            "Mixes both channels into one for songs, audiobooks and imported MP3s. "
+            "Applies to new conversions once saved; off keeps stereo."
         )
-        button.raise_()
+        note.setWordWrap(True)
+        role(note, "caption")
+        layout.addWidget(self.mono_check)
+        layout.addWidget(note)
+        return card
+
+    def refresh_save(self) -> None:
+        """Save is on only when something differs from what is stored and the texts are valid."""
+        speech = self.speech
+        modified = getattr(speech, "modified", False) or (
+            self.mono_check.isChecked() != self.mono_saved
+        )
+        self.save_button.setEnabled(bool(getattr(speech, "is_valid", True)) and modified)
+
+    def mark_saved(self, mono: bool) -> None:
+        self.mono_saved = mono
+        self.refresh_save()
 
     @staticmethod
     def _section(text: str) -> QLabel:

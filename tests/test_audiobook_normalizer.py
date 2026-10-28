@@ -4,10 +4,10 @@ from pathlib import Path
 import pytest
 from mutagen.id3 import ID3
 
-from shokz_refill.audiobook_models import Audiobook, AudioSource, Chapter, export_plan
-from shokz_refill.audiobook_normalizer import AudiobookNormalizer
-from shokz_refill.book_export import BookExportOptions
-from shokz_refill.metadata import read_identity
+from shokz_filler.audiobook_models import Audiobook, AudioSource, Chapter, export_plan
+from shokz_filler.audiobook_normalizer import AudiobookNormalizer
+from shokz_filler.book_export import BookExportOptions
+from shokz_filler.metadata import read_identity
 
 
 class FakeSpeech:
@@ -135,7 +135,7 @@ def test_progress_includes_normalization_and_final_merge(
         poll()
         ID3().save(command[-1])
 
-    monkeypatch.setattr("shokz_refill.audiobook_normalizer.run_process", process)
+    monkeypatch.setattr("shokz_filler.audiobook_normalizer.run_process", process)
     normalizer = AudiobookNormalizer(
         validator=lambda _p: None, binary=lambda _name: Path("fake"), speech=FakeSpeech()
     )
@@ -208,3 +208,12 @@ def test_many_sources_use_a_manifest_and_bounded_commands(tmp_path: Path) -> Non
     assert max(len(" ".join(command)) for command in commands) < 4000
     assert len(manifests[0].splitlines()) == 101
     assert manifests[0].endswith("file 'normalized-0001-00100.mp3'\n")
+
+
+def test_mono_option_reaches_every_encode_option_list() -> None:
+    normalizer = AudiobookNormalizer()
+    options = normalizer._mp3_options()
+    assert options[options.index("-ac") + 1] == "2"
+    normalizer.channels = 1
+    options = normalizer._mp3_options()
+    assert options[options.index("-ac") + 1] == "1"

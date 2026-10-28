@@ -16,6 +16,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .about import version_label
 from .icons import icon, logo_pixmap
 from .models import Device
 from .theme import ACCENT, ON_ACCENT, role
@@ -116,6 +117,7 @@ class Sidebar(QWidget):
     pageRequested = Signal(int)
     refreshRequested = Signal()
     tourRequested = Signal()
+    changelogRequested = Signal()
 
     def __init__(self) -> None:
         super().__init__()
@@ -129,18 +131,19 @@ class Sidebar(QWidget):
         brand_row.setSpacing(10)
         mark = QLabel()
         mark.setPixmap(logo_pixmap(34))
-        mark.setAccessibleName("Shokz Refill logo")
+        mark.setAccessibleName("Shokz Filler logo")
         brand_row.addWidget(mark)
-        brand = QLabel("<b>SHOKZ</b> REFILL")
+        brand = QLabel("<b>SHOKZ</b> FILLER")
         brand.setObjectName("brand")
         brand_row.addWidget(brand, 1)
         layout.addLayout(brand_row)
         layout.addSpacing(24)
+        # Name closer to the storage bar; the bar and the menu keep their original positions.
+        layout.addSpacing(4)
+        device_block = QVBoxLayout()
+        device_block.setSpacing(4)
         device_row = QHBoxLayout()
         device_row.setSpacing(10)
-        headphones = QLabel()
-        headphones.setPixmap(icon("headphones").pixmap(26, 26))
-        device_row.addWidget(headphones)
         self.device_name = QLabel()
         self.device_name.setTextFormat(Qt.TextFormat.PlainText)
         role(self.device_name, "strong")
@@ -149,24 +152,27 @@ class Sidebar(QWidget):
         device_row.addWidget(self.device_name, 1)
         self.refresh = QPushButton()
         self.refresh.setIcon(icon("refresh", ACCENT))
-        self.refresh.setFixedSize(30, 30)
+        self.refresh.setFixedSize(22, 22)
         self.refresh.setFocusPolicy(Qt.FocusPolicy.TabFocus)
         self.refresh.setToolTip("Refresh connected devices")
         self.refresh.setAccessibleName("Refresh connected devices")
         role(self.refresh, "quiet")
         self.refresh.clicked.connect(self.refreshRequested)
         device_row.addWidget(self.refresh, 0, Qt.AlignmentFlag.AlignVCenter)
-        layout.addLayout(device_row)
+        device_block.addLayout(device_row)
         self.storage = QProgressBar()
         self.storage.setRange(0, 100)
         self.storage.setTextVisible(False)
         self.storage.setAccessibleName("Device storage used")
-        layout.addWidget(self.storage)
+        device_block.addWidget(self.storage)
         self.device_status = QLabel()
         self.device_status.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         role(self.device_status, "caption")
-        layout.addWidget(self.device_status)
-        layout.addSpacing(18)
+        # Reserved even when empty, so the menu does not move when a device connects.
+        self.device_status.setFixedHeight(16)
+        device_block.addWidget(self.device_status)
+        layout.addLayout(device_block)
+        layout.addSpacing(22)
         self.group = QButtonGroup(self)
         self.group.idClicked.connect(self.pageRequested)
         self.buttons: list[QPushButton] = []
@@ -198,6 +204,19 @@ class Sidebar(QWidget):
                 self.tour_button.clicked.connect(self.tourRequested)
                 layout.addWidget(self.tour_button)
             layout.addWidget(button)
+        about = QHBoxLayout()
+        about.setContentsMargins(15, 2, 7, 0)
+        about.setSpacing(6)
+        self.version_label = QLabel(version_label())
+        role(self.version_label, "caption")
+        self.changelog_button = QPushButton("Changelog")
+        role(self.changelog_button, "footnote")
+        self.changelog_button.setToolTip("See what changed in each release")
+        self.changelog_button.clicked.connect(self.changelogRequested)
+        about.addWidget(self.version_label, 0, Qt.AlignmentFlag.AlignVCenter)
+        about.addStretch()
+        about.addWidget(self.changelog_button, 0, Qt.AlignmentFlag.AlignVCenter)
+        layout.addLayout(about)
         self.set_page(0)
         self.set_device(None)
 
@@ -232,7 +251,7 @@ class Sidebar(QWidget):
     def set_device(self, device: Device | None) -> None:
         if device is None:
             self.device_name.setText("No Shokz connected")
-            self.device_status.setText("Choose a device in Shokz files")
+            self.device_status.setText("")
             self.device_name.setToolTip("")
             self.storage.setValue(0)
             self.storage.setToolTip("No device selected")

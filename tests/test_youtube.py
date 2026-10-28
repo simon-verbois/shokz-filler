@@ -4,8 +4,8 @@ from typing import Any
 import pytest
 import requests
 
-from shokz_refill import youtube
-from shokz_refill.youtube import YouTubeMusicService, map_playlist, map_track
+from shokz_filler import youtube
+from shokz_filler.youtube import YouTubeMusicService, map_playlist, map_track
 
 
 class FakeClient:
@@ -159,8 +159,8 @@ def test_cancelled_network_task_never_starts_another_request(
 ) -> None:
     import threading
 
-    from shokz_refill.cancellation import current_cancellation
-    from shokz_refill.youtube import TimeoutSession
+    from shokz_filler.cancellation import current_cancellation
+    from shokz_filler.youtube import TimeoutSession
 
     event = threading.Event()
     event.set()

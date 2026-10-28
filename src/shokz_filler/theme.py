@@ -85,7 +85,7 @@ QLineEdit:focus, QPlainTextEdit:focus {
 QPushButton[role="primary"] {
     color: #071b25; font-weight: 600; border: 1px solid #40d9d3;
     background: qlineargradient(x1:0,y1:0,x2:1,y2:0,stop:0 #25d7c5,stop:1 #40abf5);
-    padding: 6px 14px;
+    padding: 5px 14px;
 }
 QPushButton[role="primary"]:hover { background: #66e0e1; }
 QPushButton[role="primary"]:focus { border: 2px solid #eef3f8; }
@@ -98,6 +98,12 @@ QPushButton[role="nav"] {
 QPushButton[role="nav"]:hover { background: #232c38; }
 QPushButton[role="nav"]:checked { background: #2b3441; }
 QPushButton[role="nav"]:focus { border-color: #32d4cf; }
+QPushButton[role="footnote"] {
+    background: transparent; border-color: transparent; color: #a4b0c0;
+    font-size: 11px; padding: 2px 8px; min-height: 0;
+}
+QPushButton[role="footnote"]:hover { background: #283440; color: #eef3f8; }
+QPushButton[role="footnote"]:focus { border: 1px solid #32d4cf; }
 QPushButton[role="quiet"] { background: transparent; border-color: transparent; }
 QPushButton[role="quiet"]:hover { background: #283440; }
 QPushButton[role="quiet"]:focus { border-color: #32d4cf; }

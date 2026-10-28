@@ -11,9 +11,9 @@ from PySide6.QtCore import QItemSelectionModel, QPoint, Qt
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication, QComboBox, QDialog, QLineEdit, QPushButton, QWidget
 
-from shokz_refill.config import ConfigStore
-from shokz_refill.models import Device, DownloadJob, JobStatus, Playlist, Track
-from shokz_refill.ui import MainWindow
+from shokz_filler.config import ConfigStore
+from shokz_filler.models import Device, DownloadJob, JobStatus, Playlist, Track
+from shokz_filler.ui import MainWindow
 
 
 @pytest.fixture
@@ -103,7 +103,7 @@ def test_card_download_uses_sorted_identity_and_excludes_hidden_selection(
         def exec(self):  # type: ignore[no-untyped-def]
             return QDialog.DialogCode.Accepted
 
-    monkeypatch.setattr("shokz_refill.ui.TransferWizard", AcceptingWizard)
+    monkeypatch.setattr("shokz_filler.ui.TransferWizard", AcceptingWizard)
     window.browser.downloadRequested.emit()
     assert queued == [second] and window.browser.pending == []
     assert window.download_button.text() == "Send to Shokz"
@@ -208,24 +208,6 @@ def test_device_actions_exclude_a_hidden_row_even_if_selected_again(
     assert window._selected_paths() == []
     window._update_actions()
     assert not window.file_buttons["Delete"].isEnabled()
-
-
-def test_settings_save_floats_over_the_bottom_right_corner_while_scrolling(
-    window: MainWindow, qt_application: QApplication
-) -> None:
-    window.sidebar.buttons[4].click()
-    qt_application.processEvents()
-    page = window.settings_page
-    button = window.speech_settings.save
-    assert button.parent() is page
-    margin = 20
-    assert button.geometry().right() == page.width() - margin - 1
-    assert button.geometry().bottom() == page.height() - margin - 1
-    before = button.pos()
-    scrollbar = page.scroll_area.verticalScrollBar()
-    scrollbar.setValue(scrollbar.maximum())
-    qt_application.processEvents()
-    assert button.pos() == before and button.isVisible()
 
 
 @pytest.mark.parametrize("size", [(1040, 720), (1280, 800)])
@@ -367,7 +349,7 @@ def test_row_hover_highlights_the_whole_row_not_a_single_cell(
 def test_cursor_is_an_arrow_inside_the_window_and_a_hand_on_buttons(
     window: MainWindow, qt_application: QApplication
 ) -> None:
-    from shokz_refill.theme import apply_theme
+    from shokz_filler.theme import apply_theme
 
     apply_theme(qt_application)
     fresh = QPushButton("Action")
@@ -381,7 +363,7 @@ def test_cursor_is_an_arrow_inside_the_window_and_a_hand_on_buttons(
 def test_rounded_combo_popup_lists_options_and_applies_the_choice(
     qt_application: QApplication,
 ) -> None:
-    from shokz_refill.theme import RoundedComboBox
+    from shokz_filler.theme import RoundedComboBox
 
     combo = RoundedComboBox()
     combo.addItems(["Audiobooks", "Podcasts", "Radio"])
@@ -399,7 +381,7 @@ def test_rounded_combo_popup_lists_options_and_applies_the_choice(
 def test_every_page_places_title_subtitle_controls_and_content_identically(
     window: MainWindow, qt_application: QApplication
 ) -> None:
-    from shokz_refill.page_layout import PageTemplate
+    from shokz_filler.page_layout import PageTemplate
 
     positions = []
     for index in range(window.tabs.count()):
@@ -440,8 +422,117 @@ def test_plus_toggles_tracks_in_order_and_survives_new_results(
 
 
 def test_logo_asset_matches_embedded_logo_and_site_favicon() -> None:
-    from shokz_refill.icons import LOGO_SVG
+    from shokz_filler.icons import LOGO_SVG
 
     root = Path(__file__).resolve().parents[1]
     assert (root / "assets" / "logo.svg").read_text() == LOGO_SVG
     assert (root / "docs" / "favicon.svg").read_text() == LOGO_SVG
+
+
+def test_clear_finished_removes_only_completed_and_skipped_rows(
+    window: MainWindow, tmp_path: Path
+) -> None:
+    panel = window.queue_panel
+    for key, status in (
+        ("a", JobStatus.COMPLETE),
+        ("b", JobStatus.FAILED),
+        ("c", JobStatus.SKIPPED),
+        ("d", JobStatus.DOWNLOADING),
+    ):
+        panel.update_job(DownloadJob(key, Track(key, key), tmp_path, status=status, progress=50))
+    assert panel.clear.isEnabled()
+    panel.clear_finished()
+    assert set(panel.jobs) == {"b", "d"}
+    assert panel.table.rowCount() == 2
+    assert [panel.table.item(row, 0).data(Qt.ItemDataRole.UserRole) for row in range(2)] == [
+        "b",
+        "d",
+    ]
+    assert not panel.clear.isEnabled()
+    panel.update_job(DownloadJob("d", Track("d", "d"), tmp_path, JobStatus.COMPLETE, 100))
+    assert panel.table.item(1, 0) is not None and panel.table.rowCount() == 2
+
+
+def test_sidebar_shows_version_and_opens_changelog_from_every_page(
+    window: MainWindow, qt_application: QApplication, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import shokz_filler
+
+    shown: list[str] = []
+    monkeypatch.setattr(
+        "shokz_filler.changelog_dialog.ThemedDialog.exec", lambda self: shown.append("x")
+    )
+    assert shokz_filler.__version__ in window.sidebar.version_label.text()
+    for index in range(window.tabs.count()):
+        window.sidebar.buttons[index].click()
+        qt_application.processEvents()
+        assert window.sidebar.version_label.isVisible()
+        window.sidebar.changelog_button.click()
+    assert len(shown) == window.tabs.count()
+
+
+def test_save_settings_is_on_only_when_something_changed(
+    window: MainWindow, qt_application: QApplication
+) -> None:
+    page = window.settings_page
+    assert not page.save_button.isEnabled()
+    page.mono_check.setChecked(True)
+    assert page.save_button.isEnabled()
+    page.mono_check.setChecked(False)
+    assert not page.save_button.isEnabled()
+    window.speech_settings.rate.setValue(window.speech_settings.rate.value() + 5)
+    assert page.save_button.isEnabled()
+    window.speech_settings.rate.setValue(window.speech_settings.rate.value() - 5)
+    assert not page.save_button.isEnabled()
+    original = window.speech_settings.template.toPlainText()
+    window.speech_settings.template.setPlainText(original + " $oops")
+    assert not page.save_button.isEnabled()
+    window.speech_settings.template.setPlainText(original)
+    page.mono_check.setChecked(True)
+    window._save_speech_settings(window.speech_settings.options)
+    qt_application.processEvents()
+    assert window.config.mono_audio and window.converter.channels == 1
+    assert window.normalizer.channels == 1
+
+
+def test_every_page_footer_sits_at_the_same_height(
+    window: MainWindow, qt_application: QApplication
+) -> None:
+    from shokz_filler.page_layout import PageTemplate
+
+    window.show()
+    positions = set()
+    button_boxes: set[tuple[int, int]] = set()
+    for index in range(window.tabs.count()):
+        window.sidebar.buttons[index].click()
+        qt_application.processEvents()
+        page = window.tabs.widget(index)
+        templates = [page] if isinstance(page, PageTemplate) else page.findChildren(PageTemplate)
+        for template in templates:
+            if template.isVisible() and template.footer_host.isVisible():
+                top = template.footer_host.mapTo(window, QPoint()).y()
+                positions.add((top, template.footer_host.height()))
+                for control in template.footer_host.findChildren(QWidget):
+                    if control.isVisible() and not isinstance(control, QPushButton):
+                        centre = control.mapTo(template.footer_host, QPoint()).y()
+                        centre += control.height() / 2
+                        assert abs(centre - template.footer_host.height() / 2) <= 1, control
+                for button in template.footer_host.findChildren(QPushButton):
+                    if button.isVisible():
+                        button_boxes.add((button.height(), button.mapTo(window, QPoint()).y()))
+    assert len(positions) == 1, positions
+    assert len(button_boxes) == 1, button_boxes
+
+
+def test_youtube_footer_explains_the_missing_device_like_audiobookshelf(
+    window: MainWindow, tmp_path: Path
+) -> None:
+    from shokz_filler.page_layout import NO_DEVICE_MESSAGE
+
+    window.device = None
+    window._update_actions()
+    assert window.browser.device_label.text() == NO_DEVICE_MESSAGE
+    assert window.audiobookshelf_panel.device_label.text() == NO_DEVICE_MESSAGE
+    window.device = Device("Shokz", tmp_path, 1000, 0, 1000)
+    window._update_actions()
+    assert window.browser.device_label.text() == ""

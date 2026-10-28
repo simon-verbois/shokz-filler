@@ -208,25 +208,26 @@ def map_book(data: dict[str, Any], *, expanded: bool = False) -> Audiobook:
 
 
 def _chapter_parts(book: Audiobook, sources: list[AudioSource]) -> list[ExportPart] | None:
-    """One part per chapter when chapters tile the book cleanly; None means use the files."""
+    """One part per chapter, whatever the server tracks look like; None means use the files.
+
+    Chapters are cut at their start times only, so server-side gaps, overlaps and end-time drift
+    never omit or repeat audio: the first chapter also covers any lead-in and the last one
+    runs to the end of the book.
+    """
     total = sum(source.duration for source in sources)
-    chapters = book.chapters
+    usable = sorted(
+        (
+            chapter
+            for chapter in book.chapters
+            if math.isfinite(chapter.start) and chapter.start < total
+        ),
+        key=lambda chapter: chapter.start,
+    )
+    chapters: list[Chapter] = []
+    for chapter in usable:
+        if not chapters or chapter.start - max(chapters[-1].start, 0.0) > 0.001:
+            chapters.append(chapter)
     if len(chapters) < 2:
-        return None
-    tolerance = 0.05
-    previous_end = 0.0
-    for chapter in chapters:
-        if (
-            not math.isfinite(chapter.start)
-            or not math.isfinite(chapter.end)
-            or chapter.start < 0
-            or chapter.end <= chapter.start
-            or abs(chapter.start - previous_end) > tolerance
-            or chapter.end > total + tolerance
-        ):
-            return None
-        previous_end = chapter.end
-    if abs(previous_end - total) > tolerance:
         return None
     starts: list[tuple[AudioSource, float]] = []
     cursor = 0.0
@@ -234,8 +235,12 @@ def _chapter_parts(book: Audiobook, sources: list[AudioSource]) -> list[ExportPa
         starts.append((source, cursor))
         cursor += source.duration
     parts: list[ExportPart] = []
-    # Snap tolerated rounding differences to shared boundaries: no audio is omitted or repeated.
-    boundaries = [0.0, *(chapter.end for chapter in chapters[:-1]), total]
+    edges = [begin for _, begin in starts]
+    boundaries = [0.0]
+    for chapter in chapters[1:]:
+        edge = min(edges, key=lambda e: abs(e - chapter.start))
+        boundaries.append(edge if abs(edge - chapter.start) <= 0.05 else chapter.start)
+    boundaries.append(total)
     for number, chapter in enumerate(chapters, 1):
         segments: list[Segment] = []
         start, end = boundaries[number - 1 : number + 1]
@@ -252,7 +257,7 @@ def _chapter_parts(book: Audiobook, sources: list[AudioSource]) -> list[ExportPa
 
 
 def export_plan(book: Audiobook) -> tuple[ExportPart, ...]:
-    """Ordered parts: one per chapter if they tile the book, else one per Audiobookshelf track."""
+    """Ordered parts: one per chapter if the book has chapters, else one per server track."""
     if not book.available or not book.sources:
         raise ValueError("This book has no available audio tracks")
     sources = sorted(book.sources, key=lambda source: source.index)

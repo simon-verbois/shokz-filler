@@ -21,14 +21,18 @@ class AudiobookNormalizer:
     def __init__(
         self,
         runner: Runner | None = None,
-        validator: Callable[[Path], None] = validate_mp3,
+        validator: Callable[[Path], None] | None = None,
         binary: Callable[[str], Path] = bundled_binary,
         speech: SpeechSynthesizer | None = None,
     ) -> None:
         self.runner = runner
-        self.validator = validator
+        self.channels = 2
+        self.validator = validator or self._validate_channels
         self.binary = binary
         self.speech = speech or PiperSpeech()
+
+    def _validate_channels(self, path: Path) -> None:
+        validate_mp3(path, self.channels)
 
     @staticmethod
     def check_size(duration: float) -> None:
@@ -89,8 +93,7 @@ class AudiobookNormalizer:
         finally:
             progress_file.unlink(missing_ok=True)
 
-    @staticmethod
-    def _mp3_options() -> list[str]:
+    def _mp3_options(self) -> list[str]:
         return [
             "-map_metadata",
             "-1",
@@ -104,7 +107,7 @@ class AudiobookNormalizer:
             "-ar",
             "44100",
             "-ac",
-            "2",
+            str(self.channels),
             "-id3v2_version",
             "3",
         ]

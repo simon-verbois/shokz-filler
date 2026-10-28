@@ -31,9 +31,17 @@ from .book_export import BookExportOptions
 from .icons import icon
 from .library_view import library_rows
 from .models import Device
-from .page_layout import PageTemplate
+from .page_layout import NO_DEVICE_MESSAGE, PageTemplate
 from .table_state import TableEmptyState
 from .theme import ON_ACCENT, RoundedComboBox, role
+
+
+class _OptionalLabel(QLabel):
+    """Takes no room while empty, so the footer's other line stays on the vertical centre."""
+
+    def setText(self, text: str) -> None:  # noqa: N802 - Qt override
+        super().setText(text)
+        self.setVisible(bool(text))
 
 
 class AudiobookshelfPanel(PageTemplate):
@@ -139,11 +147,12 @@ class AudiobookshelfPanel(PageTemplate):
             self.books, "Your audiobook library\nConnect to your server to choose books."
         )
         self.content.addWidget(self.books)
-        self.details = QLabel()
+        self.details = _OptionalLabel()
+        self.details.hide()
         self.details.setTextFormat(Qt.TextFormat.PlainText)
         self.details.setWordWrap(True)
         role(self.details, "muted")
-        self.device_label = QLabel("No Shokz selected — choose a device in Shokz files")
+        self.device_label = QLabel(NO_DEVICE_MESSAGE)
         self.device_label.setWordWrap(True)
         role(self.device_label, "muted")
         info = QVBoxLayout()
@@ -156,7 +165,8 @@ class AudiobookshelfPanel(PageTemplate):
         self.download.setIcon(icon("download", ON_ACCENT))
         self.download.setToolTip(
             "One book → one folder → one numbered MP3 per chapter (01 - Title.mp3…), copied in "
-            "playback order. MP3 CBR 192 kbps · 44.1 kHz · stereo. Existing files are skipped; "
+            "playback order. MP3 CBR 192 kbps · 44.1 kHz · stereo (mono in Settings). "
+            "Existing files are skipped; "
             "conflicts keep both files."
         )
         self.footer.addWidget(self.download)
@@ -414,9 +424,7 @@ class AudiobookshelfController(QObject):
 
     def update_device(self) -> None:
         device = self.get_device()
-        self.panel.device_label.setText(
-            "" if device is not None else "No Shokz selected — choose a device in Shokz files"
-        )
+        self.panel.device_label.setText("" if device is not None else NO_DEVICE_MESSAGE)
         self.panel.download.setEnabled(
             self.client is not None
             and self.client.connection.can_download

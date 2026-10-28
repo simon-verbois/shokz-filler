@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .audiobook_normalizer import AudiobookNormalizer
 from .audiobook_panel import AudiobookshelfController, AudiobookshelfPanel
 from .audiobook_queue import AudiobookQueue
 from .audiobook_settings import AudiobookshelfSettings
@@ -43,6 +44,7 @@ from .background import TaskRunner
 from .book_dialogs import SpeechSettingsPanel
 from .book_export import BookExportOptions
 from .browser_panel import BrowserPanel
+from .changelog_dialog import show_changelog
 from .config import ConfigStore
 from .device import DeviceDetector, manual_device, verify_device
 from .dialogs import DeviceFolderDialog
@@ -53,11 +55,11 @@ from .guided_tour import GuidedTour, application_tour_steps
 from .icons import icon
 from .library_view import LibraryEntry, library_rows
 from .local_import import LocalMp3Importer
-from .media import MediaDownloader
+from .media import AudioConverter, MediaDownloader
 from .models import Device, DownloadJob, JobStatus, Playlist, Track
 from .naming import playlist_folder_name
 from .navigation import SETTINGS_PAGE, Sidebar
-from .page_layout import PageTemplate
+from .page_layout import NO_DEVICE_MESSAGE, PageTemplate
 from .playback_order import next_position
 from .queue_panel import QueuePanel
 from .settings_page import SettingsPage
@@ -142,14 +144,20 @@ class MainWindow(QMainWindow):
         self._file_kinds: dict[Path, bool] = {}
         transfer_state = store.cache_dir / "transfers.json"
         self.transfer = TransferManager(transfer_state)
-        self.local_import = LocalMp3Importer(store.cache_dir, self.transfer)
+        self.converter = AudioConverter()
+        self.normalizer = AudiobookNormalizer()
+        self._apply_channels()
+        self.local_import = LocalMp3Importer(store.cache_dir, self.transfer, self.converter)
         self.queue = DownloadQueue(
             store.cache_dir,
             self.transfer,
             downloader=MediaDownloader(store.auth_path),
+            converter=self.converter,
             callback=self._queue_callback,
         )
-        self.audiobook_queue = AudiobookQueue(store.cache_dir, self.transfer, self._queue_callback)
+        self.audiobook_queue = AudiobookQueue(
+            store.cache_dir, self.transfer, self._queue_callback, self.normalizer
+        )
         self._queues = (self.queue, self.audiobook_queue)
         self._initial_focus_cleared = False
         self.guided_tour: GuidedTour | None = None
@@ -183,7 +191,7 @@ class MainWindow(QMainWindow):
             host.setFocus(Qt.FocusReason.OtherFocusReason)
 
     def _build_ui(self) -> None:
-        self.setWindowTitle("Shokz Refill")
+        self.setWindowTitle("Shokz Filler")
         self.setWindowFlag(Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setMouseTracking(True)
@@ -212,7 +220,7 @@ class MainWindow(QMainWindow):
         body = QWidget()
         column.addWidget(body, 1)
         content = QVBoxLayout(body)
-        content.setContentsMargins(24, 4, 20, 16)
+        content.setContentsMargins(24, 4, 20, 10)
         self.tabs = QTabWidget()
         self.tabs.tabBar().hide()
         self.sidebar.pageRequested.connect(self.tabs.setCurrentIndex)
@@ -246,7 +254,9 @@ class MainWindow(QMainWindow):
             self.audiobookshelf_panel.connection_card,
             self.speech_settings,
             self.speech_settings.save,
+            self.config.mono_audio,
         )
+        self.sidebar.changelogRequested.connect(lambda: show_changelog(self))
         self.settings_page.authRequested.connect(self._connect_youtube)
         self.settings_page.disconnectRequested.connect(self._disconnect_youtube)
         self.auth_label = self.settings_page.auth_label
@@ -334,6 +344,11 @@ class MainWindow(QMainWindow):
             return
         super().mousePressEvent(event)
 
+    def _apply_channels(self) -> None:
+        channels = 1 if self.config.mono_audio else 2
+        self.converter.channels = channels
+        self.normalizer.channels = channels
+
     def _save_speech_settings(self, options: BookExportOptions) -> None:
         options.validate()
         self.config.book_tts_announce = options.announce
@@ -342,9 +357,14 @@ class MainWindow(QMainWindow):
         self.config.book_tts_template = options.template
         self.config.book_tts_voice = options.voice
         self.config.book_tts_rate = options.rate
+        mono = self.settings_page.mono_check.isChecked()
+        self.config.mono_audio = mono
+        self._apply_channels()
         snapshot = replace(self.config)
 
         def saved(_value: object) -> None:
+            self.speech_settings.mark_saved(options)
+            self.settings_page.mark_saved(mono)
             self.speech_settings.set_status(
                 "Settings saved"
                 if self.speech_settings.options == options
@@ -568,6 +588,7 @@ class MainWindow(QMainWindow):
         paths = self._selected_paths()
         editable = writable and not self._reserved_paths(paths)
         self.download_button.setEnabled(ready and bool(self.browser.pending))
+        self.browser.device_label.setText("" if self.device is not None else NO_DEVICE_MESSAGE)
         for label, button in self.file_buttons.items():
             enabled = writable
             if label == "Rename":
@@ -627,7 +648,7 @@ class MainWindow(QMainWindow):
 
     def _show_error(self, message: str) -> None:
         self.statusBar().showMessage("Operation failed")
-        MessageDialog.warning(self, "Shokz Refill", message or "The operation failed")
+        MessageDialog.warning(self, "Shokz Filler", message or "The operation failed")
 
     def _refresh_auth_label(self) -> None:
         if self.youtube.connection_verified:

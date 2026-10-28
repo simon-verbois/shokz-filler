@@ -52,14 +52,15 @@ class LocalMp3Importer:
             def report(value: int, completed: int = index) -> None:
                 progress(int((completed + value / 100) * 100 / len(sources)))
 
+            channels = getattr(self.converter, "channels", 2)
             try:
-                validate_mp3(source)
+                validate_mp3(source, channels)
             except ValueError:
                 work.mkdir(parents=True, exist_ok=True)
                 prepared = self.converter.normalize(
                     source, work / f"{index + 1}.mp3", lambda p: report(p // 2), cancelled
                 )
-                validate_mp3(prepared)
+                validate_mp3(prepared, channels)
 
             def copying(value: int, normalized: bool = prepared != source) -> None:
                 report(50 + value // 2 if normalized else value)

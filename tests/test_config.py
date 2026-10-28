@@ -1,7 +1,9 @@
 import os
 from pathlib import Path
 
-from shokz_refill.config import AppConfig, ConfigStore
+import pytest
+
+from shokz_filler.config import AppConfig, ConfigStore
 
 
 def test_config_round_trip_and_bad_input(tmp_path: Path) -> None:
@@ -54,3 +56,18 @@ def test_untouched_old_default_announcement_gains_the_chapter_number(tmp_path: P
         '{"book_tts_engine": "piper-v1", "book_tts_template": "Listen to $book_name."}'
     )
     assert store.load().book_tts_template == "Listen to $book_name."
+
+
+def test_legacy_refill_folders_are_moved_to_the_filler_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from shokz_filler.config import _platform_dir
+
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
+    monkeypatch.setattr("shokz_filler.config.sys.platform", "linux")
+    legacy = tmp_path / "shokz-refill"
+    legacy.mkdir()
+    (legacy / "config.json").write_text("{}", encoding="utf-8")
+    assert _platform_dir("config") == tmp_path / "shokz-filler"
+    assert (tmp_path / "shokz-filler" / "config.json").is_file()
+    assert not legacy.exists()

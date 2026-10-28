@@ -15,7 +15,7 @@ from PySide6.QtCore import (
     QRectF,
     Qt,
 )
-from PySide6.QtGui import QColor, QCursor, QLinearGradient, QPainter, QPen
+from PySide6.QtGui import QColor, QCursor, QIcon, QLinearGradient, QPainter, QPen
 from PySide6.QtWidgets import (
     QStyle,
     QStyledItemDelegate,
@@ -55,6 +55,9 @@ def _hue_seed(title: str) -> int:
 
 
 class LibraryDelegate(QStyledItemDelegate):
+    # Column whose cell hosts real widgets and must not be painted over; None when there is none.
+    widget_column: int | None = 3
+
     def __init__(self, table: QTableWidget, *, book: bool = False) -> None:
         super().__init__(table)
         self.table = table
@@ -99,7 +102,7 @@ class LibraryDelegate(QStyledItemDelegate):
         rect = option.rect.adjusted(16, 0, -12, 0)
         if index.column() == 0:
             self._title(painter, rect, value, index.data() or "")
-        elif self.book or index.column() != 3:  # col 3 holds real buttons
+        elif self.book or index.column() != self.widget_column:
             painter.setPen(_MUTED)
             # The duration column is right-aligned so times line up against the row's edge.
             side = (
@@ -156,6 +159,37 @@ class LibraryDelegate(QStyledItemDelegate):
             QRect(text.left(), text.center().y() + 3, text.width(), 22),
             Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
             painter.fontMetrics().elidedText(subtitle, Qt.TextElideMode.ElideRight, text.width()),
+        )
+
+
+class QueueDelegate(LibraryDelegate):
+    """Card rows for transfers: status icon and name, with the progress bar hosted in column 2."""
+
+    widget_column = 2
+    _status: QIcon | None = None
+
+    def paint(
+        self,
+        painter: QPainter,
+        option: QStyleOptionViewItem,
+        index: QModelIndex | QPersistentModelIndex,
+    ) -> None:
+        decoration = index.data(Qt.ItemDataRole.DecorationRole)
+        self._status = decoration if isinstance(decoration, QIcon) else None
+        super().paint(painter, option, index)
+
+    def _title(self, painter: QPainter, rect: QRect, value: object, fallback: str) -> None:
+        if self._status is not None:
+            self._status.paint(painter, QRect(rect.left(), rect.center().y() - 10, 20, 20))
+        font = painter.font()
+        font.setBold(True)
+        painter.setFont(font)
+        painter.setPen(_TEXT)
+        text = rect.adjusted(32, 0, 0, 0)
+        painter.drawText(
+            text,
+            Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter,
+            painter.fontMetrics().elidedText(fallback, Qt.TextElideMode.ElideRight, text.width()),
         )
 
 

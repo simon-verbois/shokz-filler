@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 import requests
 
-from shokz_refill.audiobook_models import (
+from shokz_filler.audiobook_models import (
     Audiobook,
     AudiobookshelfCredentials,
     AudioSource,
@@ -15,8 +15,8 @@ from shokz_refill.audiobook_models import (
     map_book,
     server_url,
 )
-from shokz_refill.audiobook_settings import AudiobookshelfSettings
-from shokz_refill.audiobookshelf import AudiobookshelfClient, Connection
+from shokz_filler.audiobook_settings import AudiobookshelfSettings
+from shokz_filler.audiobookshelf import AudiobookshelfClient, Connection
 
 
 def response(data=None, *, content: bytes = b"", status: int = 200):  # type: ignore[no-untyped-def]
@@ -65,35 +65,33 @@ def test_book_follows_server_order_and_splits_by_chapter_with_ordered_names() ->
     assert [(s.source_index, s.offset, s.duration) for s in plan[1].segments] == [(2, 5, 5)]
 
 
-def test_invalid_chapters_fall_back_to_one_part_per_server_track() -> None:
-    book = map_book(item(), expanded=True)
-    book = replace(book, chapters=(Chapter("Invalid", 0, 25), Chapter("Overlap", 5, 10)))
-    plan = export_plan(book)
-    assert [part.filename for part in plan] == ["01 - Z.mp3", "02 - A.mp3"]
-    assert sum(s.duration for part in plan for s in part.segments) == 20
-
-
 @pytest.mark.parametrize(
-    "chapters",
+    "chapters, bounds",
     [
-        (Chapter("One", 10, 20), Chapter("Two", 30, 40)),
-        (Chapter("One", 1, 30), Chapter("Two", 30, 60)),
-        (Chapter("One", 0, 20), Chapter("Two", 21, 60)),
-        (Chapter("One", 0, 30), Chapter("Two", 30, 59)),
-        (Chapter("One", 0, 30), Chapter("Two", 29, 60)),
-        (Chapter("One", 0, 30), Chapter("Two", 30, 60.1)),
-        (Chapter("One", 0, float("nan")), Chapter("Two", 30, 60)),
+        ((Chapter("One", 10, 20), Chapter("Two", 30, 40)), [(0, 30), (30, 30)]),
+        ((Chapter("One", 1, 30), Chapter("Two", 30, 60)), [(0, 30), (30, 30)]),
+        ((Chapter("One", 0, 20), Chapter("Two", 21, 60)), [(0, 21), (21, 39)]),
+        ((Chapter("One", 0, 30), Chapter("Two", 30, 59)), [(0, 30), (30, 30)]),
+        ((Chapter("One", 0, 30), Chapter("Two", 29, 70)), [(0, 29), (29, 31)]),
+        ((Chapter("Two", 30, 60), Chapter("One", 0, 30)), [(0, 30), (30, 30)]),
+        ((Chapter("One", 0, float("nan")), Chapter("Two", 30, 60)), [(0, 30), (30, 30)]),
     ],
 )
-def test_incomplete_chapters_preserve_all_audio_by_falling_back(
-    chapters: tuple[Chapter, ...],
+def test_chapters_split_a_single_file_without_losing_audio(
+    chapters: tuple[Chapter, ...], bounds: list[tuple[float, float]]
 ) -> None:
     book = Audiobook(
         "book", "Book", sources=(AudioSource(1, "full.m4b", "/audio", 60),), chapters=chapters
     )
     parts = export_plan(book)
-    assert len(parts) == 1
-    assert [(s.offset, s.duration) for s in parts[0].segments] == [(0, 60)]
+    assert [(s.offset, s.duration) for p in parts for s in p.segments] == bounds
+    assert sum(s.duration for p in parts for s in p.segments) == 60
+
+
+def test_unusable_chapters_fall_back_to_one_part_per_server_track() -> None:
+    book = replace(map_book(item(), expanded=True), chapters=(Chapter("Only", 0, 20),))
+    plan = export_plan(book)
+    assert [part.filename for part in plan] == ["01 - Z.mp3", "02 - A.mp3"]
 
 
 def test_chapter_rounding_is_snapped_without_losing_or_repeating_audio() -> None:

@@ -21,11 +21,11 @@ $env:QT_QPA_PLATFORM = "offscreen"
 & .venv\Scripts\python.exe -m ruff check .
 & .venv\Scripts\python.exe -m mypy
 
-$BinDir = "src\shokz_refill\bin"
+$BinDir = "src\shokz_filler\bin"
 New-Item -ItemType Directory -Force $BinDir | Out-Null
 if (-not (Test-Path "$BinDir\ffmpeg.exe") -or -not (Test-Path "$BinDir\ffprobe.exe")) {
-    $Archive = Join-Path $env:TEMP "shokz-refill-ffmpeg.zip"
-    $Extract = Join-Path $env:TEMP "shokz-refill-ffmpeg"
+    $Archive = Join-Path $env:TEMP "shokz-filler-ffmpeg.zip"
+    $Extract = Join-Path $env:TEMP "shokz-filler-ffmpeg"
     Write-Host "Downloading ffmpeg Windows runtime"
     Invoke-WebRequest "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip" -OutFile $Archive
     Remove-Item $Extract -Recurse -Force -ErrorAction SilentlyContinue
@@ -38,8 +38,8 @@ if (-not (Test-Path "$BinDir\ffmpeg.exe") -or -not (Test-Path "$BinDir\ffprobe.e
     if ($License) { Copy-Item $License.FullName "$BinDir\FFMPEG-GPLv3.txt" }
 }
 if (-not (Test-Path "$BinDir\deno.exe")) {
-    $DenoArchive = Join-Path $env:TEMP "shokz-refill-deno.zip"
-    $DenoExtract = Join-Path $env:TEMP "shokz-refill-deno"
+    $DenoArchive = Join-Path $env:TEMP "shokz-filler-deno.zip"
+    $DenoExtract = Join-Path $env:TEMP "shokz-filler-deno"
     Write-Host "Downloading Deno Windows runtime"
     Invoke-WebRequest "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-pc-windows-msvc.zip" -OutFile $DenoArchive
     Remove-Item $DenoExtract -Recurse -Force -ErrorAction SilentlyContinue
@@ -52,13 +52,13 @@ if (-not (Test-Path "$BinDir\DENO-LICENSE.md")) {
 
 & .venv\Scripts\python.exe scripts\fetch_tts_voices.py
 if ($LASTEXITCODE -ne 0) { throw "Piper voice download/verification failed" }
-& .venv\Scripts\python.exe -m PyInstaller --noconfirm --clean shokz-refill.spec
-$Artifact = "dist\Shokz-Refill-windows-x86_64.exe"
-Move-Item "dist\Shokz-Refill.exe" $Artifact -Force
+& .venv\Scripts\python.exe -m PyInstaller --noconfirm --clean shokz-filler.spec
+$Artifact = "dist\Shokz-Filler-windows-x86_64.exe"
+Move-Item "dist\Shokz-Filler.exe" $Artifact -Force
 $SmokeTest = Start-Process -FilePath (Join-Path $ProjectDir $Artifact) -ArgumentList "--smoke-test" -Wait -PassThru
 if ($SmokeTest.ExitCode -ne 0) { throw "Packaged application smoke test failed ($($SmokeTest.ExitCode))" }
 $SpeechTest = Start-Process -FilePath (Join-Path $ProjectDir $Artifact) -ArgumentList "--tts-smoke-test" -Wait -PassThru
 if ($SpeechTest.ExitCode -ne 0) { throw "Packaged offline Piper speech smoke test failed ($($SpeechTest.ExitCode))" }
 $Hash = (Get-FileHash $Artifact -Algorithm SHA256).Hash.ToLowerInvariant()
-Set-Content -Path "$Artifact.sha256" -Value "$Hash  Shokz-Refill-windows-x86_64.exe"
+Set-Content -Path "$Artifact.sha256" -Value "$Hash  Shokz-Filler-windows-x86_64.exe"
 Write-Host "Portable Windows executable: $Artifact"

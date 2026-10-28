@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
     QAbstractItemView,
     QHBoxLayout,
     QHeaderView,
+    QLabel,
     QLineEdit,
     QMenu,
     QPushButton,
@@ -20,7 +21,7 @@ from PySide6.QtWidgets import (
 from .icons import icon
 from .library_view import LibraryDelegate, library_rows
 from .models import Playlist, Track
-from .page_layout import PageTemplate
+from .page_layout import NO_DEVICE_MESSAGE, PageTemplate
 from .table_filters import ColumnFilters
 from .table_state import TableEmptyState
 from .theme import ACCENT, ON_ACCENT, RoundedComboBox, role
@@ -165,6 +166,9 @@ class BrowserPanel(PageTemplate):
         self.clear_pending_button.setToolTip("Empty the send list")
         self.clear_pending_button.clicked.connect(self.clear_pending)
         self.clear_pending_button.hide()
+        self.device_label = QLabel(NO_DEVICE_MESSAGE)
+        role(self.device_label, "muted")
+        self.footer.addWidget(self.device_label)
         self.footer.addStretch(1)
         self.footer.addWidget(self.clear_pending_button)
         self.footer.addWidget(download)

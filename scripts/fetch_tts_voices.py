@@ -13,7 +13,7 @@ import requests
 
 def main() -> None:
     root = Path(__file__).resolve().parents[1]
-    destination = root / "src" / "shokz_refill" / "voices"
+    destination = root / "src" / "shokz_filler" / "voices"
     destination.mkdir(exist_ok=True)
     entries = json.loads(Path(__file__).with_name("tts-voices.json").read_text())
     for entry in entries:

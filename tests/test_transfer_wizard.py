@@ -6,10 +6,10 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 from PySide6.QtWidgets import QApplication, QDialog  # noqa: E402
 
-from shokz_refill.device import manual_device  # noqa: E402
-from shokz_refill.models import Track  # noqa: E402
-from shokz_refill.themed_dialog import InputDialog  # noqa: E402
-from shokz_refill.transfer_wizard import TransferWizard  # noqa: E402
+from shokz_filler.device import manual_device  # noqa: E402
+from shokz_filler.models import Track  # noqa: E402
+from shokz_filler.themed_dialog import InputDialog  # noqa: E402
+from shokz_filler.transfer_wizard import TransferWizard  # noqa: E402
 
 
 def pump(app: QApplication, predicate) -> None:  # type: ignore[no-untyped-def]

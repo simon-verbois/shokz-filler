@@ -261,7 +261,8 @@ class AudiobookQueue:
                 job,
                 JobStatus.COMPLETE,
                 100,
-                f"{len(parts)} ordered MP3 files in {job.destination.name}",
+                f"{len(parts)} ordered MP3 {'file' if len(parts) == 1 else 'files'} "
+                f"in {job.destination.name}",
             )
             shutil.rmtree(cache, ignore_errors=True)
         except Exception as exc:

@@ -8,11 +8,11 @@ import pytest
 import requests
 from yt_dlp.cookies import YoutubeDLCookieJar
 
-from shokz_refill import browser_auth, youtube
-from shokz_refill.browser_auth import BrowserSessionImporter, LoginBrowser
-from shokz_refill.cancellation import current_cancellation
-from shokz_refill.media import _download_auth_options
-from shokz_refill.youtube import YouTubeMusicService
+from shokz_filler import browser_auth, youtube
+from shokz_filler.browser_auth import BrowserSessionImporter, LoginBrowser
+from shokz_filler.cancellation import current_cancellation
+from shokz_filler.media import _download_auth_options
+from shokz_filler.youtube import YouTubeMusicService
 
 BROWSER = LoginBrowser("firefox", "Firefox", ("/usr/bin/firefox",))
 

@@ -162,7 +162,7 @@ class DeviceFolderDialog(ThemedDialog):
         self.ok_button.setEnabled(self._is_valid_destination(path))
 
     def _create_folder(self) -> None:
-        # Shokz Refill deliberately keeps a flat folder layout. New folders are
+        # Shokz Filler deliberately keeps a flat folder layout. New folders are
         # always top-level, even when an existing folder happens to be selected.
         parent = self.device.root
         name, accepted = InputDialog.getText(self, "New folder", "Folder name:")

@@ -5,11 +5,11 @@ import pytest
 from PySide6.QtCore import QThread
 from PySide6.QtWidgets import QDialog, QWidget
 
-from shokz_refill import youtube_dialog
-from shokz_refill.browser_auth import LoginBrowser
-from shokz_refill.cancellation import check_cancelled, current_cancellation
-from shokz_refill.youtube import YouTubeMusicService
-from shokz_refill.youtube_dialog import AuthDialog
+from shokz_filler import youtube_dialog
+from shokz_filler.browser_auth import LoginBrowser
+from shokz_filler.cancellation import check_cancelled, current_cancellation
+from shokz_filler.youtube import YouTubeMusicService
+from shokz_filler.youtube_dialog import AuthDialog
 
 BROWSER = LoginBrowser("firefox", "Firefox", ("firefox",))
 

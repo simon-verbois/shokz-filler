@@ -7,7 +7,9 @@ from mutagen import MutagenError
 from mutagen.id3 import ID3, TALB, TCON, TIT2, TPE1, TPOS, TRCK, TXXX
 from mutagen.mp3 import MP3, BitrateMode
 
-SOURCE_DESC = "SHOKZ_REFILL_SOURCE_ID"
+SOURCE_DESC = "SHOKZ_FILLER_SOURCE_ID"
+# Files written before the rename to Shokz Filler carry this tag; it is still read.
+LEGACY_SOURCE_DESC = "SHOKZ_REFILL_SOURCE_ID"
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,6 +25,7 @@ def write_metadata(path: Path, *, source_id: str, artist: str, title: str, album
     except Exception:
         tags = ID3()
     tags.delall("TXXX:" + SOURCE_DESC)
+    tags.delall("TXXX:" + LEGACY_SOURCE_DESC)
     tags.add(TXXX(encoding=3, desc=SOURCE_DESC, text=[source_id]))
     tags.setall("TPE1", [TPE1(encoding=3, text=[artist])])
     tags.setall("TIT2", [TIT2(encoding=3, text=[title])])
@@ -47,14 +50,14 @@ def read_identity(path: Path) -> Mp3Identity:
         tags = ID3(path)
     except Exception:
         return Mp3Identity()
-    sources = tags.getall("TXXX:" + SOURCE_DESC)
+    sources = tags.getall("TXXX:" + SOURCE_DESC) or tags.getall("TXXX:" + LEGACY_SOURCE_DESC)
     source = str(sources[0].text[0]) if sources and sources[0].text else ""
     artist = str(tags["TPE1"].text[0]) if "TPE1" in tags and tags["TPE1"].text else ""
     title = str(tags["TIT2"].text[0]) if "TIT2" in tags and tags["TIT2"].text else ""
     return Mp3Identity(source, artist, title)
 
 
-def validate_mp3(path: Path) -> None:
+def validate_mp3(path: Path, channels: int = 2) -> None:
     if not path.is_file() or path.stat().st_size == 0:
         raise ValueError("The converted MP3 is empty")
     try:
@@ -67,8 +70,8 @@ def validate_mp3(path: Path) -> None:
         raise ValueError("The converted MP3 is not CBR 192 kbps")
     if audio.info.sample_rate != 44_100:
         raise ValueError("The converted MP3 is not 44.1 kHz")
-    if audio.info.channels != 2:
-        raise ValueError("The converted MP3 is not stereo")
+    if audio.info.channels != channels:
+        raise ValueError(f"The converted MP3 is not {'mono' if channels == 1 else 'stereo'}")
 
 
 def validate_source_mp3(path: Path) -> None:

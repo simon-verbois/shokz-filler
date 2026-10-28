@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from shokz_refill.media import AudioConverter, DownloadCancelled, _download_auth_options
-from shokz_refill.metadata import read_identity, validate_mp3
+from shokz_filler.media import AudioConverter, DownloadCancelled, _download_auth_options
+from shokz_filler.metadata import read_identity, validate_mp3
 
 
 def test_download_auth_uses_scoped_cookie_file(tmp_path: Path) -> None:
@@ -40,7 +40,7 @@ def test_download_auth_uses_scoped_cookie_file(tmp_path: Path) -> None:
 def test_process_drains_large_stderr_without_deadlock() -> None:
     import sys
 
-    from shokz_refill.media import run_process
+    from shokz_filler.media import run_process
 
     run_process([sys.executable, "-c", "import sys; sys.stderr.write('x' * 200000)"], lambda: False)
 
@@ -50,7 +50,7 @@ def test_process_failure_reports_tail() -> None:
 
     import pytest
 
-    from shokz_refill.media import run_process
+    from shokz_filler.media import run_process
 
     with pytest.raises(RuntimeError, match="specific failure"):
         run_process(
@@ -64,7 +64,7 @@ def test_process_cancellation_terminates_and_reaps_child(tmp_path: Path) -> None
 
     import pytest
 
-    from shokz_refill.media import DownloadCancelled, run_process
+    from shokz_filler.media import DownloadCancelled, run_process
 
     ready = tmp_path / "ready"
     command = [
@@ -83,7 +83,7 @@ def test_process_kills_child_that_ignores_termination(monkeypatch) -> None:  # t
 
     import pytest
 
-    from shokz_refill.media import DownloadCancelled, run_process
+    from shokz_filler.media import DownloadCancelled, run_process
 
     class StubbornProcess:
         terminated = False
@@ -106,7 +106,7 @@ def test_process_kills_child_that_ignores_termination(monkeypatch) -> None:  # t
             return 0
 
     child = StubbornProcess()
-    monkeypatch.setattr("shokz_refill.media.subprocess.Popen", lambda *a, **k: child)
+    monkeypatch.setattr("shokz_filler.media.subprocess.Popen", lambda *a, **k: child)
     checks = 0
 
     def cancelled() -> bool:
@@ -129,8 +129,8 @@ def test_local_conversion_uses_target_format_and_preserves_metadata(
         commands.append(command)
         shutil.copyfile(Path(__file__).parent / "fixtures" / "target-stereo.mp3", command[-1])
 
-    monkeypatch.setattr("shokz_refill.media.bundled_binary", lambda _name: Path("fake-ffmpeg"))
-    monkeypatch.setattr("shokz_refill.media.run_process", run)
+    monkeypatch.setattr("shokz_filler.media.bundled_binary", lambda _name: Path("fake-ffmpeg"))
+    monkeypatch.setattr("shokz_filler.media.run_process", run)
     source = Path(__file__).parent / "fixtures" / "source-mono.mp3"
     output = tmp_path / "normalized.mp3"
     AudioConverter().normalize(source, output, lambda _p: None, lambda: False)
@@ -150,9 +150,39 @@ def test_local_conversion_cancellation_does_not_publish_output(
         Path(command[-1]).write_bytes(b"unfinished")
         raise DownloadCancelled("cancelled")
 
-    monkeypatch.setattr("shokz_refill.media.bundled_binary", lambda _name: Path("fake-ffmpeg"))
-    monkeypatch.setattr("shokz_refill.media.run_process", run)
+    monkeypatch.setattr("shokz_filler.media.bundled_binary", lambda _name: Path("fake-ffmpeg"))
+    monkeypatch.setattr("shokz_filler.media.run_process", run)
     output = tmp_path / "normalized.mp3"
     with pytest.raises(DownloadCancelled):
         AudioConverter().normalize(Path("source.mp3"), output, lambda _p: None, lambda: False)
     assert not list(tmp_path.iterdir())
+
+
+def test_mono_option_changes_the_encoder_channels_and_the_validation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    commands: list[list[str]] = []
+    validated: list[int] = []
+
+    def run(command: list[str], cancelled) -> None:  # type: ignore[no-untyped-def]
+        commands.append(command)
+        Path(command[-1]).write_bytes(b"x")
+
+    monkeypatch.setattr("shokz_filler.media.bundled_binary", lambda _name: Path("fake-ffmpeg"))
+    monkeypatch.setattr("shokz_filler.media.run_process", run)
+    monkeypatch.setattr(
+        "shokz_filler.media.validate_mp3", lambda _path, channels=2: validated.append(channels)
+    )
+    source = Path(__file__).parent / "fixtures" / "source-mono.mp3"
+    AudioConverter(channels=1).normalize(
+        source, tmp_path / "out.mp3", lambda _p: None, lambda: False
+    )
+    assert commands[0][commands[0].index("-ac") + 1] == "1"
+    assert validated == [1]
+
+
+def test_stereo_mp3_is_rejected_when_mono_is_required() -> None:
+    stereo = Path(__file__).parent / "fixtures" / "target-stereo.mp3"
+    validate_mp3(stereo)
+    with pytest.raises(ValueError, match="not mono"):
+        validate_mp3(stereo, channels=1)

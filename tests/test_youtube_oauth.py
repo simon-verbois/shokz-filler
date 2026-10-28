@@ -6,11 +6,11 @@ from unittest.mock import Mock
 import pytest
 import requests
 
-from shokz_refill import youtube, youtube_oauth
-from shokz_refill.cancellation import current_cancellation
-from shokz_refill.media import _download_auth_options
-from shokz_refill.youtube import YouTubeMusicService
-from shokz_refill.youtube_oauth import GoogleDeviceAuth, OAuthClient
+from shokz_filler import youtube, youtube_oauth
+from shokz_filler.cancellation import current_cancellation
+from shokz_filler.media import _download_auth_options
+from shokz_filler.youtube import YouTubeMusicService
+from shokz_filler.youtube_oauth import GoogleDeviceAuth, OAuthClient
 
 CLIENT = OAuthClient("test-client", "private-secret")
 CODE = {

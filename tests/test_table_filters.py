@@ -11,8 +11,8 @@ from PySide6.QtWidgets import (  # noqa: E402
     QTableWidgetItem,
 )
 
-from shokz_refill.table_filters import ColumnFilters  # noqa: E402
-from shokz_refill.themed_dialog import InputDialog  # noqa: E402
+from shokz_filler.table_filters import ColumnFilters  # noqa: E402
+from shokz_filler.themed_dialog import InputDialog  # noqa: E402
 
 
 def test_filters_combine_ignore_case_and_clear_hidden_selection() -> None:

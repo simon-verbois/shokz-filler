@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from shokz_refill.transfer import TransferManager
+from shokz_filler.transfer import TransferManager
 
 
 def test_transfer_success_and_collision(tmp_path: Path) -> None:
@@ -64,7 +64,7 @@ def test_transfer_reports_low_space(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     source.write_bytes(b"too large")
     usage = shutil.disk_usage(root)
     monkeypatch.setattr(
-        "shokz_refill.transfer.shutil.disk_usage",
+        "shokz_filler.transfer.shutil.disk_usage",
         lambda _path: usage._replace(free=1),
     )
     with pytest.raises(OSError, match="enough free space"):
@@ -144,7 +144,7 @@ def test_resume_requires_only_remaining_free_space(
     manager, source, root, _partial = interrupted_copy(tmp_path)
     usage = shutil.disk_usage(root)
     monkeypatch.setattr(
-        "shokz_refill.transfer.shutil.disk_usage", lambda _p: usage._replace(free=6)
+        "shokz_filler.transfer.shutil.disk_usage", lambda _p: usage._replace(free=6)
     )
     result = manager.transfer(source, root / "song.mp3", root)
     assert result.read_bytes() == source.read_bytes()
@@ -252,7 +252,7 @@ def test_corrupt_journal_fails_closed(tmp_path: Path) -> None:
 def test_final_hash_rejects_content_modified_during_copy(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from shokz_refill import transfer
+    from shokz_filler import transfer
 
     root = tmp_path / "device"
     root.mkdir()
@@ -283,7 +283,7 @@ def test_readonly_copy_fails_without_publishing(
     def readonly(*args, **kwargs):  # type: ignore[no-untyped-def]
         raise PermissionError("Read-only device")
 
-    monkeypatch.setattr("shokz_refill.transfer._open_partial", readonly)
+    monkeypatch.setattr("shokz_filler.transfer._open_partial", readonly)
     with pytest.raises(PermissionError, match="Read-only"):
         TransferManager(tmp_path / "state.json").transfer(source, root / "song.mp3", root)
     assert not list(root.iterdir())
@@ -293,7 +293,7 @@ def test_waiting_device_operation_can_be_cancelled() -> None:
     import threading
     from concurrent.futures import ThreadPoolExecutor
 
-    from shokz_refill.filesystem import device_operation
+    from shokz_filler.filesystem import device_operation
 
     started = threading.Event()
     cancelled = threading.Event()

@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from shokz_refill.naming import (
+from shokz_filler.naming import (
     collision_path,
     playlist_folder_name,
     sanitize_component,

@@ -6,9 +6,9 @@ from unittest.mock import Mock
 
 import pytest
 
-from shokz_refill.book_export import VOICE_MODELS
-from shokz_refill.speech import PiperSpeech
-from shokz_refill.tts_worker import cached_voice_path, main, synthesize, valid_voice
+from shokz_filler.book_export import VOICE_MODELS
+from shokz_filler.speech import PiperSpeech
+from shokz_filler.tts_worker import cached_voice_path, main, synthesize, valid_voice
 
 
 def write_wave(path: Path) -> None:
@@ -28,7 +28,7 @@ def test_private_text_native_speed_normalization_and_cached_reuse(tmp_path: Path
 
     def runner(command, cancelled):  # type: ignore[no-untyped-def]
         commands.append(command)
-        if "shokz_refill.tts_worker" in command:
+        if "shokz_filler.tts_worker" in command:
             text = Path(command[-4])
             assert text.read_text() == "Private book, by Author."
             assert command[-2:] == ["en-us", "95"]
@@ -59,7 +59,7 @@ def test_cancellation_cleans_partials_preserving_existing_output(
     output.write_bytes(b"existing export")
 
     def runner(command, cancelled):  # type: ignore[no-untyped-def]
-        if "shokz_refill.tts_worker" in command:
+        if "shokz_filler.tts_worker" in command:
             write_wave(Path(command[-3]))
             if stage == "synthesis":
                 raise InterruptedError("Cancelled")
@@ -107,7 +107,7 @@ def test_invalid_cached_audio_is_regenerated(tmp_path: Path) -> None:
 
     def runner(command, cancelled):  # type: ignore[no-untyped-def]
         seen.append(command)
-        write_wave(Path(command[-3] if "shokz_refill.tts_worker" in command else command[-1]))
+        write_wave(Path(command[-3] if "shokz_filler.tts_worker" in command else command[-1]))
 
     make_speech(runner, cache).synthesize("Text", tmp_path / "speech.wav", "fr", 95, lambda: False)
     assert len(seen) == 2
@@ -118,7 +118,7 @@ def test_invalid_cached_audio_is_regenerated(tmp_path: Path) -> None:
 
 def test_invalid_processed_wave_is_not_cached_or_exported(tmp_path: Path) -> None:
     def runner(command, cancelled):  # type: ignore[no-untyped-def]
-        if "shokz_refill.tts_worker" in command:
+        if "shokz_filler.tts_worker" in command:
             write_wave(Path(command[-3]))
         else:
             Path(command[-1]).write_bytes(b"invalid audio")
@@ -142,7 +142,7 @@ def test_piper_worker_loads_bundled_male_voice_and_scales_duration(
     model = tmp_path / (VOICE_MODELS["fr"] + ".onnx")
     model.touch()
     model.with_suffix(".onnx.json").touch()
-    monkeypatch.setattr("shokz_refill.tts_worker.VOICE_DIRECTORY", tmp_path)
+    monkeypatch.setattr("shokz_filler.tts_worker.VOICE_DIRECTORY", tmp_path)
     engine = Mock()
 
     def write_raw(text, handle, **kwargs):  # type: ignore[no-untyped-def]
@@ -180,7 +180,7 @@ def test_worker_errors_do_not_echo_book_text(monkeypatch: pytest.MonkeyPatch, ca
     def fail(*args):  # type: ignore[no-untyped-def]
         raise RuntimeError("private title must not be printed")
 
-    monkeypatch.setattr("shokz_refill.tts_worker.synthesize", fail)
+    monkeypatch.setattr("shokz_filler.tts_worker.synthesize", fail)
     assert main(["text", "output", "fr", "95"]) == 1
     assert "private title" not in capsys.readouterr().err
 

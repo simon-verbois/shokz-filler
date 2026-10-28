@@ -18,7 +18,7 @@ from .ui import MainWindow
 def _logging(store: ConfigStore) -> None:
     store.ensure_dirs()
     handler = RotatingFileHandler(
-        store.cache_dir / "shokz-refill.log", maxBytes=1_000_000, backupCount=2, encoding="utf-8"
+        store.cache_dir / "shokz-filler.log", maxBytes=1_000_000, backupCount=2, encoding="utf-8"
     )
     handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
     logging.basicConfig(level=logging.INFO, handlers=[handler])
@@ -27,11 +27,11 @@ def _logging(store: ConfigStore) -> None:
 def main() -> int:
     store = ConfigStore()
     _logging(store)
-    QCoreApplication.setOrganizationName("Shokz Refill")
-    QCoreApplication.setApplicationName("Shokz Refill")
+    QCoreApplication.setOrganizationName("Shokz Filler")
+    QCoreApplication.setApplicationName("Shokz Filler")
     app = QApplication(sys.argv)
     app.setWindowIcon(app_icon())
-    app.setDesktopFileName("shokz-refill")
+    app.setDesktopFileName("shokz-filler")
     apply_theme(app)
     window = MainWindow(store)
     window.show()

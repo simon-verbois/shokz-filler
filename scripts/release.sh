@@ -80,11 +80,19 @@ if git rev-parse --quiet --verify "refs/tags/${tag}" >/dev/null; then
   exit 1
 fi
 
+today="$(date +%F)"
+if ! awk '/^## Unreleased/ {on=1; next} /^## / {on=0} on && /^- / {found=1} END {exit !found}' CHANGELOG.md; then
+  echo "CHANGELOG.md needs entries under '## Unreleased' for this release." >&2
+  exit 1
+fi
+
 echo "Creating release ${tag} from branch ${branch}."
 
 printf '%s\n' "$tag" > VERSION
 sed -i "s/^version = \".*\"/version = \"${tag}\"/" pyproject.toml
-sed -i "s/^__version__ = \".*\"/__version__ = \"${tag}\"/" src/shokz_refill/__init__.py
+sed -i "s/^__version__ = \".*\"/__version__ = \"${tag}\"/" src/shokz_filler/__init__.py
+
+sed -i "s/^## Unreleased.*/## Unreleased\n\n## ${tag} - ${today}/" CHANGELOG.md
 
 git add -A
 git commit -m "Release ${tag}"

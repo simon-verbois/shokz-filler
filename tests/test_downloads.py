@@ -4,10 +4,10 @@ from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from shokz_refill.device import device_identity
-from shokz_refill.downloads import DownloadQueue
-from shokz_refill.metadata import write_metadata
-from shokz_refill.models import JobStatus, Track
+from shokz_filler.device import device_identity
+from shokz_filler.downloads import DownloadQueue
+from shokz_filler.metadata import write_metadata
+from shokz_filler.models import JobStatus, Track
 
 
 def wait_until(predicate: Callable[[], bool]) -> None:

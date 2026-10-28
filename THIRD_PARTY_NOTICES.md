@@ -1,6 +1,6 @@
 # Third-party notices
 
-Shokz Refill bundles open-source dependencies in its portable distributions. Their respective
+Shokz Filler bundles open-source dependencies in its portable distributions. Their respective
 licenses remain applicable. In particular, the separate `ffmpeg` and `ffprobe` programs are built
 with GPL components including libmp3lame and are distributed under GPLv3 by the binary providers
 used in this project's build scripts.
@@ -38,7 +38,7 @@ neural models produce the audio. No announcement is sent to a remote service.
 - Pim (Dutch, CC0) and Davefx (Spanish, CC0): <https://github.com/OHF-Voice/voice-datasets>
 
 Full license texts are included under `licenses/`, and model cards beside the models in
-`shokz_refill/voices/`. The voice revision and SHA-256 digests are recorded in
+`shokz_filler/voices/`. The voice revision and SHA-256 digests are recorded in
 `scripts/tts-voices.json`; build scripts fetch and verify these files before packaging. Retain the
 license and attribution files and provide corresponding source under the applicable licenses
 when redistributing these components.

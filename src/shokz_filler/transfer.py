@@ -160,7 +160,7 @@ class TransferManager:
                     not partial.is_absolute()
                     or partial.parent != destination.parent
                     or not partial.name.startswith(destination.name + ".")
-                    or not partial.name.endswith(".shokz-refill.part")
+                    or not partial.name.endswith(".shokz-filler.part")
                     or not is_within(root, partial, allow_missing=True)
                 ):
                     raise ValueError("Unsafe transfer partial path; file preserved")
@@ -170,7 +170,7 @@ class TransferManager:
         existing = partial is not None
         if partial is None:
             key = uuid.uuid4().hex
-            partial = destination.with_name(destination.name + f".{key}.shokz-refill.part")
+            partial = destination.with_name(destination.name + f".{key}.shokz-filler.part")
         check_device()
         if not existing and shutil.disk_usage(destination.parent).free < needed:
             raise OSError("The device does not have enough free space")

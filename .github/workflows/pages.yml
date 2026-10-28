@@ -1,4 +1,4 @@
-name: Shokz Refill presentation site
+name: Shokz Filler presentation site
 
 on:
   workflow_dispatch:

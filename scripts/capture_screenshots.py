@@ -14,12 +14,12 @@ from PySide6.QtCore import QPoint  # noqa: E402
 from PySide6.QtGui import QColor, QPainter  # noqa: E402
 from PySide6.QtWidgets import QApplication, QWidget  # noqa: E402
 
-from shokz_refill.audiobook_models import Audiobook, AudioSource, BookPage  # noqa: E402
-from shokz_refill.config import ConfigStore  # noqa: E402
-from shokz_refill.models import Device, DownloadJob, JobStatus, Track  # noqa: E402
-from shokz_refill.theme import apply_theme  # noqa: E402
-from shokz_refill.transfer_wizard import TransferWizard  # noqa: E402
-from shokz_refill.ui import MainWindow  # noqa: E402
+from shokz_filler.audiobook_models import Audiobook, AudioSource, BookPage  # noqa: E402
+from shokz_filler.config import ConfigStore  # noqa: E402
+from shokz_filler.models import Device, DownloadJob, JobStatus, Track  # noqa: E402
+from shokz_filler.theme import apply_theme  # noqa: E402
+from shokz_filler.transfer_wizard import TransferWizard  # noqa: E402
+from shokz_filler.ui import MainWindow  # noqa: E402
 
 
 def main() -> None:

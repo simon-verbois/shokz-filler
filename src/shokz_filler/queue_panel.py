@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 )
 
 from .icons import icon
+from .library_view import QueueDelegate
 from .models import DownloadJob, JobStatus
 from .page_layout import PageTemplate
 from .table_filters import ColumnFilters
@@ -34,6 +35,7 @@ _STATUS_ICONS = {
     JobStatus.CANCELLED: _FAILED_ICON,
     JobStatus.QUEUED: ("clock", "#e6bd72"),
 }
+_FINISHED = {JobStatus.COMPLETE, JobStatus.SKIPPED}
 TERMINAL = {JobStatus.COMPLETE, JobStatus.SKIPPED, JobStatus.FAILED, JobStatus.CANCELLED}
 
 
@@ -55,12 +57,20 @@ class QueuePanel(PageTemplate):
         self.retry.clicked.connect(self.retryRequested)
         self.cancel = QPushButton("Cancel selected")
         self.cancel.clicked.connect(self.cancelRequested)
+        self.clear = QPushButton("Clear finished")
+        self.clear.setToolTip("Remove completed and skipped transfers from this list")
+        self.clear.clicked.connect(self.clear_finished)
+        self.footer.addWidget(self.clear)
         self.footer.addStretch()
         self.footer.addWidget(self.retry)
         self.footer.addWidget(self.cancel)
         self.controls.addWidget(self.overall, 1)
         self.table = QTableWidget(0, 4)
-        polish_table(self.table, 44)
+        polish_table(self.table, 56)
+        self.table.setProperty("library", True)
+        self.table.setMouseTracking(True)
+        self.delegate = QueueDelegate(self.table)
+        self.table.setItemDelegate(self.delegate)
         self.table.setHorizontalHeaderLabels(["Track / book", "Status", "Progress", "Details"])
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
@@ -73,12 +83,13 @@ class QueuePanel(PageTemplate):
         for column, mode in enumerate(
             (
                 QHeaderView.ResizeMode.Stretch,
-                QHeaderView.ResizeMode.ResizeToContents,
+                QHeaderView.ResizeMode.Fixed,
                 QHeaderView.ResizeMode.Fixed,
                 QHeaderView.ResizeMode.Stretch,
             )
         ):
             view.setSectionResizeMode(column, mode)
+        self.table.setColumnWidth(1, 170)
         self.table.setColumnWidth(2, 120)
         self.filters = ColumnFilters(self.table, (0, 1))
         self.table.horizontalHeader().hide()
@@ -114,6 +125,7 @@ class QueuePanel(PageTemplate):
             any(job.status in {JobStatus.FAILED, JobStatus.CANCELLED} for job in selected)
         )
         self.cancel.setEnabled(any(job.status not in TERMINAL for job in selected))
+        self.clear.setEnabled(any(job.status in _FINISHED for job in self.jobs.values()))
 
     def update_job(self, job: DownloadJob) -> bool:
         previous = self.jobs.get(job.job_id)
@@ -133,6 +145,7 @@ class QueuePanel(PageTemplate):
             progress_layout.addWidget(progress, 1, Qt.AlignmentFlag.AlignVCenter)
             self.progress_bars[job.job_id] = progress
             self.table.setCellWidget(row, 2, cell)
+            self.delegate.track(cell)
         status = f"{job.progress}% · {job.status.value}" if job.progress else job.status.value
         self.table.setItem(row, 1, QTableWidgetItem(status))
         status_icon, status_color = _STATUS_ICONS.get(job.status, _RUNNING_ICON)
@@ -148,18 +161,42 @@ class QueuePanel(PageTemplate):
         bar.setValue(job.progress)
         bar.setAccessibleName(f"{job.track.title}: {job.progress}% — {job.status.value}")
         bar.setToolTip(f"{job.progress}% — {job.status.value}")
+        self._refresh_summary()
+        return job.status == JobStatus.COMPLETE and (
+            previous is None or previous.status != JobStatus.COMPLETE
+        )
+
+    def _refresh_summary(self) -> None:
         self.overall.setValue(
             int(sum(item.progress for item in self.jobs.values()) / len(self.jobs))
+            if self.jobs
+            else 0
         )
         active = sum(item.status not in TERMINAL for item in self.jobs.values())
         failed = sum(item.status == JobStatus.FAILED for item in self.jobs.values())
         summary = f"{active} active · {self.overall.value()}%" if active else "Finished"
+        if not self.jobs:
+            summary = "No transfers"
         self.subtitle.setText(summary + (f" · {failed} failed" if failed else ""))
         self.summaryChanged.emit(active, self.overall.value(), failed, len(self.jobs))
         self._update_actions()
-        return job.status == JobStatus.COMPLETE and (
-            previous is None or previous.status != JobStatus.COMPLETE
-        )
+
+    def clear_finished(self) -> None:
+        """Drop completed and skipped rows; failed and cancelled ones stay for retry."""
+        done = {key for key, job in self.jobs.items() if job.status in _FINISHED}
+        for row in reversed(range(self.table.rowCount())):
+            item = self.table.item(row, 0)
+            if item is not None and str(item.data(Qt.ItemDataRole.UserRole)) in done:
+                self.table.removeRow(row)
+        for key in done:
+            del self.jobs[key]
+            self.progress_bars.pop(key, None)
+        self.rows = {}
+        for row in range(self.table.rowCount()):
+            item = self.table.item(row, 0)
+            if item is not None:
+                self.rows[str(item.data(Qt.ItemDataRole.UserRole))] = row
+        self._refresh_summary()
 
     def _context_menu(self, point: QPoint) -> None:
         row = self.table.rowAt(point.y())

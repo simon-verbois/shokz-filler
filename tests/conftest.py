@@ -14,9 +14,9 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtCore import QCoreApplication, QEvent  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from shokz_refill.background import TaskRunner  # noqa: E402
-from shokz_refill.theme import apply_theme  # noqa: E402
-from shokz_refill.ui import MainWindow  # noqa: E402
+from shokz_filler.background import TaskRunner  # noqa: E402
+from shokz_filler.theme import apply_theme  # noqa: E402
+from shokz_filler.ui import MainWindow  # noqa: E402
 
 
 @pytest.fixture(scope="session")

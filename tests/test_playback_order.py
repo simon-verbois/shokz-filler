@@ -4,16 +4,16 @@ from pathlib import Path
 
 import pytest
 
-from shokz_refill.downloads import DownloadQueue
-from shokz_refill.models import JobStatus, Track
-from shokz_refill.playback_order import (
+from shokz_filler.downloads import DownloadQueue
+from shokz_filler.models import JobStatus, Track
+from shokz_filler.playback_order import (
     OrderGate,
     next_position,
     ordered_name,
     plan_names,
     position_of,
 )
-from shokz_refill.transfer import TransferManager
+from shokz_filler.transfer import TransferManager
 
 
 def test_names_are_zero_padded_so_name_sort_equals_playback_order() -> None:

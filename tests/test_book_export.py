@@ -2,7 +2,7 @@ from dataclasses import replace
 
 import pytest
 
-from shokz_refill.book_export import BookExportOptions, announcement_text, validate_template
+from shokz_filler.book_export import BookExportOptions, announcement_text, validate_template
 
 
 def test_template_uses_book_variables_without_interpreting_book_text_as_code() -> None:
@@ -41,7 +41,7 @@ def test_every_voice_is_pinned_with_model_config_and_card() -> None:
     import json
     from pathlib import Path
 
-    from shokz_refill.book_export import VOICE_MODELS, VOICES
+    from shokz_filler.book_export import VOICE_MODELS, VOICES
 
     assert VOICES.keys() == VOICE_MODELS.keys()
     assert len(set(VOICE_MODELS.values())) == len(VOICE_MODELS)

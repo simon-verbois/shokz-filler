@@ -14,4 +14,4 @@ if [[ ! -x "$python_bin" ]]; then
 fi
 
 cd -- "$project_dir"
-exec "$python_bin" "$project_dir/run_shokz_refill.py" "$@"
+exec "$python_bin" "$project_dir/run_shokz_filler.py" "$@"

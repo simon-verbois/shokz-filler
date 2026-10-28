@@ -4,16 +4,16 @@ from pathlib import Path
 import pytest
 from PySide6.QtWidgets import QApplication, QLineEdit
 
-from shokz_refill.audiobook_models import (
+from shokz_filler.audiobook_models import (
     Audiobook,
     AudiobookshelfCredentials,
     BookPage,
     Library,
 )
-from shokz_refill.audiobookshelf import AudiobookshelfClient, Connection
-from shokz_refill.config import ConfigStore
-from shokz_refill.device import manual_device
-from shokz_refill.ui import MainWindow
+from shokz_filler.audiobookshelf import AudiobookshelfClient, Connection
+from shokz_filler.config import ConfigStore
+from shokz_filler.device import manual_device
+from shokz_filler.ui import MainWindow
 
 
 def until(app: QApplication, predicate) -> None:  # type: ignore[no-untyped-def]
@@ -149,7 +149,7 @@ def test_app_speech_settings_validate_preview_and_persist(
 def test_book_context_menu_selects_the_row_and_offers_actions(
     qt_application: QApplication,
 ) -> None:
-    from shokz_refill.audiobook_panel import AudiobookshelfPanel
+    from shokz_filler.audiobook_panel import AudiobookshelfPanel
 
     panel = AudiobookshelfPanel(AudiobookshelfCredentials("", "", ""))
     panel.set_browsing_enabled(True)

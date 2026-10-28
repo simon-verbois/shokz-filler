@@ -19,7 +19,7 @@ Validation après corrections : **232 tests réussis**, dont **26 nouveaux cas**
 Ruff, formatage, mypy, vérification du site et construction Linux réussis.
 Les tests du binaire incluent le démarrage, Piper et désormais l'import d'un MP3
 128 kbps mono normalisé vers la cible imposée. Journal :
-`/tmp/shokz-refill-fixes-build.log`. Les vérifications natives Windows restent à effectuer.
+`/tmp/shokz-filler-fixes-build.log`. Les vérifications natives Windows restent à effectuer.
 
 Les observations de structure et le nettoyage du code inutilisé restent des travaux
 distincts des sept corrections demandées.
@@ -47,7 +47,7 @@ Cet audit ne valide pas les services distants réels ni un appareil physique.
 
 ### 1. P1 — Le découpage en chapitres peut perdre une partie du livre
 
-Emplacement : [audiobook_models.py](../src/shokz_refill/audiobook_models.py),
+Emplacement : [audiobook_models.py](../src/shokz_filler/audiobook_models.py),
 `_chapter_parts`, lignes 210–241.
 
 La fonction rejette certains chevauchements, mais ne vérifie ni que le premier
@@ -65,9 +65,9 @@ Tester les trous initiaux, intermédiaires et finaux, ainsi que les limites de t
 
 ### 2. P1 — Un téléchargement musical peut écrire sur un périphérique de remplacement
 
-Emplacements : [downloads.py](../src/shokz_refill/downloads.py),
+Emplacements : [downloads.py](../src/shokz_filler/downloads.py),
 `_download_stage` et `_transfer_stage`, lignes 269–338 ;
-[transfer.py](../src/shokz_refill/transfer.py), `_transfer`.
+[transfer.py](../src/shokz_filler/transfer.py), `_transfer`.
 
 La file musicale conserve le chemin du périphérique, sans conserver son identité
 avant le téléchargement. `TransferManager` capture cette identité seulement au
@@ -86,9 +86,9 @@ deux parcours. Ajouter le scénario de remplacement à la suite musicale.
 
 ### 3. P2 — Deux envois vers le même dossier réutilisent les positions
 
-Emplacements : [downloads.py](../src/shokz_refill/downloads.py), `enqueue`,
-lignes 133–139 ; [ui.py](../src/shokz_refill/ui.py), `_enqueue_tracks` ;
-[playback_order.py](../src/shokz_refill/playback_order.py), `next_position`.
+Emplacements : [downloads.py](../src/shokz_filler/downloads.py), `enqueue`,
+lignes 133–139 ; [ui.py](../src/shokz_filler/ui.py), `_enqueue_tracks` ;
+[playback_order.py](../src/shokz_filler/playback_order.py), `next_position`.
 
 La prochaine position vient uniquement des fichiers déjà présents. Les positions
 des jobs actifs ne sont pas réservées, et chaque appel à `enqueue` crée sa propre
@@ -104,7 +104,7 @@ Tester deux envois successifs alors que le premier est encore en cours.
 
 ### 4. P2 — `OrderGate` peut exécuter ses callbacks dans l'ordre inverse
 
-Emplacement : [playback_order.py](../src/shokz_refill/playback_order.py),
+Emplacement : [playback_order.py](../src/shokz_filler/playback_order.py),
 `OrderGate._drain`, lignes 81–90.
 
 Le verrou protège la sélection du callback et l'avancement de `_next`, mais le
@@ -123,7 +123,7 @@ le test actuel de la barrière appelle ses méthodes depuis un seul thread.
 
 ### 5. P2 — Réessayer un livre modifié mélange deux versions dans le même dossier
 
-Emplacement : [audiobook_queue.py](../src/shokz_refill/audiobook_queue.py),
+Emplacement : [audiobook_queue.py](../src/shokz_filler/audiobook_queue.py),
 `_run`, lignes 196–202, et `retry`, lignes 387–424.
 
 Les détails du livre et les identités sont recalculés à chaque tentative, mais
@@ -141,7 +141,7 @@ en préservant l'ancien export. Tester une révision après publication partiell
 
 ### 6. P2 — Annuler un job retenu par la barrière ne le termine pas immédiatement
 
-Emplacement : [downloads.py](../src/shokz_refill/downloads.py), `cancel`,
+Emplacement : [downloads.py](../src/shokz_filler/downloads.py), `cancel`,
 lignes 340–353, et `_submit_transfer`.
 
 Après sa conversion, un job peut attendre dans `OrderGate` sans aucun `Future`
@@ -160,8 +160,8 @@ transition entre deux executors, en plus de l'annulation pendant une opération.
 
 ### 7. P2 — L'import local ne respecte pas le format cible imposé
 
-Emplacements : [ui.py](../src/shokz_refill/ui.py), `_add_local`, lignes 1279–1294 ;
-[metadata.py](../src/shokz_refill/metadata.py), `validate_source_mp3`, lignes 74–82.
+Emplacements : [ui.py](../src/shokz_filler/ui.py), `_add_local`, lignes 1279–1294 ;
+[metadata.py](../src/shokz_filler/metadata.py), `validate_source_mp3`, lignes 74–82.
 
 L'import vérifie que le fichier est un MP3 lisible, puis le copie tel quel.
 La validation CBR 192 kbps, 44,1 kHz, stéréo est réservée aux conversions.
@@ -243,7 +243,7 @@ Environnement local : Linux, Python **3.14.6** dans `.venv`.
 | Reproduction du constat 7 | Fichier généré localement avec le ffmpeg embarqué, sans réseau. |
 
 Le journal de construction de cette session est dans
-`/tmp/shokz-refill-audit-build.log` ; il s'agit d'un fichier temporaire, non versionné.
+`/tmp/shokz-filler-audit-build.log` ; il s'agit d'un fichier temporaire, non versionné.
 La construction a régénéré les artefacts Linux ignorés par Git.
 
 Non exécutés : build et vérifications natifs Windows, exécution sous Python 3.11

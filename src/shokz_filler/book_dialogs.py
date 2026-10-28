@@ -24,9 +24,12 @@ from .theme import ON_ACCENT, RoundedComboBox, role
 class SpeechSettingsPanel(QWidget):
     saveRequested = Signal(object)
     previewRequested = Signal(object)
+    changed = Signal()  # any edit, or a change of validity
 
     def __init__(self, settings: BookExportOptions) -> None:
         super().__init__()
+        self.baseline = settings
+        self.is_valid = True
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
@@ -106,7 +109,7 @@ class SpeechSettingsPanel(QWidget):
         self.status.setWordWrap(True)
         self._set_status("")
         layout.addWidget(self.status)
-        # Not laid out here: the Settings page floats it over the page's bottom-right corner.
+        # Not laid out here: the Settings page places it in its footer and decides when it is on.
         self.save = QPushButton("Save settings")
         role(self.save, "primary")
         self.save.setIcon(icon("check", ON_ACCENT))
@@ -130,6 +133,14 @@ class SpeechSettingsPanel(QWidget):
             self.chapter_template.toPlainText(),
         )
 
+    @property
+    def modified(self) -> bool:
+        return self.options != self.baseline
+
+    def mark_saved(self, options: BookExportOptions) -> None:
+        self.baseline = options
+        self.changed.emit()
+
     def _preview(self) -> None:
         try:
             options = self.options
@@ -140,8 +151,9 @@ class SpeechSettingsPanel(QWidget):
                 control.setEnabled(speaks)
             if not speaks:
                 self.preview.setText("Each MP3 starts directly with the chapter.")
-                self.save.setEnabled(True)
+                self.is_valid = True
                 self._set_status("")
+                self.changed.emit()
                 return
             lines = []
             for number, title in ((1, "Prologue"), (2, "La rencontre")):
@@ -150,12 +162,13 @@ class SpeechSettingsPanel(QWidget):
             self.preview.setText(
                 "\n".join(lines) + f"\nEach is followed by {SILENCE_SECONDS} seconds of silence."
             )
-            self.save.setEnabled(True)
+            self.is_valid = True
             self._set_status("")
         except ValueError as exc:
             self.preview.clear()
             self._set_status(str(exc))
-            self.save.setEnabled(False)
+            self.is_valid = False
+        self.changed.emit()
 
     def _request_preview(self) -> None:
         try:

@@ -9,11 +9,11 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtCore import QThread  # noqa: E402
 from PySide6.QtWidgets import QApplication, QDialog, QHeaderView  # noqa: E402
 
-from shokz_refill.config import ConfigStore  # noqa: E402
-from shokz_refill.device import manual_device  # noqa: E402
-from shokz_refill.models import Playlist, Track  # noqa: E402
-from shokz_refill.themed_dialog import InputDialog  # noqa: E402
-from shokz_refill.ui import DeviceFolderDialog, MainWindow  # noqa: E402
+from shokz_filler.config import ConfigStore  # noqa: E402
+from shokz_filler.device import manual_device  # noqa: E402
+from shokz_filler.models import Playlist, Track  # noqa: E402
+from shokz_filler.themed_dialog import InputDialog  # noqa: E402
+from shokz_filler.ui import DeviceFolderDialog, MainWindow  # noqa: E402
 
 
 def test_background_result_reaches_ui(tmp_path: Path) -> None:
@@ -42,7 +42,7 @@ def test_local_import_runs_in_worker_with_selected_device_identity(
     window.device, window.current_folder = device, root
     source = Path(__file__).parent / "fixtures" / "source-mono.mp3"
     monkeypatch.setattr(
-        "shokz_refill.ui.QFileDialog.getOpenFileNames", lambda *_args: ([str(source)], "")
+        "shokz_filler.ui.QFileDialog.getOpenFileNames", lambda *_args: ([str(source)], "")
     )
     calls: list[tuple[QThread, tuple[int, int] | None]] = []
 
@@ -159,7 +159,7 @@ def _window_with_wizard(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):  # typ
     root = tmp_path / "device"
     root.mkdir()
     FakeWizard.instances.clear()
-    monkeypatch.setattr("shokz_refill.ui.TransferWizard", FakeWizard)
+    monkeypatch.setattr("shokz_filler.ui.TransferWizard", FakeWizard)
     window = MainWindow(ConfigStore(tmp_path / "config", tmp_path / "cache"))
     window.device = manual_device(root)
     queued: list[tuple[list[Track], Path, int | None]] = []
@@ -455,7 +455,7 @@ def test_stale_folder_listing_cannot_replace_current_folder(
 ) -> None:
     import threading
 
-    from shokz_refill.files import DeviceFileService
+    from shokz_filler.files import DeviceFileService
 
     app = QApplication.instance() or QApplication([])
     monkeypatch.setattr(MainWindow, "_poll_devices", lambda _self: None)
@@ -498,7 +498,7 @@ def test_close_cancels_work_and_waits_without_blocking_qt(
 ) -> None:
     import threading
 
-    from shokz_refill.cancellation import check_cancelled
+    from shokz_filler.cancellation import check_cancelled
 
     app = QApplication.instance() or QApplication([])
     monkeypatch.setattr(MainWindow, "_poll_devices", lambda _self: None)
@@ -546,7 +546,7 @@ def test_selecting_device_does_not_resume_cancelled_copies_automatically(
 def test_pending_download_reserves_destination_folder(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from shokz_refill.models import DownloadJob, JobStatus
+    from shokz_filler.models import DownloadJob, JobStatus
 
     app = QApplication.instance() or QApplication([])
     monkeypatch.setattr(MainWindow, "_poll_devices", lambda _self: None)

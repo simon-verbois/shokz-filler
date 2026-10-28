@@ -1,4 +1,4 @@
-# Shokz Refill
+# Shokz Filler
 
 [![GitHub stars](https://img.shields.io/github/stars/simon-verbois/shokz-filler?style=for-the-badge&logo=github&labelColor=191e27&color=32d4cf)](https://github.com/simon-verbois/shokz-filler/stargazers)
 [![GitHub forks](https://img.shields.io/github/forks/simon-verbois/shokz-filler?style=for-the-badge&logo=github&labelColor=191e27&color=32d4cf)](https://github.com/simon-verbois/shokz-filler/forks)
@@ -13,11 +13,11 @@ A desktop app for searching YouTube Music, preparing compatible MP3 files and ma
 
 [Website and usage guide](https://simon-verbois.github.io/shokz-filler/) · [Downloads](https://github.com/simon-verbois/shokz-filler/releases/latest) · [Report an issue](https://github.com/simon-verbois/shokz-filler/issues)
 
-[![Buy me a coffee to support Shokz Refill](docs/buy-me-a-coffee.svg)](https://buymeacoffee.com/simonverbois)
+[![Buy me a coffee to support Shokz Filler](docs/buy-me-a-coffee.svg)](https://buymeacoffee.com/simonverbois)
 
 Website languages: [English](https://simon-verbois.github.io/shokz-filler/) · [Français](https://simon-verbois.github.io/shokz-filler/fr/) · [Nederlands](https://simon-verbois.github.io/shokz-filler/nl/) · [Deutsch](https://simon-verbois.github.io/shokz-filler/de/) · [Español](https://simon-verbois.github.io/shokz-filler/es/)
 
-![Shokz Refill: music search and the download and transfer queue](docs/screenshots/music.png)
+![Shokz Filler: music search and the download and transfer queue](docs/screenshots/music.png)
 
 _Real application screenshots with fictional demonstration data. The desktop interface is in English._
 
@@ -31,7 +31,7 @@ _Real application screenshots with fictional demonstration data. The desktop int
 - **Device management**: check free space, create and organise folders, import local MP3 files and confirm deletions. `SYSTEM` and `System Volume Information` are hidden from the browser and folder pickers.
 - **Verified transfers**: recognise duplicates, preserve files on name conflicts, validate partial files and verify SHA-256 integrity before publishing the final file.
 
-Conversions produce **MP3 CBR 192 kb/s · 44.1 kHz · stereo · ID3v2.3**. Local MP3s that already match the target format are copied directly; others are normalised without changing the originals. Portable builds include Python, Qt, FFmpeg, Piper and their dependencies and voice models.
+Conversions produce **MP3 CBR 192 kb/s · 44.1 kHz · stereo · ID3v2.3** (an optional Settings switch converts to mono). Local MP3s that already match the target format are copied directly; others are normalised without changing the originals. Portable builds include Python, Qt, FFmpeg, Piper and their dependencies and voice models.
 
 ## Install
 
@@ -39,14 +39,14 @@ Download the file for your operating system from the [GitHub releases](https://g
 
 | System         | File                              |
 | -------------- | --------------------------------- |
-| Linux x86_64   | `Shokz-Refill-linux-x86_64`       |
-| Windows x86_64 | `Shokz-Refill-windows-x86_64.exe` |
+| Linux x86_64   | `Shokz-Filler-linux-x86_64`       |
+| Windows x86_64 | `Shokz-Filler-windows-x86_64.exe` |
 
 On Linux, make the file executable and launch it:
 
 ```bash
-chmod +x Shokz-Refill-linux-x86_64
-./Shokz-Refill-linux-x86_64
+chmod +x Shokz-Filler-linux-x86_64
+./Shokz-Filler-linux-x86_64
 ```
 
 On Windows, launch the `.exe`. No separate Python or FFmpeg installation is needed to use a portable build.
@@ -67,9 +67,9 @@ Use the sidebar or `Alt+1` to `Alt+5` to switch screens. The device summary and 
 Public search does not require a YouTube account. To use **My playlists**, open **Settings → Accounts** and click **Connect** next to YouTube Music:
 
 1. Choose your browser if several are installed, then click **Open YouTube Music**.
-2. Sign in normally in the browser. Return to Shokz Refill: it imports and validates the session automatically. If you are already signed in, click **I'm signed in — Connect** directly.
+2. Sign in normally in the browser. Return to Shokz Filler: it imports and validates the session automatically. If you are already signed in, click **I'm signed in — Connect** directly.
 
-There is no Google Cloud setup, client ID, secret, script or browser extension to install. Connecting imports the selected browser's session locally and saves only cookies applicable to YouTube Music. The browser's main Google account is used. Your Google password is never requested by Shokz Refill. The saved session also supplies cookies to the media downloader. **Disconnect** removes the application's local copy; it does not sign you out of your browser.
+There is no Google Cloud setup, client ID, secret, script or browser extension to install. Connecting imports the selected browser's session locally and saves only cookies applicable to YouTube Music. The browser's main Google account is used. Your Google password is never requested by Shokz Filler. The saved session also supplies cookies to the media downloader. **Disconnect** removes the application's local copy; it does not sign you out of your browser.
 
 Supported browsers are Firefox, Chrome, Edge, Brave and Chromium on Linux and Windows. Use a normal window, not private browsing. Browser protections can prevent cookie access, especially in Chromium-based browsers on Windows: close the browser and retry, or use Firefox. **Advanced connection options** retains manual request-header import as a fallback. Existing saved sessions continue to work.
 
@@ -115,7 +115,7 @@ Choose **John** for an English announcement or **Tom** for French. Speech synthe
 
 ## Support the project
 
-If Shokz Refill is useful to you, you can support its development by [buying me a coffee](https://buymeacoffee.com/simonverbois).
+If Shokz Filler is useful to you, you can support its development by [buying me a coffee](https://buymeacoffee.com/simonverbois).
 
 You can also help by starring the [public GitHub repository](https://github.com/simon-verbois/shokz-filler), reporting bugs or sharing the app.
 
@@ -128,7 +128,7 @@ python3 -m venv .venv
 .venv/bin/pip install -e '.[dev]'
 .venv/bin/python scripts/fetch_tts_voices.py
 scripts/fetch_ffmpeg_linux.sh
-./start-shokz-refill.sh
+./start-shokz-filler.sh
 ```
 
 The voice models are fetched from pinned revisions and verified by SHA-256. Portable executables include them afterwards; speech synthesis does not contact a service.
@@ -159,4 +159,4 @@ python3 scripts/build_site.py
 python3 -m http.server 8000 --directory build/site
 ```
 
-The build rejects missing translations, stale generated pages and broken local links. It publishes only explicitly allowlisted public assets. The [desktop design notes](docs/ui-design.md) describe the native UI and its interaction rules. Regenerate screenshots with fictional data using `.venv/bin/python scripts/capture_screenshots.py`. In GitHub Actions, run **Shokz Refill presentation site** on the default branch to publish.
+The build rejects missing translations, stale generated pages and broken local links. It publishes only explicitly allowlisted public assets. The [desktop design notes](docs/ui-design.md) describe the native UI and its interaction rules. Regenerate screenshots with fictional data using `.venv/bin/python scripts/capture_screenshots.py`. In GitHub Actions, run **Shokz Filler presentation site** on the default branch to publish.

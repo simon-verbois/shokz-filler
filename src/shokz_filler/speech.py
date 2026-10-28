@@ -52,7 +52,7 @@ class PiperSpeech:
         command = (
             [sys.executable, "--tts-worker"]
             if getattr(sys, "frozen", False)
-            else [sys.executable, "-m", "shokz_refill.tts_worker"]
+            else [sys.executable, "-m", "shokz_filler.tts_worker"]
         )
         try:
             if valid_voice(original):

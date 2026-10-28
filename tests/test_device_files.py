@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from shokz_refill.device import is_within, manual_device
-from shokz_refill.files import DeviceFileService
-from shokz_refill.transfer import TransferManager
+from shokz_filler.device import is_within, manual_device
+from shokz_filler.files import DeviceFileService
+from shokz_filler.transfer import TransferManager
 
 
 def _create_directory_link(link: Path, target: Path) -> None:

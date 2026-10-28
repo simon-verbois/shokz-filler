@@ -7,21 +7,40 @@ heights, so switching pages never makes titles, fields or buttons jump.
 from __future__ import annotations
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QLayout, QVBoxLayout, QWidget
 
 from .theme import role
 
 HEADER_HEIGHT = 40
 SUBTITLE_HEIGHT = 22
 CONTROLS_HEIGHT = 38
-FOOTER_HEIGHT = 44
+FOOTER_HEIGHT = 38
 SPACING = 10
+NO_DEVICE_MESSAGE = "No Shokz selected — choose a device in Shokz files"
 
 
-def _row(height: int) -> tuple[QWidget, QHBoxLayout]:
+class CenteredRow(QHBoxLayout):
+    """Row whose widgets sit on the vertical centre unless given another alignment."""
+
+    def addWidget(  # noqa: N802 - Qt override
+        self,
+        arg__1: QWidget,
+        stretch: int | None = 0,
+        alignment: Qt.AlignmentFlag | None = None,
+    ) -> None:
+        super().addWidget(arg__1, stretch or 0, alignment or Qt.AlignmentFlag.AlignVCenter)
+
+    def addLayout(  # noqa: N802 - Qt override
+        self, layout: QLayout, stretch: int | None = 0
+    ) -> None:
+        super().addLayout(layout, stretch or 0)
+        self.setAlignment(layout, Qt.AlignmentFlag.AlignVCenter)
+
+
+def _row(height: int, *, centered: bool = False) -> tuple[QWidget, QHBoxLayout]:
     host = QWidget()
     host.setFixedHeight(height)
-    layout = QHBoxLayout(host)
+    layout: QHBoxLayout = CenteredRow(host) if centered else QHBoxLayout(host)
     layout.setContentsMargins(0, 0, 0, 0)
     layout.setSpacing(8)
     return host, layout
@@ -54,6 +73,6 @@ class PageTemplate(QWidget):
         self.content = QVBoxLayout()
         self.content.setContentsMargins(0, 0, 0, 0)
         outer.addLayout(self.content, 1)
-        self.footer_host, self.footer = _row(FOOTER_HEIGHT)
+        self.footer_host, self.footer = _row(FOOTER_HEIGHT, centered=True)
         self.footer_host.setVisible(footer)
         outer.addWidget(self.footer_host)

@@ -21,7 +21,14 @@ def _platform_dir(kind: str) -> Path:
         env = "XDG_CACHE_HOME" if kind == "cache" else "XDG_CONFIG_HOME"
         default = Path.home() / (".cache" if kind == "cache" else ".config")
         base = Path(os.environ.get(env, default))
-    return base / "shokz-refill"
+    target = base / "shokz-filler"
+    legacy = base / "shokz-refill"  # the application's name before it became Shokz Filler
+    if legacy.is_dir() and not target.exists():
+        try:
+            legacy.rename(target)
+        except OSError:
+            return legacy
+    return target
 
 
 _LEGACY_ANNOUNCEMENT = "$book_name, de $author_name."
@@ -42,6 +49,7 @@ class AppConfig:
     book_tts_announce: bool = True
     book_announce_chapters: bool = True
     book_chapter_template: str = DEFAULT_CHAPTER_ANNOUNCEMENT
+    mono_audio: bool = False
 
     def book_export_options(self) -> BookExportOptions:
         return BookExportOptions(

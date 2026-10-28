@@ -1,13 +1,13 @@
-# Technical guide — Shokz Refill
+# Technical guide — Shokz Filler
 
-Shokz Refill is a small desktop utility for finding music through YouTube Music and safely
+Shokz Filler is a small desktop utility for finding music through YouTube Music and safely
 loading compatible MP3 files onto Shokz headphones with onboard storage, including OpenSwim
 Pro. It also browses Audiobookshelf servers, converts selected audiobooks into ordered compatible MP3s,
 imports existing local MP3 files and provides a focused browser for the selected device.
 
 The application searches songs and playlists, opens playlist tracks, loads account-library
 playlists, downloads up to three tracks concurrently, and transfers them sequentially. Converted output is
-broadly compatible MP3: **CBR 192 kbps, 44.1 kHz, stereo, ID3v2.3**.
+broadly compatible MP3: **CBR 192 kbps, 44.1 kHz, stereo, ID3v2.3**. A Settings option (`mono_audio`, off by default) switches every conversion to mono instead; stereo stays the default and the validator expects whichever is selected.
 
 ## Use
 
@@ -18,7 +18,7 @@ The page used before opening the tour is restored on exit. Opening the tour sets
 not open automatically again. Existing configurations without this field receive the tour once.
 Replay it from **Guided tour**, below the sidebar divider and above **Settings**.
 
-The tour's content and widget targets live in `src/shokz_refill/guided_tour.py`. Any change to a
+The tour's content and widget targets live in `src/shokz_filler/guided_tour.py`. Any change to a
 covered control, feature, or workflow must update the affected tour steps and
 `tests/test_guided_tour.py` in the same change (see `AGENTS.md`). Ordinary updates must preserve
 the seen preference. Startup schedules the tour from `app.py` after the main window is shown;
@@ -32,16 +32,16 @@ portable smoke mode skips onboarding.
    Nothing downloads until you choose **Send to Shokz (N)**, which opens the transfer assistant
    (`transfer_wizard.py`): step 1 reviews and reorders the songs, step 2 picks or creates a folder.
 4. To transfer an entire playlist, open it and use right-click → **Add all songs to send list**,
-   then **Send to Shokz**. Shokz Refill creates or reuses a folder that keeps the playlist's original
+   then **Send to Shokz**. Shokz Filler creates or reuses a folder that keeps the playlist's original
    capitalization and spaces, such as `My Running Mix`, directly at the device root.
 5. Watch download, conversion, and transfer progress in the **Transfers** page and the sidebar summary. Failed or cancelled items can be retried with **Retry selected**, and
-   active or queued items can be cancelled. Retrying a transfer reuses its converted MP3 cache.
+   active or queued items can be cancelled. **Clear finished** removes completed and skipped rows from the list. Retrying a transfer reuses its converted MP3 cache.
 
 Downloads, conversions, and device transfers use independent bounded worker pools. A conversion
 therefore does not prevent the next track from downloading, while writes to removable storage stay
 strictly sequential.
 
-For songs selected outside a playlist, Shokz Refill uses the download folder selected with
+For songs selected outside a playlist, Shokz Filler uses the download folder selected with
 **Change…** beside the destination or **Use as download destination**. If no folder has been chosen,
 the in-app folder tree opens on the first download. The device root is hidden: choose an existing
 folder or create a new top-level folder. Downloading these songs directly to the device root is
@@ -86,7 +86,7 @@ Network cancellation is cooperative and can wait for the current request timeout
 The device tab keeps the current or last file operation visible. During a move or local MP3 copy it
 explicitly warns not to disconnect the Shokz, then reports completion or failure.
 
-Names created by Shokz Refill keep readable Unicode letters, numbers, spaces, hyphens and
+Names created by Shokz Filler keep readable Unicode letters, numbers, spaces, hyphens and
 underscores. Other punctuation, emoji, control characters and filesystem-reserved characters are
 removed consistently from MP3 and folder names.
 
@@ -115,9 +115,9 @@ queues only the selected books. Choose the Shokz device in the device tab first.
 
 Each book gets a separate top-level folder named from its author and title, with a short stable ID
 to distinguish books sharing the same name. **Each chapter becomes one MP3** named `NN - Title.mp3`
-(zero-padded to the book's size). Chapters come from Audiobookshelf when they tile the book without
-gaps or overlaps, possibly spanning several source files; otherwise each server track becomes one
-file, in the server's track order. Shokz documents both name order (help article) and transfer time
+(zero-padded to the book's size). Chapters come from Audiobookshelf whenever the book has at least two usable ones, whether it
+is a single m4b or several files; they are cut at their start times, so gaps, overlaps or end-time drift never drop
+or repeat audio. Without chapters, each server track becomes one file, in the server's track order. Shokz documents both name order (help article) and transfer time
 (OpenSwim Pro FAQ), so `playback_order.py` applies both: padded prefixes, strictly sequential
 publication, and `TRCK` tags. Two optional texts are spoken before the files: one for chapter 1 (by default the book, author
 and chapter number) and one for the others (by default the chapter number), using `$book_name`,
@@ -190,7 +190,7 @@ Public search does not require a login. To show your library playlists, click **
 Music** and follow the in-app steps: while signed in at `music.youtube.com`, copy the request
 headers from an authenticated `/browse` POST request in the browser developer tools and paste them
 into the dialog. This is the current browser-header flow supported by ytmusicapi and needs no
-Shokz Refill server.
+Shokz Filler server.
 
 A saved session is labelled as unverified until an account request succeeds. If **My playlists**
 rejects an old or malformed session, the application displays a reconnect message and stays open.
@@ -198,12 +198,12 @@ Use **Settings → Accounts → Connect** to replace it with fresh headers. Temp
 report an error without invalidating the saved session.
 
 The resulting browser session data remains in your per-user configuration directory with owner-only
-permissions (`~/.config/shokz-refill` on Linux or `%APPDATA%\shokz-refill` on Windows). For
+permissions (`~/.config/shokz-filler` on Linux or `%APPDATA%\shokz-filler` on Windows). For
 downloads, cookies are scoped to YouTube through a short-lived cookie file instead of being sent as
 a global HTTP header. Credentials are never logged. **Disconnect** removes the stored session
 locally. Logging out of YouTube can invalidate it.
 
-Shokz Refill does not bypass DRM. Downloads work only where yt-dlp can legitimately access the
+Shokz Filler does not bypass DRM. Downloads work only where yt-dlp can legitimately access the
 source. You are responsible for having the rights or authorization to download and transfer media.
 
 ## Linux / Fedora
@@ -211,8 +211,8 @@ source. You are responsible for having the rights or authorization to download a
 The portable build is one executable. Make it executable if needed, then launch it:
 
 ```bash
-chmod +x Shokz-Refill-linux-x86_64
-./Shokz-Refill-linux-x86_64
+chmod +x Shokz-Filler-linux-x86_64
+./Shokz-Filler-linux-x86_64
 ```
 
 It bundles Python, PySide6, yt-dlp, Deno, ffmpeg and the other runtime dependencies. Device
@@ -224,7 +224,7 @@ For development:
 python3 -m venv .venv
 .venv/bin/pip install -e '.[dev]'
 .venv/bin/python scripts/fetch_tts_voices.py
-.venv/bin/python -m shokz_refill
+.venv/bin/python -m shokz_filler
 ```
 
 Build and verify:
@@ -236,7 +236,7 @@ Build and verify:
 scripts/build_linux.sh
 ```
 
-The resulting single binary is `dist/Shokz-Refill-linux-x86_64` with its SHA-256 checksum beside
+The resulting single binary is `dist/Shokz-Filler-linux-x86_64` with its SHA-256 checksum beside
 it.
 
 ## Windows
@@ -247,7 +247,7 @@ Install 64-bit Python 3.12 and PowerShell 7.3 or newer only on the build machine
 pwsh -ExecutionPolicy Bypass -File scripts\build_windows.ps1
 ```
 
-The resulting `dist\Shokz-Refill-windows-x86_64.exe` includes Python, PySide6, yt-dlp with its EJS
+The resulting `dist\Shokz-Filler-windows-x86_64.exe` includes Python, PySide6, yt-dlp with its EJS
 scripts, Deno, dependencies, ffmpeg and ffprobe. Its SHA-256 checksum is written beside it.
 Windows must be built natively; the Linux build cannot cross-compile it.
 
@@ -282,7 +282,7 @@ installation. The Linux fetch script uses the GPLv3 static builds published by J
 Windows script uses Gyan's GPL essentials build. ffmpeg is a separate bundled executable and is
 redistributed under its applicable GPL terms. Distributors should retain the build's license/source
 notices and provide the corresponding source offer/link; see <https://ffmpeg.org/legal.html> and the
-binary distributor's accompanying documentation. Shokz Refill's own source is MIT licensed.
+binary distributor's accompanying documentation. Shokz Filler's own source is MIT licensed.
 
 ## Known limitations
 
@@ -333,7 +333,7 @@ account connection or third-party JavaScript. Only the explicitly listed public 
 credentials, developer documentation and application caches are excluded.
 
 GitHub Pages uses GitHub Actions. From the repository's default branch, manually run
-**Shokz Refill presentation site** in Actions to publish. The workflow pins its actions and grants
+**Shokz Filler presentation site** in Actions to publish. The workflow pins its actions and grants
 Pages write permission only to the deployment job. Publishing the website does not create an app
 release. The release mirror preserves `.github`, `docs` and `scripts/build_site.py`. Update the
 feature-availability note in the page when Audiobookshelf and Piper reach a public release.

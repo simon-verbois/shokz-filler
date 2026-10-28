@@ -20,12 +20,14 @@ _SAFE_DOWNLOAD_HEADERS = {"accept-language", "user-agent"}
 
 def bundled_binary(name: str) -> Path:
     executable = name + (".exe" if sys.platform == "win32" else "")
-    configured = os.environ.get("SHOKZ_REFILL_FFMPEG_DIR")
+    configured = os.environ.get("SHOKZ_FILLER_FFMPEG_DIR") or os.environ.get(
+        "SHOKZ_REFILL_FFMPEG_DIR"
+    )
     roots = [
         Path(configured) if configured else Path("/__not_configured__"),
         Path(__file__).resolve().parent / "bin",
         Path(sys.executable).resolve().parent / "bin",
-        Path(sys.executable).resolve().parent / "_internal" / "shokz_refill" / "bin",
+        Path(sys.executable).resolve().parent / "_internal" / "shokz_filler" / "bin",
     ]
     for root in roots:
         candidate = root / executable
@@ -84,7 +86,7 @@ def _download_auth_options(
     work_dir.mkdir(parents=True, exist_ok=True)
     cookie_path = work_dir / "youtube-cookies.txt"
     temporary = cookie_path.with_suffix(".tmp")
-    lines = ["# Netscape HTTP Cookie File", "# Created locally by Shokz Refill"]
+    lines = ["# Netscape HTTP Cookie File", "# Created locally by Shokz Filler"]
     lines.extend(
         f".youtube.com\tTRUE\t/\tTRUE\t0\t{name}\t{value}" for name, value in cookies.items()
     )
@@ -163,6 +165,9 @@ class MediaDownloader:
 
 
 class AudioConverter:
+    def __init__(self, channels: int = 2) -> None:
+        self.channels = channels
+
     def convert(
         self, source: Path, output: Path, track: Track, progress: Progress, cancelled: Cancelled
     ) -> Path:
@@ -201,7 +206,7 @@ class AudioConverter:
             "-ar",
             "44100",
             "-ac",
-            "2",
+            str(self.channels),
             "-id3v2_version",
             "3",
             str(temporary),
@@ -219,7 +224,7 @@ class AudioConverter:
                     title=track.title,
                     album=track.album,
                 )
-            validate_mp3(temporary)
+            validate_mp3(temporary, self.channels)
             if cancelled():
                 raise DownloadCancelled("Conversion cancelled")
             temporary.replace(output)
