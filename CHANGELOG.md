@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2026.44.1 - 2026-10-28
+
 - The application is now called **Shokz Filler**. Your settings and cache folders are moved automatically, and MP3s already on your device are still recognised.
 - Audiobooks with chapters now export one MP3 per chapter, even from a single m4b file or when the server's chapter times have gaps or drift.
 - The sidebar no longer shows "Choose a device in Shokz files" when nothing is connected.

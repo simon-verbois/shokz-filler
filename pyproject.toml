@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "shokz-filler"
-version = "2026.43.5"
+version = "2026.44.1"
 description = "Load compatible MP3 music and audiobooks from YouTube Music, Audiobookshelf or local files"
 readme = "README.md"
 requires-python = ">=3.11"
