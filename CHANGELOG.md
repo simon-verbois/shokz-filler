@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed the Windows release build failing on its changelog check.
+
 ## 2026.44.1 - 2026-10-28
 
 - The application is now called **Shokz Filler**. Your settings and cache folders are moved automatically, and MP3s already on your device are still recognised.
