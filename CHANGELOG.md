@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 2026.44.2 - 2026-10-28
+
 - Fixed the Windows release build failing on its changelog check.
 
 ## 2026.44.1 - 2026-10-28
